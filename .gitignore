@@ -1,0 +1,21 @@
+# Worktrees
+.worktrees/
+
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+target/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
