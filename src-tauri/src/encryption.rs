@@ -94,3 +94,36 @@ pub fn encrypt(plaintext: &str, passphrase: &str) -> Result<EncryptedPayload, En
         ciphertext: BASE64.encode(in_out),
     })
 }
+
+/// Decrypts an encrypted payload using a passphrase
+pub fn decrypt(payload: &EncryptedPayload, passphrase: &str) -> Result<String, EncryptionError> {
+    // Decode base64 values
+    let salt = BASE64
+        .decode(&payload.salt)
+        .map_err(|_| EncryptionError::InvalidData("Invalid salt".into()))?;
+    let nonce_bytes: [u8; 12] = BASE64
+        .decode(&payload.nonce)
+        .map_err(|_| EncryptionError::InvalidData("Invalid nonce".into()))?
+        .try_into()
+        .map_err(|_| EncryptionError::InvalidData("Nonce wrong length".into()))?;
+    let mut ciphertext = BASE64
+        .decode(&payload.ciphertext)
+        .map_err(|_| EncryptionError::InvalidData("Invalid ciphertext".into()))?;
+
+    // Derive key from passphrase
+    let key_bytes = derive_key(passphrase, &salt)?;
+
+    // Create AES-256-GCM key
+    let unbound_key = UnboundKey::new(&AES_256_GCM, &key_bytes)
+        .map_err(|_| EncryptionError::Decryption("Failed to create key".into()))?;
+    let key = LessSafeKey::new(unbound_key);
+
+    // Decrypt
+    let nonce = Nonce::assume_unique_for_key(nonce_bytes);
+    let plaintext = key
+        .open_in_place(nonce, Aad::empty(), &mut ciphertext)
+        .map_err(|_| EncryptionError::Decryption("Decryption failed - wrong passphrase?".into()))?;
+
+    String::from_utf8(plaintext.to_vec())
+        .map_err(|_| EncryptionError::Decryption("Invalid UTF-8".into()))
+}
