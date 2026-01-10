@@ -65,3 +65,32 @@ pub fn generate_salt() -> [u8; 16] {
     OsRng.fill_bytes(&mut salt);
     salt
 }
+
+/// Encrypts plaintext using AES-256-GCM with a passphrase
+pub fn encrypt(plaintext: &str, passphrase: &str) -> Result<EncryptedPayload, EncryptionError> {
+    // Generate random salt and nonce
+    let salt = generate_salt();
+    let mut nonce_bytes = [0u8; 12];
+    use rand::RngCore;
+    OsRng.fill_bytes(&mut nonce_bytes);
+
+    // Derive key from passphrase
+    let key_bytes = derive_key(passphrase, &salt)?;
+
+    // Create AES-256-GCM key
+    let unbound_key = UnboundKey::new(&AES_256_GCM, &key_bytes)
+        .map_err(|_| EncryptionError::Encryption("Failed to create key".into()))?;
+    let key = LessSafeKey::new(unbound_key);
+
+    // Encrypt
+    let nonce = Nonce::assume_unique_for_key(nonce_bytes);
+    let mut in_out = plaintext.as_bytes().to_vec();
+    key.seal_in_place_append_tag(nonce, Aad::empty(), &mut in_out)
+        .map_err(|_| EncryptionError::Encryption("Encryption failed".into()))?;
+
+    Ok(EncryptedPayload {
+        salt: BASE64.encode(salt),
+        nonce: BASE64.encode(nonce_bytes),
+        ciphertext: BASE64.encode(in_out),
+    })
+}
