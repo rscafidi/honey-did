@@ -2,6 +2,7 @@
 
 mod encryption;
 mod models;
+mod storage;
 
 fn main() {
     tauri::Builder::default()
