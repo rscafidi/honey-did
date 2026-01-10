@@ -35,3 +35,33 @@ impl std::fmt::Display for EncryptionError {
 }
 
 impl std::error::Error for EncryptionError {}
+
+/// Derives a 256-bit key from a passphrase using Argon2id
+pub fn derive_key(passphrase: &str, salt: &[u8]) -> Result<[u8; 32], EncryptionError> {
+    let argon2 = Argon2::new(
+        argon2::Algorithm::Argon2id,
+        argon2::Version::V0x13,
+        argon2::Params::new(
+            ARGON2_MEMORY_COST,
+            ARGON2_TIME_COST,
+            ARGON2_PARALLELISM,
+            Some(32),
+        )
+        .map_err(|e| EncryptionError::KeyDerivation(e.to_string()))?,
+    );
+
+    let mut key = [0u8; 32];
+    argon2
+        .hash_password_into(passphrase.as_bytes(), salt, &mut key)
+        .map_err(|e| EncryptionError::KeyDerivation(e.to_string()))?;
+
+    Ok(key)
+}
+
+/// Generates a random 16-byte salt for Argon2
+pub fn generate_salt() -> [u8; 16] {
+    let mut salt = [0u8; 16];
+    use rand::RngCore;
+    OsRng.fill_bytes(&mut salt);
+    salt
+}
