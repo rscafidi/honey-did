@@ -127,3 +127,60 @@ pub fn decrypt(payload: &EncryptedPayload, passphrase: &str) -> Result<String, E
     String::from_utf8(plaintext.to_vec())
         .map_err(|_| EncryptionError::Decryption("Invalid UTF-8".into()))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_encrypt_decrypt_roundtrip() {
+        let plaintext = "Hello, this is secret data!";
+        let passphrase = "correct-horse-battery-staple";
+
+        let encrypted = encrypt(plaintext, passphrase).expect("encryption should succeed");
+        let decrypted = decrypt(&encrypted, passphrase).expect("decryption should succeed");
+
+        assert_eq!(decrypted, plaintext);
+    }
+
+    #[test]
+    fn test_wrong_passphrase_fails() {
+        let plaintext = "Secret message";
+        let encrypted = encrypt(plaintext, "correct-passphrase").expect("encryption should succeed");
+
+        let result = decrypt(&encrypted, "wrong-passphrase");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_different_encryptions_produce_different_output() {
+        let plaintext = "Same message";
+        let passphrase = "same-passphrase";
+
+        let encrypted1 = encrypt(plaintext, passphrase).expect("encryption should succeed");
+        let encrypted2 = encrypt(plaintext, passphrase).expect("encryption should succeed");
+
+        // Salt and nonce should differ, making ciphertext different
+        assert_ne!(encrypted1.salt, encrypted2.salt);
+        assert_ne!(encrypted1.nonce, encrypted2.nonce);
+        assert_ne!(encrypted1.ciphertext, encrypted2.ciphertext);
+    }
+
+    #[test]
+    fn test_empty_plaintext() {
+        let encrypted = encrypt("", "passphrase").expect("encryption should succeed");
+        let decrypted = decrypt(&encrypted, "passphrase").expect("decryption should succeed");
+        assert_eq!(decrypted, "");
+    }
+
+    #[test]
+    fn test_unicode_content() {
+        let plaintext = "Hello 世界 🔒 émojis";
+        let passphrase = "unicode-passphrase-日本語";
+
+        let encrypted = encrypt(plaintext, passphrase).expect("encryption should succeed");
+        let decrypted = decrypt(&encrypted, passphrase).expect("decryption should succeed");
+
+        assert_eq!(decrypted, plaintext);
+    }
+}
