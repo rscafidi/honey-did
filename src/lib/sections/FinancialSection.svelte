@@ -132,11 +132,11 @@
     <h3>Bank Accounts</h3>
     {#each financial.bank_accounts as account, i}
       <ItemCard title={account.name || 'New Account'} on:delete={() => removeBankAccount(i)}>
-        <FormField label="Account Name" value={account.name} on:change={(e) => updateBankAccount(i, 'name', e.target.value)} />
-        <FormField label="Institution" value={account.institution} on:change={(e) => updateBankAccount(i, 'institution', e.target.value)} />
-        <FormField label="Account Type" value={account.account_type} on:change={(e) => updateBankAccount(i, 'account_type', e.target.value)} />
-        <FormField label="Last 4 Digits" value={account.last_four} on:change={(e) => updateBankAccount(i, 'last_four', e.target.value)} />
-        <FormField label="Notes" type="textarea" value={account.notes} on:change={(e) => updateBankAccount(i, 'notes', e.target.value)} />
+        <FormField label="Account Name" value={account.name} on:change={(e) => updateBankAccount(i, 'name', e.detail.value)} />
+        <FormField label="Institution" value={account.institution} on:change={(e) => updateBankAccount(i, 'institution', e.detail.value)} />
+        <FormField label="Account Type" value={account.account_type} on:change={(e) => updateBankAccount(i, 'account_type', e.detail.value)} />
+        <FormField label="Last 4 Digits" value={account.last_four} on:change={(e) => updateBankAccount(i, 'last_four', e.detail.value)} />
+        <FormField label="Notes" type="textarea" value={account.notes} on:change={(e) => updateBankAccount(i, 'notes', e.detail.value)} />
       </ItemCard>
     {/each}
     <AddButton label="Add Bank Account" on:click={addBankAccount} />
@@ -146,10 +146,10 @@
     <h3>Credit Cards</h3>
     {#each financial.credit_cards as card, i}
       <ItemCard title={card.name || 'New Card'} on:delete={() => removeCreditCard(i)}>
-        <FormField label="Card Name" value={card.name} on:change={(e) => updateCreditCard(i, 'name', e.target.value)} />
-        <FormField label="Issuer" value={card.issuer} on:change={(e) => updateCreditCard(i, 'issuer', e.target.value)} />
-        <FormField label="Last 4 Digits" value={card.last_four} on:change={(e) => updateCreditCard(i, 'last_four', e.target.value)} />
-        <FormField label="Notes" type="textarea" value={card.notes} on:change={(e) => updateCreditCard(i, 'notes', e.target.value)} />
+        <FormField label="Card Name" value={card.name} on:change={(e) => updateCreditCard(i, 'name', e.detail.value)} />
+        <FormField label="Issuer" value={card.issuer} on:change={(e) => updateCreditCard(i, 'issuer', e.detail.value)} />
+        <FormField label="Last 4 Digits" value={card.last_four} on:change={(e) => updateCreditCard(i, 'last_four', e.detail.value)} />
+        <FormField label="Notes" type="textarea" value={card.notes} on:change={(e) => updateCreditCard(i, 'notes', e.detail.value)} />
       </ItemCard>
     {/each}
     <AddButton label="Add Credit Card" on:click={addCreditCard} />
@@ -159,10 +159,10 @@
     <h3>Investments</h3>
     {#each financial.investments as investment, i}
       <ItemCard title={investment.name || 'New Investment'} on:delete={() => removeInvestment(i)}>
-        <FormField label="Account Name" value={investment.name} on:change={(e) => updateInvestment(i, 'name', e.target.value)} />
-        <FormField label="Institution" value={investment.institution} on:change={(e) => updateInvestment(i, 'institution', e.target.value)} />
-        <FormField label="Account Type" value={investment.account_type} placeholder="401k, IRA, Brokerage, etc." on:change={(e) => updateInvestment(i, 'account_type', e.target.value)} />
-        <FormField label="Notes" type="textarea" value={investment.notes} on:change={(e) => updateInvestment(i, 'notes', e.target.value)} />
+        <FormField label="Account Name" value={investment.name} on:change={(e) => updateInvestment(i, 'name', e.detail.value)} />
+        <FormField label="Institution" value={investment.institution} on:change={(e) => updateInvestment(i, 'institution', e.detail.value)} />
+        <FormField label="Account Type" value={investment.account_type} placeholder="401k, IRA, Brokerage, etc." on:change={(e) => updateInvestment(i, 'account_type', e.detail.value)} />
+        <FormField label="Notes" type="textarea" value={investment.notes} on:change={(e) => updateInvestment(i, 'notes', e.detail.value)} />
       </ItemCard>
     {/each}
     <AddButton label="Add Investment Account" on:click={addInvestment} />
@@ -172,9 +172,9 @@
     <h3>Debts & Loans</h3>
     {#each financial.debts as debt, i}
       <ItemCard title={debt.name || 'New Debt'} on:delete={() => removeDebt(i)}>
-        <FormField label="Description" value={debt.name} on:change={(e) => updateDebt(i, 'name', e.target.value)} />
-        <FormField label="Lender" value={debt.lender} on:change={(e) => updateDebt(i, 'lender', e.target.value)} />
-        <FormField label="Notes" type="textarea" value={debt.notes} on:change={(e) => updateDebt(i, 'notes', e.target.value)} />
+        <FormField label="Description" value={debt.name} on:change={(e) => updateDebt(i, 'name', e.detail.value)} />
+        <FormField label="Lender" value={debt.lender} on:change={(e) => updateDebt(i, 'lender', e.detail.value)} />
+        <FormField label="Notes" type="textarea" value={debt.notes} on:change={(e) => updateDebt(i, 'notes', e.detail.value)} />
       </ItemCard>
     {/each}
     <AddButton label="Add Debt/Loan" on:click={addDebt} />

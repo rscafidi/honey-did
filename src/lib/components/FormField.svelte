@@ -1,22 +1,37 @@
 <script lang="ts">
+  import { createEventDispatcher } from 'svelte';
+
   export let label: string;
   export let value: string = '';
   export let type: 'text' | 'textarea' | 'checkbox' = 'text';
   export let placeholder: string = '';
   export let checked: boolean = false;
+
+  const dispatch = createEventDispatcher<{
+    change: { value: string; checked?: boolean };
+  }>();
+
+  function handleChange(e: Event) {
+    const target = e.target as HTMLInputElement | HTMLTextAreaElement;
+    if (type === 'checkbox') {
+      dispatch('change', { value: '', checked: (target as HTMLInputElement).checked });
+    } else {
+      dispatch('change', { value: target.value });
+    }
+  }
 </script>
 
 <div class="form-field" class:checkbox={type === 'checkbox'}>
   <label>
     {#if type === 'checkbox'}
-      <input type="checkbox" bind:checked on:change />
+      <input type="checkbox" bind:checked on:change={handleChange} />
       <span>{label}</span>
     {:else}
       <span class="label-text">{label}</span>
       {#if type === 'textarea'}
-        <textarea bind:value {placeholder} rows="2" on:change></textarea>
+        <textarea bind:value {placeholder} rows="2" on:change={handleChange}></textarea>
       {:else}
-        <input type="text" bind:value {placeholder} on:change />
+        <input type="text" bind:value {placeholder} on:change={handleChange} />
       {/if}
     {/if}
   </label>
