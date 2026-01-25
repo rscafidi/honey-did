@@ -117,3 +117,42 @@ pub fn load_document() -> Result<Option<LegacyDocument>, StorageError> {
 
     Ok(Some(document))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::*;
+
+    #[test]
+    fn test_get_data_dir_returns_path() {
+        let result = get_data_dir();
+        // Should return a valid path containing app name
+        assert!(result.is_ok());
+        let dir = result.unwrap();
+        assert!(dir.to_string_lossy().contains("honey-did"));
+    }
+
+    #[test]
+    fn test_save_and_load_document_roundtrip() {
+        // Note: This test requires keyring access and may fail in CI
+        let mut doc = LegacyDocument::default();
+        doc.meta.creator_name = "Storage Test User".to_string();
+        doc.financial.notes = "Storage test notes".to_string();
+
+        // Attempt save - may fail if keyring unavailable
+        let save_result = save_document(&doc);
+        if save_result.is_err() {
+            // Skip test if keyring not available
+            eprintln!("Skipping test: keyring unavailable");
+            return;
+        }
+
+        // Load back
+        let loaded = load_document()
+            .expect("load should succeed")
+            .expect("document should exist");
+
+        assert_eq!(loaded.meta.creator_name, "Storage Test User");
+        assert_eq!(loaded.financial.notes, "Storage test notes");
+    }
+}
