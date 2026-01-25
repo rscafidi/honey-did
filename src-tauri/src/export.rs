@@ -1366,3 +1366,92 @@ fn render_pets_section(pets: &crate::models::PetsSection) -> String {
 
     html
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::*;
+
+    fn create_test_document() -> LegacyDocument {
+        LegacyDocument {
+            meta: DocumentMeta {
+                creator_name: "Test User".to_string(),
+                created_at: "2026-01-25".to_string(),
+                updated_at: "2026-01-25".to_string(),
+            },
+            financial: FinancialSection {
+                bank_accounts: vec![BankAccount {
+                    name: "Checking Account".to_string(),
+                    institution: "Test Bank".to_string(),
+                    account_type: "Checking".to_string(),
+                    last_four: "1234".to_string(),
+                    notes: "Primary account".to_string(),
+                }],
+                credit_cards: vec![],
+                investments: vec![],
+                debts: vec![],
+                notes: "Financial notes".to_string(),
+            },
+            insurance: InsuranceSection::default(),
+            bills: BillsSection::default(),
+            property: PropertySection::default(),
+            legal: LegalSection::default(),
+            digital: DigitalSection::default(),
+            household: HouseholdSection::default(),
+            personal: PersonalSection::default(),
+            contacts: ContactsSection::default(),
+            medical: MedicalSection::default(),
+            pets: PetsSection::default(),
+        }
+    }
+
+    #[test]
+    fn test_export_import_roundtrip() {
+        let original = create_test_document();
+        let passphrase = "test-passphrase-123";
+
+        let html = generate_encrypted_html(&original, passphrase)
+            .expect("export should succeed");
+
+        assert!(html.contains("<!DOCTYPE html>"));
+        assert!(html.contains("ENCRYPTED_DATA"));
+        assert!(html.contains("Test User"));
+
+        let imported = import_from_html(&html, passphrase)
+            .expect("import should succeed");
+
+        assert_eq!(imported.meta.creator_name, original.meta.creator_name);
+        assert_eq!(imported.financial.bank_accounts.len(), 1);
+        assert_eq!(imported.financial.bank_accounts[0].name, "Checking Account");
+        assert_eq!(imported.financial.bank_accounts[0].institution, "Test Bank");
+        assert_eq!(imported.financial.notes, "Financial notes");
+    }
+
+    #[test]
+    fn test_import_wrong_passphrase_fails() {
+        let doc = create_test_document();
+        let html = generate_encrypted_html(&doc, "correct-passphrase")
+            .expect("export should succeed");
+
+        let result = import_from_html(&html, "wrong-passphrase");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_import_invalid_html_fails() {
+        let result = import_from_html("<html><body>No encrypted data</body></html>", "any");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_print_html_generation() {
+        let doc = create_test_document();
+        let html = generate_print_html(&doc);
+
+        assert!(html.contains("<!DOCTYPE html>"));
+        assert!(html.contains("Test User"));
+        assert!(html.contains("Checking Account"));
+        assert!(html.contains("Test Bank"));
+        assert!(!html.contains("ENCRYPTED_DATA"));
+    }
+}
