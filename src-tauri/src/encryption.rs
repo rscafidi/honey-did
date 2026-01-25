@@ -2,11 +2,16 @@ use argon2::Argon2;
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use rand::rngs::OsRng;
 use ring::aead::{Aad, LessSafeKey, Nonce, UnboundKey, AES_256_GCM};
+use ring::pbkdf2;
 use serde::{Deserialize, Serialize};
+use std::num::NonZeroU32;
 
 const ARGON2_MEMORY_COST: u32 = 65536; // 64 MB
 const ARGON2_TIME_COST: u32 = 3;
 const ARGON2_PARALLELISM: u32 = 4;
+
+// PBKDF2 iterations - high enough for security, compatible with Web Crypto
+const PBKDF2_ITERATIONS: u32 = 600_000;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EncryptedPayload {
@@ -93,6 +98,84 @@ pub fn encrypt(plaintext: &str, passphrase: &str) -> Result<EncryptedPayload, En
         nonce: BASE64.encode(nonce_bytes),
         ciphertext: BASE64.encode(in_out),
     })
+}
+
+/// Encrypts using PBKDF2 key derivation (compatible with Web Crypto API)
+/// Use this for data that needs to be decrypted in a browser
+pub fn encrypt_for_browser(plaintext: &str, passphrase: &str) -> Result<EncryptedPayload, EncryptionError> {
+    // Generate random salt and nonce
+    let salt = generate_salt();
+    let mut nonce_bytes = [0u8; 12];
+    use rand::RngCore;
+    OsRng.fill_bytes(&mut nonce_bytes);
+
+    // Derive key using PBKDF2 (Web Crypto compatible)
+    let mut key_bytes = [0u8; 32];
+    pbkdf2::derive(
+        pbkdf2::PBKDF2_HMAC_SHA256,
+        NonZeroU32::new(PBKDF2_ITERATIONS).unwrap(),
+        &salt,
+        passphrase.as_bytes(),
+        &mut key_bytes,
+    );
+
+    // Create AES-256-GCM key
+    let unbound_key = UnboundKey::new(&AES_256_GCM, &key_bytes)
+        .map_err(|_| EncryptionError::Encryption("Failed to create key".into()))?;
+    let key = LessSafeKey::new(unbound_key);
+
+    // Encrypt
+    let nonce = Nonce::assume_unique_for_key(nonce_bytes);
+    let mut in_out = plaintext.as_bytes().to_vec();
+    key.seal_in_place_append_tag(nonce, Aad::empty(), &mut in_out)
+        .map_err(|_| EncryptionError::Encryption("Encryption failed".into()))?;
+
+    Ok(EncryptedPayload {
+        salt: BASE64.encode(salt),
+        nonce: BASE64.encode(nonce_bytes),
+        ciphertext: BASE64.encode(in_out),
+    })
+}
+
+/// Decrypts using PBKDF2 key derivation (compatible with Web Crypto API)
+/// Use this for data encrypted with encrypt_for_browser
+pub fn decrypt_from_browser(payload: &EncryptedPayload, passphrase: &str) -> Result<String, EncryptionError> {
+    // Decode base64 values
+    let salt = BASE64
+        .decode(&payload.salt)
+        .map_err(|_| EncryptionError::InvalidData("Invalid salt".into()))?;
+    let nonce_bytes: [u8; 12] = BASE64
+        .decode(&payload.nonce)
+        .map_err(|_| EncryptionError::InvalidData("Invalid nonce".into()))?
+        .try_into()
+        .map_err(|_| EncryptionError::InvalidData("Nonce wrong length".into()))?;
+    let mut ciphertext = BASE64
+        .decode(&payload.ciphertext)
+        .map_err(|_| EncryptionError::InvalidData("Invalid ciphertext".into()))?;
+
+    // Derive key using PBKDF2 (Web Crypto compatible)
+    let mut key_bytes = [0u8; 32];
+    pbkdf2::derive(
+        pbkdf2::PBKDF2_HMAC_SHA256,
+        NonZeroU32::new(PBKDF2_ITERATIONS).unwrap(),
+        &salt,
+        passphrase.as_bytes(),
+        &mut key_bytes,
+    );
+
+    // Create AES-256-GCM key
+    let unbound_key = UnboundKey::new(&AES_256_GCM, &key_bytes)
+        .map_err(|_| EncryptionError::Decryption("Failed to create key".into()))?;
+    let key = LessSafeKey::new(unbound_key);
+
+    // Decrypt
+    let nonce = Nonce::assume_unique_for_key(nonce_bytes);
+    let plaintext = key
+        .open_in_place(nonce, Aad::empty(), &mut ciphertext)
+        .map_err(|_| EncryptionError::Decryption("Decryption failed - wrong passphrase?".into()))?;
+
+    String::from_utf8(plaintext.to_vec())
+        .map_err(|_| EncryptionError::Decryption("Invalid UTF-8".into()))
 }
 
 /// Decrypts an encrypted payload using a passphrase
@@ -182,5 +265,42 @@ mod tests {
         let decrypted = decrypt(&encrypted, passphrase).expect("decryption should succeed");
 
         assert_eq!(decrypted, plaintext);
+    }
+
+    #[test]
+    fn test_browser_encrypt_decrypt_roundtrip() {
+        let plaintext = "Browser-compatible encryption test!";
+        let passphrase = "browser-test-passphrase";
+
+        let encrypted = encrypt_for_browser(plaintext, passphrase)
+            .expect("browser encryption should succeed");
+        let decrypted = decrypt_from_browser(&encrypted, passphrase)
+            .expect("browser decryption should succeed");
+
+        assert_eq!(decrypted, plaintext);
+    }
+
+    #[test]
+    fn test_browser_wrong_passphrase_fails() {
+        let plaintext = "Secret data";
+        let encrypted = encrypt_for_browser(plaintext, "correct")
+            .expect("encryption should succeed");
+
+        let result = decrypt_from_browser(&encrypted, "wrong");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_browser_encryption_produces_unique_output() {
+        let plaintext = "Same message";
+        let passphrase = "same-pass";
+
+        let enc1 = encrypt_for_browser(plaintext, passphrase).unwrap();
+        let enc2 = encrypt_for_browser(plaintext, passphrase).unwrap();
+
+        // Salt and nonce should differ
+        assert_ne!(enc1.salt, enc2.salt);
+        assert_ne!(enc1.nonce, enc2.nonce);
+        assert_ne!(enc1.ciphertext, enc2.ciphertext);
     }
 }
