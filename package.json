@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "npx @tauri-apps/cli"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^3.0.0",

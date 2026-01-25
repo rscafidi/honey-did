@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { document } from './lib/stores/document';
+  import FinancialSection from './lib/sections/FinancialSection.svelte';
 
   type Section =
     | 'financial' | 'insurance' | 'bills' | 'property' | 'legal'
@@ -65,8 +66,11 @@
       <h2>{sections.find((s) => s.id === currentSection)?.label}</h2>
     </header>
     <div class="content-body">
-      <!-- Section content will go here -->
-      <p>Section content for {currentSection}</p>
+      {#if currentSection === 'financial'}
+        <FinancialSection />
+      {:else}
+        <p>Section content for {currentSection} coming soon...</p>
+      {/if}
     </div>
   </section>
 </main>
