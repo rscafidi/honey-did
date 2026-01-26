@@ -253,8 +253,21 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
                 html += '<p>Prepared by ' + escapeHtml(data.meta.creator_name) + '</p>';
             }}
             html += '<div class="toolbar">';
-            html += '<input type="text" id="searchInput" class="search-input" placeholder="Search..." oninput="search(this.value)">';
+            html += '<input type="text" id="searchInput" class="search-input" placeholder="Search..." oninput="debounceSearch(this.value)">';
             html += '<button class="print-btn" onclick="window.print()">Print</button>';
+            html += '</div>';
+            html += '<div class="search-controls" id="searchControls" style="display:none;">';
+            html += '<div class="search-nav">';
+            html += '<button onclick="prevMatch()" id="prevBtn" disabled>◀</button>';
+            html += '<button onclick="nextMatch()" id="nextBtn" disabled>▶</button>';
+            html += '<span class="search-counter" id="searchCounter"></span>';
+            html += '</div>';
+            html += '<div class="search-filters">';
+            html += '<span class="search-filter active" data-type="exact" onclick="toggleFilter(this)">Exact (<span id="exactCount">0</span>)</span>';
+            html += '<span class="search-filter active" data-type="contains" onclick="toggleFilter(this)">Contains (<span id="containsCount">0</span>)</span>';
+            html += '<span class="search-filter active" data-type="spelling" onclick="toggleFilter(this)">Spelling (<span id="spellingCount">0</span>)</span>';
+            html += '<span class="search-filter active" data-type="phonetic" onclick="toggleFilter(this)">Sounds-like (<span id="phoneticCount">0</span>)</span>';
+            html += '</div>';
             html += '</div></div>';
 
             // Table of Contents
