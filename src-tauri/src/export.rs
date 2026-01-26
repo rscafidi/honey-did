@@ -90,71 +90,71 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-        body {{ font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; background: #F8FAFC; color: #1E293B; }}
-        .lock-screen {{ display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); }}
+        body {{ font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; background: #F0EFEB; color: #283618; }}
+        .lock-screen {{ display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; background: linear-gradient(145deg, #F0EFEB 0%, #D4D4D4 100%); }}
         .lock-icon {{ font-size: 4rem; margin-bottom: 1rem; }}
-        .lock-title {{ font-size: 1.75rem; font-weight: 600; color: #92400E; margin-bottom: 0.5rem; }}
-        .lock-subtitle {{ color: #78716C; margin-bottom: 2rem; font-size: 0.95rem; }}
+        .lock-title {{ font-size: 1.75rem; font-weight: 600; color: #283618; margin-bottom: 0.5rem; }}
+        .lock-subtitle {{ color: #606C38; margin-bottom: 2rem; font-size: 0.95rem; }}
         .password-form {{ display: flex; flex-direction: column; gap: 1rem; width: 100%; max-width: 320px; }}
-        .password-input {{ padding: 14px 16px; font-size: 1rem; border: 2px solid #E2E8F0; border-radius: 10px; text-align: center; background: white; transition: border-color 0.2s, box-shadow 0.2s; }}
-        .password-input:focus {{ outline: none; border-color: #D97706; box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.1); }}
-        .unlock-btn {{ padding: 14px 28px; font-size: 1rem; font-weight: 500; background: #B45309; color: white; border: none; border-radius: 10px; cursor: pointer; transition: background 0.2s, transform 0.1s; }}
-        .unlock-btn:hover {{ background: #92400E; }}
+        .password-input {{ padding: 14px 16px; font-size: 1rem; border: 2px solid #D4D4D4; border-radius: 10px; text-align: center; background: white; transition: border-color 0.2s, box-shadow 0.2s; }}
+        .password-input:focus {{ outline: none; border-color: #283618; box-shadow: 0 0 0 3px rgba(40, 54, 24, 0.1); }}
+        .unlock-btn {{ padding: 14px 28px; font-size: 1rem; font-weight: 500; background: #283618; color: #F0EFEB; border: none; border-radius: 10px; cursor: pointer; transition: background 0.2s, transform 0.1s; }}
+        .unlock-btn:hover {{ background: #1a2410; }}
         .unlock-btn:active {{ transform: scale(0.98); }}
-        .error {{ color: #DC2626; margin-top: 1rem; font-size: 0.9rem; }}
+        .error {{ color: #9B2C2C; margin-top: 1rem; font-size: 0.9rem; }}
         .content {{ display: none; width: 100%; }}
         .content.visible {{ display: block; width: 100%; }}
         .layout {{ display: flex; min-height: 100vh; width: 100%; }}
         .container {{ width: 100%; }}
-        .sidebar {{ width: 280px; min-width: 280px; background: #FFFFFF; border-right: 1px solid #E2E8F0; height: 100vh; position: fixed; left: 0; top: 0; overflow-y: auto; display: flex; flex-direction: column; z-index: 100; }}
-        .sidebar-header {{ padding: 24px 20px; border-bottom: 1px solid #E2E8F0; background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%); }}
-        .sidebar-title {{ font-size: 1.25rem; font-weight: 600; color: #92400E; margin-bottom: 0.25rem; }}
-        .sidebar-subtitle {{ font-size: 0.8rem; color: #78716C; }}
-        .sidebar-search {{ padding: 16px; border-bottom: 1px solid #E2E8F0; }}
+        .sidebar {{ width: 280px; min-width: 280px; background: #FFFFFF; border-right: 1px solid #D4D4D4; height: 100vh; position: fixed; left: 0; top: 0; overflow-y: auto; display: flex; flex-direction: column; z-index: 100; }}
+        .sidebar-header {{ padding: 24px 20px; border-bottom: 1px solid #D4D4D4; background: #283618; }}
+        .sidebar-title {{ font-size: 1.25rem; font-weight: 600; color: #F0EFEB; margin-bottom: 0.25rem; }}
+        .sidebar-subtitle {{ font-size: 0.8rem; color: #B7B7A4; }}
+        .sidebar-search {{ padding: 16px; border-bottom: 1px solid #D4D4D4; }}
         .search-wrapper {{ position: relative; display: flex; align-items: center; }}
-        .search-input {{ width: 100%; padding: 10px 36px 10px 14px; border: 1px solid #E2E8F0; border-radius: 8px; font-size: 0.9rem; background: #F8FAFC; transition: border-color 0.2s, box-shadow 0.2s; }}
-        .search-input:focus {{ outline: none; border-color: #D97706; box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.1); background: white; }}
-        .search-clear {{ position: absolute; right: 10px; background: none; border: none; cursor: pointer; color: #94A3B8; font-size: 1.1rem; padding: 0 4px; line-height: 1; transition: color 0.2s; }}
-        .search-clear:hover {{ color: #475569; }}
+        .search-input {{ width: 100%; padding: 10px 36px 10px 14px; border: 1px solid #D4D4D4; border-radius: 8px; font-size: 0.9rem; background: #F0EFEB; transition: border-color 0.2s, box-shadow 0.2s; }}
+        .search-input:focus {{ outline: none; border-color: #283618; box-shadow: 0 0 0 3px rgba(40, 54, 24, 0.1); background: white; }}
+        .search-clear {{ position: absolute; right: 10px; background: none; border: none; cursor: pointer; color: #B7B7A4; font-size: 1.1rem; padding: 0 4px; line-height: 1; transition: color 0.2s; }}
+        .search-clear:hover {{ color: #283618; }}
         .search-clear.hidden {{ display: none; }}
-        .search-controls {{ padding: 12px 16px; border-bottom: 1px solid #E2E8F0; display: none; background: #F8FAFC; }}
+        .search-controls {{ padding: 12px 16px; border-bottom: 1px solid #D4D4D4; display: none; background: #F0EFEB; }}
         .search-controls.visible {{ display: block; }}
         .search-nav {{ display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }}
-        .search-nav button {{ padding: 6px 12px; border: 1px solid #E2E8F0; background: white; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; }}
-        .search-nav button:hover:not(:disabled) {{ background: #F1F5F9; border-color: #CBD5E1; }}
+        .search-nav button {{ padding: 6px 12px; border: 1px solid #D4D4D4; background: white; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; }}
+        .search-nav button:hover:not(:disabled) {{ background: #F0EFEB; border-color: #B7B7A4; }}
         .search-nav button:disabled {{ opacity: 0.4; cursor: not-allowed; }}
-        .search-counter {{ color: #64748B; font-size: 0.85rem; font-weight: 500; }}
+        .search-counter {{ color: #606C38; font-size: 0.85rem; font-weight: 500; }}
         .search-filters {{ display: flex; gap: 6px; flex-wrap: wrap; }}
-        .search-filter {{ padding: 4px 8px; border: 1px solid #E2E8F0; background: white; border-radius: 6px; font-size: 0.75rem; font-weight: 500; cursor: pointer; user-select: none; transition: all 0.2s; }}
-        .search-filter.active {{ background: #0F766E; color: white; border-color: #0F766E; }}
+        .search-filter {{ padding: 4px 8px; border: 1px solid #D4D4D4; background: white; border-radius: 6px; font-size: 0.75rem; font-weight: 500; cursor: pointer; user-select: none; transition: all 0.2s; }}
+        .search-filter.active {{ background: #283618; color: #F0EFEB; border-color: #283618; }}
         .search-filter.disabled {{ opacity: 0.4; cursor: not-allowed; }}
         .sidebar-nav {{ flex: 1; overflow-y: auto; padding: 16px; }}
-        .nav-title {{ font-weight: 600; font-size: 0.7rem; text-transform: uppercase; color: #94A3B8; margin-bottom: 0.75rem; letter-spacing: 0.05em; }}
+        .nav-title {{ font-weight: 600; font-size: 0.7rem; text-transform: uppercase; color: #B7B7A4; margin-bottom: 0.75rem; letter-spacing: 0.05em; }}
         .nav-list {{ list-style: none; }}
         .nav-list li {{ margin: 2px 0; }}
-        .nav-list a {{ color: #475569; text-decoration: none; display: block; padding: 8px 12px; border-radius: 6px; font-size: 0.9rem; font-weight: 500; transition: all 0.2s; }}
-        .nav-list a:hover {{ background: #F1F5F9; color: #B45309; }}
-        .sidebar-footer {{ padding: 16px; border-top: 1px solid #E2E8F0; }}
-        .print-btn {{ width: 100%; padding: 12px 16px; background: #475569; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: background 0.2s; }}
-        .print-btn:hover {{ background: #334155; }}
+        .nav-list a {{ color: #283618; text-decoration: none; display: block; padding: 8px 12px; border-radius: 6px; font-size: 0.9rem; font-weight: 500; transition: all 0.2s; }}
+        .nav-list a:hover {{ background: #F0EFEB; color: #606C38; }}
+        .sidebar-footer {{ padding: 16px; border-top: 1px solid #D4D4D4; }}
+        .print-btn {{ width: 100%; padding: 12px 16px; background: #B7B7A4; color: #283618; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: background 0.2s; }}
+        .print-btn:hover {{ background: #a3a392; }}
         .main-content {{ flex: 1; margin-left: 280px; padding: 24px 40px; }}
-        .section {{ background: white; padding: 24px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06); border: 1px solid #E2E8F0; }}
-        .section-title {{ font-size: 1.15rem; font-weight: 600; color: #1E293B; border-bottom: 2px solid #D97706; padding-bottom: 0.75rem; margin-bottom: 1.25rem; }}
-        .item {{ background: #F8FAFC; padding: 16px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #E2E8F0; }}
-        .item-title {{ font-weight: 600; color: #1E293B; margin-bottom: 0.5rem; }}
-        .item-detail {{ color: #64748B; font-size: 0.9rem; }}
-        .notes {{ background: #FFFBEB; padding: 12px 14px; border-radius: 8px; margin-top: 1rem; font-style: italic; color: #92400E; border-left: 3px solid #D97706; }}
-        .match-badge {{ font-size: 0.65rem; font-weight: 500; color: #64748B; background: #E2E8F0; padding: 2px 6px; border-radius: 4px; margin-left: 4px; vertical-align: middle; text-transform: lowercase; }}
-        .highlight {{ background: #FEF08A; padding: 1px 2px; border-radius: 2px; }}
-        .highlight.current {{ background: #FCD34D; outline: 2px solid #D97706; }}
-        .menu-toggle {{ display: none; position: fixed; top: 12px; left: 12px; z-index: 200; background: #B45309; color: white; border: none; border-radius: 8px; padding: 10px 14px; cursor: pointer; font-weight: 500; font-size: 0.9rem; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }}
+        .section {{ background: white; padding: 24px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(40,54,24,0.08), 0 1px 2px rgba(40,54,24,0.04); border: 1px solid #D4D4D4; }}
+        .section-title {{ font-size: 1.15rem; font-weight: 600; color: #283618; border-bottom: 2px solid #283618; padding-bottom: 0.75rem; margin-bottom: 1.25rem; }}
+        .item {{ background: #F0EFEB; padding: 16px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #D4D4D4; }}
+        .item-title {{ font-weight: 600; color: #283618; margin-bottom: 0.5rem; }}
+        .item-detail {{ color: #606C38; font-size: 0.9rem; }}
+        .notes {{ background: #F0EFEB; padding: 12px 14px; border-radius: 8px; margin-top: 1rem; font-style: italic; color: #283618; border-left: 3px solid #B7B7A4; }}
+        .match-badge {{ font-size: 0.65rem; font-weight: 500; color: #606C38; background: #D4D4D4; padding: 2px 6px; border-radius: 4px; margin-left: 4px; vertical-align: middle; text-transform: lowercase; }}
+        .highlight {{ background: #DDE5B6; padding: 1px 2px; border-radius: 2px; }}
+        .highlight.current {{ background: #ADC178; outline: 2px solid #283618; }}
+        .menu-toggle {{ display: none; position: fixed; top: 12px; left: 12px; z-index: 200; background: #283618; color: #F0EFEB; border: none; border-radius: 8px; padding: 10px 14px; cursor: pointer; font-weight: 500; font-size: 0.9rem; box-shadow: 0 2px 8px rgba(40,54,24,0.2); }}
         @media (max-width: 768px) {{
             .menu-toggle {{ display: block; }}
             .sidebar {{ transform: translateX(-100%); transition: transform 0.3s ease; }}
-            .sidebar.open {{ transform: translateX(0); box-shadow: 4px 0 20px rgba(0,0,0,0.15); }}
+            .sidebar.open {{ transform: translateX(0); box-shadow: 4px 0 20px rgba(40,54,24,0.15); }}
             .main-content {{ margin-left: 0; padding: 70px 16px 20px 16px; }}
         }}
-        @media print {{ .sidebar, .menu-toggle {{ display: none; }} .main-content {{ margin-left: 0; }} .section {{ break-inside: avoid; box-shadow: none; border: 1px solid #ddd; }} }}
+        @media print {{ .sidebar, .menu-toggle {{ display: none; }} .main-content {{ margin-left: 0; }} .section {{ break-inside: avoid; box-shadow: none; border: 1px solid #D4D4D4; }} }}
     </style>
 </head>
 <body>
