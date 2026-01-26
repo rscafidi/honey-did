@@ -1,6 +1,8 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { document } from './lib/stores/document';
+  import { onMount, onDestroy } from 'svelte';
+  import { invoke } from '@tauri-apps/api/core';
+  import { getCurrentWindow } from '@tauri-apps/api/window';
+  import { document, isDocumentEmpty, setPasswordRequired } from './lib/stores/document';
   import FinancialSection from './lib/sections/FinancialSection.svelte';
   import InsuranceSection from './lib/sections/InsuranceSection.svelte';
   import BillsSection from './lib/sections/BillsSection.svelte';
@@ -15,7 +17,9 @@
   import ExportDialog from './lib/components/ExportDialog.svelte';
   import ImportDialog from './lib/components/ImportDialog.svelte';
   import GuidedWizard from './lib/wizard/GuidedWizard.svelte';
-  import { isDocumentEmpty } from './lib/stores/document';
+  import LockScreen from './lib/components/LockScreen.svelte';
+  import SetPasswordModal from './lib/components/SetPasswordModal.svelte';
+  import SettingsModal from './lib/components/SettingsModal.svelte';
 
   type Section =
     | 'financial' | 'insurance' | 'bills' | 'property' | 'legal'
@@ -26,6 +30,13 @@
   let showImportDialog = false;
   let isGuidedMode = false;
   let hasCheckedEmpty = false;
+
+  // Password protection state
+  let isLocked = false;
+  let hasPassword = false;
+  let showSetPasswordModal = false;
+  let showSettings = false;
+  let isLoading = true;
 
   const sections: { id: Section; label: string; icon: string }[] = [
     { id: 'financial', label: 'Financial', icon: '💰' },
@@ -47,11 +58,46 @@
   }
 
   onMount(async () => {
+    // Check if app has a password set
+    try {
+      hasPassword = await invoke<boolean>('has_app_password');
+      if (hasPassword) {
+        isLocked = true;
+      }
+    } catch (e) {
+      console.error('Failed to check password status:', e);
+    }
+
+    isLoading = false;
+
+    if (!isLocked) {
+      await document.load();
+      // Auto-enter guided mode for empty documents
+      if (!hasCheckedEmpty) {
+        hasCheckedEmpty = true;
+        setTimeout(() => {
+          const doc = $document;
+          if (isDocumentEmpty(doc)) {
+            isGuidedMode = true;
+          }
+        }, 100);
+      }
+    }
+
+    // Set up password requirement callback
+    setPasswordRequired(() => {
+      if (!hasPassword) {
+        showSetPasswordModal = true;
+      }
+    });
+  });
+
+  async function handleUnlock() {
+    isLocked = false;
     await document.load();
-    // Auto-enter guided mode for empty documents
+    // Check for empty document after unlock
     if (!hasCheckedEmpty) {
       hasCheckedEmpty = true;
-      // Use setTimeout to check after store is populated
       setTimeout(() => {
         const doc = $document;
         if (isDocumentEmpty(doc)) {
@@ -59,7 +105,21 @@
         }
       }, 100);
     }
-  });
+  }
+
+  function handleDataCleared() {
+    // Reset app state after data is cleared
+    hasPassword = false;
+    isLocked = false;
+    isGuidedMode = true;
+    hasCheckedEmpty = true;
+    document.load();
+  }
+
+  function handlePasswordCreated() {
+    hasPassword = true;
+    showSetPasswordModal = false;
+  }
 
   function enterGuidedMode() {
     isGuidedMode = true;
@@ -68,9 +128,36 @@
   function exitGuidedMode() {
     isGuidedMode = false;
   }
+
+  // Window close handler for "Clear on Exit" feature
+  let unlistenClose: (() => void) | null = null;
+
+  onMount(async () => {
+    const appWindow = getCurrentWindow();
+    unlistenClose = await appWindow.onCloseRequested(async (event) => {
+      try {
+        const clearOnExit = await invoke<boolean>('get_clear_on_exit');
+        if (clearOnExit) {
+          await invoke('clear_data_on_exit');
+        }
+      } catch (e) {
+        console.error('Error during close:', e);
+      }
+    });
+  });
+
+  onDestroy(() => {
+    if (unlistenClose) {
+      unlistenClose();
+    }
+  });
 </script>
 
-{#if isGuidedMode}
+{#if isLoading}
+  <div class="loading">Loading...</div>
+{:else if isLocked}
+  <LockScreen on:unlock={handleUnlock} on:cleared={handleDataCleared} />
+{:else if isGuidedMode}
   <GuidedWizard on:exit={exitGuidedMode} />
 {:else}
   <main class="app">
@@ -92,9 +179,14 @@
         {/each}
       </nav>
       <div class="sidebar-footer">
-        <button class="btn btn-outline" on:click={enterGuidedMode}>
-          Guided Setup
-        </button>
+        <div class="footer-row">
+          <button class="btn btn-outline flex-1" on:click={enterGuidedMode}>
+            Guided Setup
+          </button>
+          <button class="btn-icon" on:click={() => (showSettings = true)} title="Settings">
+            ⚙️
+          </button>
+        </div>
         <button class="btn btn-secondary" on:click={() => (showImportDialog = true)}>
           Import File
         </button>
@@ -153,7 +245,29 @@
   }}
 />
 
+<SetPasswordModal
+  bind:isOpen={showSetPasswordModal}
+  on:created={handlePasswordCreated}
+  on:cancel={() => (showSetPasswordModal = false)}
+/>
+
+<SettingsModal
+  bind:isOpen={showSettings}
+  on:close={() => (showSettings = false)}
+  on:cleared={handleDataCleared}
+/>
+
 <style>
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background: #f5f5f5;
+    font-size: 1.2rem;
+    color: #666;
+  }
+
   .app {
     display: flex;
     height: 100vh;
@@ -236,6 +350,32 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
+  }
+
+  .footer-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .flex-1 {
+    flex: 1;
+  }
+
+  .btn-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: #f0f0f0;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1.2rem;
+  }
+
+  .btn-icon:hover {
+    background: #e0e0e0;
   }
 
   .btn {

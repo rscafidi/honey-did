@@ -31,7 +31,20 @@
       "Bash(rustc:*)",
       "Bash(python3:*)",
       "Bash(convert:*)",
-      "Bash(npx tauri icon:*)"
+      "Bash(npx tauri icon:*)",
+      "Bash(npm run tauri:*)",
+      "Bash(git config:*)",
+      "Bash(cargo --version:*)",
+      "Bash(CARGO_NET_OFFLINE=true cargo check:*)",
+      "Bash(rustfmt:*)",
+      "Bash(find:*)",
+      "Bash(wc:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(cargo test:*)",
+      "Bash(npx svelte-check)",
+      "Bash(git push:*)",
+      "Bash(cargo build:*)",
+      "Bash(git init:*)"
     ]
   }
 }

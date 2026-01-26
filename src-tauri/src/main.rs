@@ -114,6 +114,87 @@ fn generate_passphrase() -> String {
     selected.join("-")
 }
 
+#[tauri::command]
+fn set_app_password(password: String) -> Result<(), String> {
+    let hash = storage::hash_password(&password).map_err(|e| e.to_string())?;
+    storage::save_password_hash(&hash).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+fn verify_app_password(password: String) -> Result<bool, String> {
+    let hash = storage::load_password_hash()
+        .map_err(|e| e.to_string())?
+        .ok_or("No password set")?;
+    storage::verify_password(&password, &hash).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn has_app_password() -> Result<bool, String> {
+    let hash = storage::load_password_hash().map_err(|e| e.to_string())?;
+    Ok(hash.is_some())
+}
+
+#[tauri::command]
+fn change_app_password(old_password: String, new_password: String) -> Result<(), String> {
+    // Verify old password first
+    let hash = storage::load_password_hash()
+        .map_err(|e| e.to_string())?
+        .ok_or("No password set")?;
+    let valid = storage::verify_password(&old_password, &hash).map_err(|e| e.to_string())?;
+    if !valid {
+        return Err("Incorrect password".to_string());
+    }
+    // Set new password
+    let new_hash = storage::hash_password(&new_password).map_err(|e| e.to_string())?;
+    storage::save_password_hash(&new_hash).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+fn clear_all_data(state: State<AppState>, password: String) -> Result<(), String> {
+    // Check if password exists
+    let hash = storage::load_password_hash().map_err(|e| e.to_string())?;
+
+    // If password exists, verify it
+    if let Some(h) = hash {
+        let valid = storage::verify_password(&password, &h).map_err(|e| e.to_string())?;
+        if !valid {
+            return Err("Incorrect password".to_string());
+        }
+    }
+    // If no password set, allow clearing without verification
+
+    // Clear everything
+    storage::delete_document().map_err(|e| e.to_string())?;
+    storage::delete_password_hash().map_err(|e| e.to_string())?;
+    storage::delete_settings().map_err(|e| e.to_string())?;
+    // Reset in-memory state
+    let mut doc = state.document.lock().map_err(|e| e.to_string())?;
+    *doc = LegacyDocument::default();
+    Ok(())
+}
+
+#[tauri::command]
+fn get_clear_on_exit() -> Result<bool, String> {
+    storage::load_settings().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn set_clear_on_exit(enabled: bool) -> Result<(), String> {
+    storage::save_settings(enabled).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn clear_data_on_exit(state: State<AppState>) -> Result<(), String> {
+    storage::delete_document().map_err(|e| e.to_string())?;
+    storage::delete_password_hash().map_err(|e| e.to_string())?;
+    storage::delete_settings().map_err(|e| e.to_string())?;
+    let mut doc = state.document.lock().map_err(|e| e.to_string())?;
+    *doc = LegacyDocument::default();
+    Ok(())
+}
+
 fn main() {
     // Try to load existing document, or create new one
     let document = storage::load_document()
@@ -137,6 +218,14 @@ fn main() {
             read_file,
             merge_document,
             generate_passphrase,
+            set_app_password,
+            verify_app_password,
+            has_app_password,
+            change_app_password,
+            clear_all_data,
+            get_clear_on_exit,
+            set_clear_on_exit,
+            clear_data_on_exit,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

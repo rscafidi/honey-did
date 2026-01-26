@@ -1,5 +1,9 @@
 use crate::encryption::{decrypt, encrypt, EncryptedPayload, EncryptionError};
 use crate::models::LegacyDocument;
+use argon2::{
+    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    Argon2,
+};
 use directories::ProjectDirs;
 use keyring::Entry;
 use std::fs;
@@ -116,6 +120,105 @@ pub fn load_document() -> Result<Option<LegacyDocument>, StorageError> {
         .map_err(|e| StorageError::SerializationError(e.to_string()))?;
 
     Ok(Some(document))
+}
+
+/// Hashes a password using Argon2id
+pub fn hash_password(password: &str) -> Result<String, StorageError> {
+    let salt = SaltString::generate(&mut OsRng);
+    let argon2 = Argon2::default();
+    let hash = argon2
+        .hash_password(password.as_bytes(), &salt)
+        .map_err(|e| StorageError::KeyringError(format!("Password hashing failed: {}", e)))?;
+    Ok(hash.to_string())
+}
+
+/// Verifies a password against a stored hash
+pub fn verify_password(password: &str, hash: &str) -> Result<bool, StorageError> {
+    let parsed_hash = PasswordHash::new(hash)
+        .map_err(|e| StorageError::KeyringError(format!("Invalid hash format: {}", e)))?;
+    Ok(Argon2::default()
+        .verify_password(password.as_bytes(), &parsed_hash)
+        .is_ok())
+}
+
+/// Saves the app password hash
+pub fn save_password_hash(hash: &str) -> Result<(), StorageError> {
+    let data_dir = get_data_dir()?;
+    fs::create_dir_all(&data_dir)
+        .map_err(|e| StorageError::IoError(e.to_string()))?;
+    let file_path = data_dir.join("password.hash");
+    fs::write(&file_path, hash)
+        .map_err(|e| StorageError::IoError(e.to_string()))?;
+    Ok(())
+}
+
+/// Loads the app password hash if it exists
+pub fn load_password_hash() -> Result<Option<String>, StorageError> {
+    let data_dir = get_data_dir()?;
+    let file_path = data_dir.join("password.hash");
+    if !file_path.exists() {
+        return Ok(None);
+    }
+    let hash = fs::read_to_string(&file_path)
+        .map_err(|e| StorageError::IoError(e.to_string()))?;
+    Ok(Some(hash))
+}
+
+/// Deletes the password hash file
+pub fn delete_password_hash() -> Result<(), StorageError> {
+    let data_dir = get_data_dir()?;
+    let file_path = data_dir.join("password.hash");
+    if file_path.exists() {
+        fs::remove_file(&file_path)
+            .map_err(|e| StorageError::IoError(e.to_string()))?;
+    }
+    Ok(())
+}
+
+/// Deletes the document file
+pub fn delete_document() -> Result<(), StorageError> {
+    let data_dir = get_data_dir()?;
+    let file_path = data_dir.join("document.encrypted");
+    if file_path.exists() {
+        fs::remove_file(&file_path)
+            .map_err(|e| StorageError::IoError(e.to_string()))?;
+    }
+    Ok(())
+}
+
+/// Saves settings to a JSON file
+pub fn save_settings(clear_on_exit: bool) -> Result<(), StorageError> {
+    let data_dir = get_data_dir()?;
+    fs::create_dir_all(&data_dir)
+        .map_err(|e| StorageError::IoError(e.to_string()))?;
+    let file_path = data_dir.join("settings.json");
+    let json = format!(r#"{{"clear_on_exit":{}}}"#, clear_on_exit);
+    fs::write(&file_path, json)
+        .map_err(|e| StorageError::IoError(e.to_string()))?;
+    Ok(())
+}
+
+/// Loads settings from JSON file
+pub fn load_settings() -> Result<bool, StorageError> {
+    let data_dir = get_data_dir()?;
+    let file_path = data_dir.join("settings.json");
+    if !file_path.exists() {
+        return Ok(false);
+    }
+    let json = fs::read_to_string(&file_path)
+        .map_err(|e| StorageError::IoError(e.to_string()))?;
+    Ok(json.contains("true"))
+}
+
+/// Deletes settings file
+pub fn delete_settings() -> Result<(), StorageError> {
+    let data_dir = get_data_dir()?;
+    let file_path = data_dir.join("settings.json");
+    if file_path.exists() {
+        fs::remove_file(&file_path)
+            .map_err(|e| StorageError::IoError(e.to_string()))?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]

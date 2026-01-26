@@ -121,7 +121,15 @@ function createDocumentStore() {
     ) => {
       update((doc) => {
         if (doc) {
+          const wasEmpty = isDocumentEmpty(doc);
           const updated = { ...doc, [section]: data };
+          const nowHasData = !isDocumentEmpty(updated);
+
+          // Trigger password prompt if transitioning from empty to having data
+          if (wasEmpty && nowHasData && passwordRequiredCallback) {
+            passwordRequiredCallback();
+          }
+
           invoke('update_document', { document: updated }).catch(console.error);
           return updated;
         }
@@ -132,6 +140,19 @@ function createDocumentStore() {
 }
 
 export const document = createDocumentStore();
+
+// Password requirement callback - called when user tries to modify data
+let passwordRequiredCallback: (() => void) | null = null;
+
+export function setPasswordRequired(callback: () => void): void {
+  passwordRequiredCallback = callback;
+}
+
+export function triggerPasswordRequired(): void {
+  if (passwordRequiredCallback) {
+    passwordRequiredCallback();
+  }
+}
 
 export function isDocumentEmpty(doc: LegacyDocument | null): boolean {
   if (!doc) return true;
