@@ -694,58 +694,68 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
             }}
         }}
 
-        function search(term) {{
-            const content = document.getElementById('documentContent');
-
-            // Remove existing highlights by replacing mark elements with their text content
-            const marks = content.querySelectorAll('mark.highlight');
-            marks.forEach(mark => {{
-                const parent = mark.parentNode;
-                parent.replaceChild(document.createTextNode(mark.textContent), mark);
-                parent.normalize();
-            }});
-
-            if (term && term.length > 1) {{
-                const regex = new RegExp(term.replace(/[.*+?^${{}}()|[\]\\]/g, '\\$&'), 'gi');
-                highlightTextNodes(content, regex);
-            }}
+        let searchTimeout;
+        function debounceSearch(term) {{
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => performSearch(term), 300);
         }}
 
-        function highlightTextNodes(element, regex) {{
-            // Skip the search input and toolbar
-            if (element.classList && element.classList.contains('toolbar')) return;
+        function performSearch(term) {{
+            clearHighlights();
+            searchState.term = term.toLowerCase();
+            searchState.matches = [];
+            searchState.currentIndex = -1;
 
-            const childNodes = Array.from(element.childNodes);
-            childNodes.forEach(node => {{
-                if (node.nodeType === Node.TEXT_NODE) {{
-                    const text = node.textContent;
-                    if (regex.test(text)) {{
-                        regex.lastIndex = 0; // Reset regex
-                        const fragment = document.createDocumentFragment();
-                        let lastIndex = 0;
-                        let match;
-                        while ((match = regex.exec(text)) !== null) {{
-                            // Add text before match
-                            if (match.index > lastIndex) {{
-                                fragment.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
-                            }}
-                            // Add highlighted match
-                            const mark = document.createElement('mark');
-                            mark.className = 'highlight';
-                            mark.textContent = match[0];
-                            fragment.appendChild(mark);
-                            lastIndex = regex.lastIndex;
-                        }}
-                        // Add remaining text
-                        if (lastIndex < text.length) {{
-                            fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
-                        }}
-                        node.parentNode.replaceChild(fragment, node);
-                    }}
-                }} else if (node.nodeType === Node.ELEMENT_NODE) {{
-                    highlightTextNodes(node, regex);
+            if (!term || term.length < 2) {{
+                document.getElementById('searchControls').style.display = 'none';
+                updateSearchUI();
+                return;
+            }}
+
+            document.getElementById('searchControls').style.display = 'flex';
+            const termMeta = metaphone(term);
+            const matchMap = new Map();
+
+            searchIndex.forEach(entry => {{
+                const key = entry.node.textContent + '|' + entry.text;
+                if (matchMap.has(key)) return;
+
+                const wordLower = entry.lowerText;
+                const termLower = term.toLowerCase();
+
+                if (wordLower === termLower) {{
+                    matchMap.set(key, {{ ...entry, type: 'exact' }});
+                    return;
+                }}
+
+                if (term.length >= 3 && wordLower.includes(termLower)) {{
+                    matchMap.set(key, {{ ...entry, type: 'contains' }});
+                    return;
+                }}
+
+                const maxDist = term.length >= 8 ? 3 : 2;
+                const dist = levenshtein(wordLower, termLower);
+                if (dist > 0 && dist <= maxDist) {{
+                    matchMap.set(key, {{ ...entry, type: 'spelling', distance: dist }});
+                    return;
+                }}
+
+                if (term.length >= 3 && termMeta && entry.metaphone === termMeta) {{
+                    matchMap.set(key, {{ ...entry, type: 'phonetic' }});
                 }}
             }});
+
+            const typeOrder = {{ exact: 0, contains: 1, spelling: 2, phonetic: 3 }};
+            searchState.matches = Array.from(matchMap.values())
+                .sort((a, b) => typeOrder[a.type] - typeOrder[b.type]);
+
+            highlightMatches();
+            updateSearchUI();
+
+            if (getVisibleMatches().length > 0) {{
+                searchState.currentIndex = 0;
+                scrollToCurrentMatch();
+            }}
         }}
     </script>
 </body>
