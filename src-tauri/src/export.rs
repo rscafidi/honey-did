@@ -2077,6 +2077,7 @@ mod tests {
             contacts: ContactsSection::default(),
             medical: MedicalSection::default(),
             pets: PetsSection::default(),
+            welcome_screen: None,
         }
     }
 
@@ -2085,7 +2086,7 @@ mod tests {
         let original = create_test_document();
         let passphrase = "test-passphrase-123";
 
-        let html = generate_encrypted_html(&original, passphrase)
+        let html = generate_encrypted_html(&original, passphrase, false)
             .expect("export should succeed");
 
         assert!(html.contains("<!DOCTYPE html>"));
@@ -2105,7 +2106,7 @@ mod tests {
     #[test]
     fn test_import_wrong_passphrase_fails() {
         let doc = create_test_document();
-        let html = generate_encrypted_html(&doc, "correct-passphrase")
+        let html = generate_encrypted_html(&doc, "correct-passphrase", false)
             .expect("export should succeed");
 
         let result = import_from_html(&html, "wrong-passphrase");
