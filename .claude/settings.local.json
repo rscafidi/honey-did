@@ -46,7 +46,8 @@
       "Bash(cargo build:*)",
       "Bash(git init:*)",
       "Bash(npm run check:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(file:*)"
     ]
   }
 }
