@@ -120,7 +120,19 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
         .item-title {{ font-weight: bold; margin-bottom: 0.5rem; }}
         .item-detail {{ color: #666; font-size: 0.9rem; }}
         .notes {{ background: #fff3cd; padding: 10px; border-radius: 4px; margin-top: 1rem; font-style: italic; }}
-        .highlight {{ background: yellow; }}
+        .search-controls {{ display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-top: 0.5rem; }}
+        .search-nav {{ display: flex; align-items: center; gap: 0.5rem; }}
+        .search-nav button {{ padding: 4px 10px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 1rem; }}
+        .search-nav button:hover:not(:disabled) {{ background: #f0f0f0; }}
+        .search-nav button:disabled {{ opacity: 0.5; cursor: not-allowed; }}
+        .search-counter {{ color: #666; font-size: 0.9rem; min-width: 100px; }}
+        .search-filters {{ display: flex; gap: 0.5rem; flex-wrap: wrap; }}
+        .search-filter {{ padding: 4px 8px; border: 1px solid #ddd; background: #f8f9fa; border-radius: 4px; font-size: 0.8rem; cursor: pointer; user-select: none; }}
+        .search-filter.active {{ background: #007bff; color: white; border-color: #007bff; }}
+        .search-filter.disabled {{ opacity: 0.5; cursor: not-allowed; }}
+        .match-badge {{ font-size: 0.7rem; color: #666; background: #e9ecef; padding: 1px 4px; border-radius: 3px; margin-left: 2px; vertical-align: middle; }}
+        .highlight {{ background: #ffeb3b; padding: 1px 0; }}
+        .highlight.current {{ background: #ff9800; outline: 2px solid #e65100; }}
         @media print {{ .toolbar, .toc {{ display: none; }} .section {{ break-inside: avoid; }} }}
     </style>
 </head>
@@ -544,26 +556,57 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
         }}
 
         function search(term) {{
-            const searchInput = document.getElementById('searchInput');
-            const currentValue = searchInput ? searchInput.value : '';
             const content = document.getElementById('documentContent');
 
-            // Remove existing highlights
-            content.innerHTML = content.innerHTML.replace(/<mark class="highlight">(.*?)<\/mark>/g, '$1');
+            // Remove existing highlights by replacing mark elements with their text content
+            const marks = content.querySelectorAll('mark.highlight');
+            marks.forEach(mark => {{
+                const parent = mark.parentNode;
+                parent.replaceChild(document.createTextNode(mark.textContent), mark);
+                parent.normalize();
+            }});
 
             if (term && term.length > 1) {{
-                const regex = new RegExp(`(${{term.replace(/[.*+?^${{}}()|[\]\\]/g, '\\$&')}})`, 'gi');
-                content.innerHTML = content.innerHTML.replace(regex, '<mark class="highlight">$1</mark>');
+                const regex = new RegExp(term.replace(/[.*+?^${{}}()|[\]\\]/g, '\\$&'), 'gi');
+                highlightTextNodes(content, regex);
             }}
+        }}
 
-            // Restore search input focus and value after innerHTML replacement
-            const newSearchInput = document.getElementById('searchInput');
-            if (newSearchInput) {{
-                newSearchInput.value = currentValue;
-                newSearchInput.focus();
-                // Move cursor to end
-                newSearchInput.setSelectionRange(currentValue.length, currentValue.length);
-            }}
+        function highlightTextNodes(element, regex) {{
+            // Skip the search input and toolbar
+            if (element.classList && element.classList.contains('toolbar')) return;
+
+            const childNodes = Array.from(element.childNodes);
+            childNodes.forEach(node => {{
+                if (node.nodeType === Node.TEXT_NODE) {{
+                    const text = node.textContent;
+                    if (regex.test(text)) {{
+                        regex.lastIndex = 0; // Reset regex
+                        const fragment = document.createDocumentFragment();
+                        let lastIndex = 0;
+                        let match;
+                        while ((match = regex.exec(text)) !== null) {{
+                            // Add text before match
+                            if (match.index > lastIndex) {{
+                                fragment.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+                            }}
+                            // Add highlighted match
+                            const mark = document.createElement('mark');
+                            mark.className = 'highlight';
+                            mark.textContent = match[0];
+                            fragment.appendChild(mark);
+                            lastIndex = regex.lastIndex;
+                        }}
+                        // Add remaining text
+                        if (lastIndex < text.length) {{
+                            fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+                        }}
+                        node.parentNode.replaceChild(fragment, node);
+                    }}
+                }} else if (node.nodeType === Node.ELEMENT_NODE) {{
+                    highlightTextNodes(node, regex);
+                }}
+            }});
         }}
     </script>
 </body>
