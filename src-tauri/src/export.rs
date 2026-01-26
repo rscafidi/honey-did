@@ -757,6 +757,70 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
                 scrollToCurrentMatch();
             }}
         }}
+
+        function clearHighlights() {{
+            document.querySelectorAll('mark.highlight').forEach(mark => {{
+                const parent = mark.parentNode;
+                const badge = mark.nextSibling;
+                if (badge && badge.classList && badge.classList.contains('match-badge')) {{
+                    badge.remove();
+                }}
+                parent.replaceChild(document.createTextNode(mark.textContent), mark);
+                parent.normalize();
+            }});
+        }}
+
+        function highlightMatches() {{
+            const visible = getVisibleMatches();
+            const termLower = searchState.term.toLowerCase();
+
+            visible.forEach((match, idx) => {{
+                const node = match.node;
+                const text = node.textContent;
+                const regex = new RegExp('(' + match.text.replace(/[.*+?^${{}}()|[\]\\]/g, '\\$&') + ')', 'gi');
+
+                if (!regex.test(text)) return;
+                regex.lastIndex = 0;
+
+                const fragment = document.createDocumentFragment();
+                let lastIndex = 0;
+                let m;
+
+                while ((m = regex.exec(text)) !== null) {{
+                    if (m.index > lastIndex) {{
+                        fragment.appendChild(document.createTextNode(text.slice(lastIndex, m.index)));
+                    }}
+
+                    const mark = document.createElement('mark');
+                    mark.className = 'highlight';
+                    mark.dataset.matchIndex = idx;
+                    mark.dataset.matchType = match.type;
+                    mark.textContent = m[0];
+                    fragment.appendChild(mark);
+
+                    const badge = document.createElement('span');
+                    badge.className = 'match-badge';
+                    badge.textContent = match.type === 'spelling' ? '~spelling' :
+                                       match.type === 'phonetic' ? 'sounds like' : match.type;
+                    fragment.appendChild(badge);
+
+                    lastIndex = regex.lastIndex;
+                    break;
+                }}
+
+                if (lastIndex < text.length) {{
+                    fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+                }}
+
+                if (lastIndex > 0) {{
+                    node.parentNode.replaceChild(fragment, node);
+                }}
+            }});
+        }}
+
+        function getVisibleMatches() {{
+            return searchState.matches.filter(m => searchState.filters[m.type]);
+        }}
     </script>
 </body>
 </html>"##,
