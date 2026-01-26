@@ -84,79 +84,84 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>honey-did - Legacy Document</title>
+    <title>Honey Did - Legacy Document</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; background: #f5f5f5; color: #333; }}
-        .lock-screen {{ display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; }}
+        body {{ font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; background: #F8FAFC; color: #1E293B; }}
+        .lock-screen {{ display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); }}
         .lock-icon {{ font-size: 4rem; margin-bottom: 1rem; }}
-        .lock-title {{ font-size: 1.5rem; margin-bottom: 0.5rem; }}
-        .lock-subtitle {{ color: #666; margin-bottom: 2rem; }}
-        .password-form {{ display: flex; flex-direction: column; gap: 1rem; width: 100%; max-width: 300px; }}
-        .password-input {{ padding: 12px; font-size: 1rem; border: 2px solid #ddd; border-radius: 8px; text-align: center; }}
-        .password-input:focus {{ outline: none; border-color: #007bff; }}
-        .unlock-btn {{ padding: 12px 24px; font-size: 1rem; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; }}
-        .unlock-btn:hover {{ background: #0056b3; }}
-        .error {{ color: #dc3545; margin-top: 1rem; }}
+        .lock-title {{ font-size: 1.75rem; font-weight: 600; color: #92400E; margin-bottom: 0.5rem; }}
+        .lock-subtitle {{ color: #78716C; margin-bottom: 2rem; font-size: 0.95rem; }}
+        .password-form {{ display: flex; flex-direction: column; gap: 1rem; width: 100%; max-width: 320px; }}
+        .password-input {{ padding: 14px 16px; font-size: 1rem; border: 2px solid #E2E8F0; border-radius: 10px; text-align: center; background: white; transition: border-color 0.2s, box-shadow 0.2s; }}
+        .password-input:focus {{ outline: none; border-color: #D97706; box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.1); }}
+        .unlock-btn {{ padding: 14px 28px; font-size: 1rem; font-weight: 500; background: #B45309; color: white; border: none; border-radius: 10px; cursor: pointer; transition: background 0.2s, transform 0.1s; }}
+        .unlock-btn:hover {{ background: #92400E; }}
+        .unlock-btn:active {{ transform: scale(0.98); }}
+        .error {{ color: #DC2626; margin-top: 1rem; font-size: 0.9rem; }}
         .content {{ display: none; width: 100%; }}
         .content.visible {{ display: block; width: 100%; }}
         .layout {{ display: flex; min-height: 100vh; width: 100%; }}
         .container {{ width: 100%; }}
-        .sidebar {{ width: 280px; min-width: 280px; background: white; border-right: 1px solid #ddd; height: 100vh; position: fixed; left: 0; top: 0; overflow-y: auto; display: flex; flex-direction: column; z-index: 100; }}
-        .sidebar-header {{ padding: 20px; border-bottom: 1px solid #eee; }}
-        .sidebar-title {{ font-size: 1.25rem; margin-bottom: 0.25rem; }}
-        .sidebar-subtitle {{ font-size: 0.85rem; color: #666; }}
-        .sidebar-search {{ padding: 15px; border-bottom: 1px solid #eee; }}
+        .sidebar {{ width: 280px; min-width: 280px; background: #FFFFFF; border-right: 1px solid #E2E8F0; height: 100vh; position: fixed; left: 0; top: 0; overflow-y: auto; display: flex; flex-direction: column; z-index: 100; }}
+        .sidebar-header {{ padding: 24px 20px; border-bottom: 1px solid #E2E8F0; background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%); }}
+        .sidebar-title {{ font-size: 1.25rem; font-weight: 600; color: #92400E; margin-bottom: 0.25rem; }}
+        .sidebar-subtitle {{ font-size: 0.8rem; color: #78716C; }}
+        .sidebar-search {{ padding: 16px; border-bottom: 1px solid #E2E8F0; }}
         .search-wrapper {{ position: relative; display: flex; align-items: center; }}
-        .search-input {{ width: 100%; padding: 8px 32px 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem; }}
-        .search-clear {{ position: absolute; right: 8px; background: none; border: none; cursor: pointer; color: #999; font-size: 1.1rem; padding: 0 4px; line-height: 1; }}
-        .search-clear:hover {{ color: #333; }}
+        .search-input {{ width: 100%; padding: 10px 36px 10px 14px; border: 1px solid #E2E8F0; border-radius: 8px; font-size: 0.9rem; background: #F8FAFC; transition: border-color 0.2s, box-shadow 0.2s; }}
+        .search-input:focus {{ outline: none; border-color: #D97706; box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.1); background: white; }}
+        .search-clear {{ position: absolute; right: 10px; background: none; border: none; cursor: pointer; color: #94A3B8; font-size: 1.1rem; padding: 0 4px; line-height: 1; transition: color 0.2s; }}
+        .search-clear:hover {{ color: #475569; }}
         .search-clear.hidden {{ display: none; }}
-        .search-controls {{ padding: 10px 15px; border-bottom: 1px solid #eee; display: none; }}
+        .search-controls {{ padding: 12px 16px; border-bottom: 1px solid #E2E8F0; display: none; background: #F8FAFC; }}
         .search-controls.visible {{ display: block; }}
-        .search-nav {{ display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }}
-        .search-nav button {{ padding: 4px 10px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 1rem; }}
-        .search-nav button:hover:not(:disabled) {{ background: #f0f0f0; }}
-        .search-nav button:disabled {{ opacity: 0.5; cursor: not-allowed; }}
-        .search-counter {{ color: #666; font-size: 0.85rem; }}
-        .search-filters {{ display: flex; gap: 0.25rem; flex-wrap: wrap; }}
-        .search-filter {{ padding: 3px 6px; border: 1px solid #ddd; background: #f8f9fa; border-radius: 4px; font-size: 0.75rem; cursor: pointer; user-select: none; }}
-        .search-filter.active {{ background: #007bff; color: white; border-color: #007bff; }}
-        .search-filter.disabled {{ opacity: 0.5; cursor: not-allowed; }}
-        .sidebar-nav {{ flex: 1; overflow-y: auto; padding: 15px; }}
-        .nav-title {{ font-weight: bold; font-size: 0.8rem; text-transform: uppercase; color: #666; margin-bottom: 0.75rem; letter-spacing: 0.5px; }}
+        .search-nav {{ display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }}
+        .search-nav button {{ padding: 6px 12px; border: 1px solid #E2E8F0; background: white; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; }}
+        .search-nav button:hover:not(:disabled) {{ background: #F1F5F9; border-color: #CBD5E1; }}
+        .search-nav button:disabled {{ opacity: 0.4; cursor: not-allowed; }}
+        .search-counter {{ color: #64748B; font-size: 0.85rem; font-weight: 500; }}
+        .search-filters {{ display: flex; gap: 6px; flex-wrap: wrap; }}
+        .search-filter {{ padding: 4px 8px; border: 1px solid #E2E8F0; background: white; border-radius: 6px; font-size: 0.75rem; font-weight: 500; cursor: pointer; user-select: none; transition: all 0.2s; }}
+        .search-filter.active {{ background: #0F766E; color: white; border-color: #0F766E; }}
+        .search-filter.disabled {{ opacity: 0.4; cursor: not-allowed; }}
+        .sidebar-nav {{ flex: 1; overflow-y: auto; padding: 16px; }}
+        .nav-title {{ font-weight: 600; font-size: 0.7rem; text-transform: uppercase; color: #94A3B8; margin-bottom: 0.75rem; letter-spacing: 0.05em; }}
         .nav-list {{ list-style: none; }}
-        .nav-list li {{ margin: 0.25rem 0; }}
-        .nav-list a {{ color: #333; text-decoration: none; display: block; padding: 6px 10px; border-radius: 4px; font-size: 0.9rem; }}
-        .nav-list a:hover {{ background: #f0f0f0; color: #007bff; }}
-        .sidebar-footer {{ padding: 15px; border-top: 1px solid #eee; }}
-        .print-btn {{ width: 100%; padding: 10px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }}
-        .print-btn:hover {{ background: #218838; }}
-        .main-content {{ flex: 1; margin-left: 280px; padding: 20px 40px; }}
-        .section {{ background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
-        .section-title {{ font-size: 1.25rem; border-bottom: 2px solid #007bff; padding-bottom: 0.5rem; margin-bottom: 1rem; }}
-        .item {{ background: #f8f9fa; padding: 15px; border-radius: 4px; margin-bottom: 10px; }}
-        .item-title {{ font-weight: bold; margin-bottom: 0.5rem; }}
-        .item-detail {{ color: #666; font-size: 0.9rem; }}
-        .notes {{ background: #fff3cd; padding: 10px; border-radius: 4px; margin-top: 1rem; font-style: italic; }}
-        .match-badge {{ font-size: 0.7rem; color: #666; background: #e9ecef; padding: 1px 4px; border-radius: 3px; margin-left: 2px; vertical-align: middle; }}
-        .highlight {{ background: #ffeb3b; padding: 1px 0; }}
-        .highlight.current {{ background: #ff9800; outline: 2px solid #e65100; }}
-        .menu-toggle {{ display: none; position: fixed; top: 10px; left: 10px; z-index: 200; background: #007bff; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; }}
+        .nav-list li {{ margin: 2px 0; }}
+        .nav-list a {{ color: #475569; text-decoration: none; display: block; padding: 8px 12px; border-radius: 6px; font-size: 0.9rem; font-weight: 500; transition: all 0.2s; }}
+        .nav-list a:hover {{ background: #F1F5F9; color: #B45309; }}
+        .sidebar-footer {{ padding: 16px; border-top: 1px solid #E2E8F0; }}
+        .print-btn {{ width: 100%; padding: 12px 16px; background: #475569; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: background 0.2s; }}
+        .print-btn:hover {{ background: #334155; }}
+        .main-content {{ flex: 1; margin-left: 280px; padding: 24px 40px; }}
+        .section {{ background: white; padding: 24px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06); border: 1px solid #E2E8F0; }}
+        .section-title {{ font-size: 1.15rem; font-weight: 600; color: #1E293B; border-bottom: 2px solid #D97706; padding-bottom: 0.75rem; margin-bottom: 1.25rem; }}
+        .item {{ background: #F8FAFC; padding: 16px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #E2E8F0; }}
+        .item-title {{ font-weight: 600; color: #1E293B; margin-bottom: 0.5rem; }}
+        .item-detail {{ color: #64748B; font-size: 0.9rem; }}
+        .notes {{ background: #FFFBEB; padding: 12px 14px; border-radius: 8px; margin-top: 1rem; font-style: italic; color: #92400E; border-left: 3px solid #D97706; }}
+        .match-badge {{ font-size: 0.65rem; font-weight: 500; color: #64748B; background: #E2E8F0; padding: 2px 6px; border-radius: 4px; margin-left: 4px; vertical-align: middle; text-transform: lowercase; }}
+        .highlight {{ background: #FEF08A; padding: 1px 2px; border-radius: 2px; }}
+        .highlight.current {{ background: #FCD34D; outline: 2px solid #D97706; }}
+        .menu-toggle {{ display: none; position: fixed; top: 12px; left: 12px; z-index: 200; background: #B45309; color: white; border: none; border-radius: 8px; padding: 10px 14px; cursor: pointer; font-weight: 500; font-size: 0.9rem; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }}
         @media (max-width: 768px) {{
             .menu-toggle {{ display: block; }}
             .sidebar {{ transform: translateX(-100%); transition: transform 0.3s ease; }}
-            .sidebar.open {{ transform: translateX(0); box-shadow: 2px 0 10px rgba(0,0,0,0.2); }}
-            .main-content {{ margin-left: 0; padding: 60px 15px 15px 15px; }}
+            .sidebar.open {{ transform: translateX(0); box-shadow: 4px 0 20px rgba(0,0,0,0.15); }}
+            .main-content {{ margin-left: 0; padding: 70px 16px 20px 16px; }}
         }}
-        @media print {{ .sidebar, .menu-toggle {{ display: none; }} .main-content {{ margin-left: 0; }} .section {{ break-inside: avoid; }} }}
+        @media print {{ .sidebar, .menu-toggle {{ display: none; }} .main-content {{ margin-left: 0; }} .section {{ break-inside: avoid; box-shadow: none; border: 1px solid #ddd; }} }}
     </style>
 </head>
 <body>
     <div id="lockScreen" class="lock-screen">
-        <div class="lock-icon">🔒</div>
-        <h1 class="lock-title">honey-did</h1>
-        <p class="lock-subtitle">This file was created by {creator_name}<br>to help you in their absence.</p>
+        <div class="lock-icon">🔐</div>
+        <h1 class="lock-title">Honey Did</h1>
+        <p class="lock-subtitle">This document was prepared by {creator_name}<br>to help you in their absence.</p>
         <form class="password-form" onsubmit="return unlock(event)">
             <input type="password" id="passphrase" class="password-input" placeholder="Enter passphrase" autofocus>
             <button type="submit" class="unlock-btn">Unlock</button>
@@ -274,9 +279,9 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
 
             // Sidebar header
             html += '<div class="sidebar-header">';
-            html += '<div class="sidebar-title">Legacy Document</div>';
+            html += '<div class="sidebar-title">Honey Did</div>';
             if (data.meta && data.meta.creator_name) {{
-                html += '<div class="sidebar-subtitle">Prepared by ' + escapeHtml(data.meta.creator_name) + '</div>';
+                html += '<div class="sidebar-subtitle">By ' + escapeHtml(data.meta.creator_name) + '</div>';
             }}
             html += '</div>';
 
@@ -317,7 +322,7 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
 
             // Sidebar footer with print button
             html += '<div class="sidebar-footer">';
-            html += '<button class="print-btn" onclick="window.print()">🖨️ Print Document</button>';
+            html += '<button class="print-btn" onclick="window.print()">Print Document</button>';
             html += '</div>';
 
             html += '</div>'; // End sidebar
