@@ -106,7 +106,11 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
         .header {{ background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; }}
         .header-title {{ font-size: 1.5rem; }}
         .toolbar {{ display: flex; gap: 1rem; margin-top: 1rem; }}
-        .search-input {{ flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; }}
+        .search-wrapper {{ flex: 1; position: relative; display: flex; align-items: center; }}
+        .search-input {{ width: 100%; padding: 8px 32px 8px 12px; border: 1px solid #ddd; border-radius: 4px; }}
+        .search-clear {{ position: absolute; right: 8px; background: none; border: none; cursor: pointer; color: #999; font-size: 1.1rem; padding: 0 4px; line-height: 1; }}
+        .search-clear:hover {{ color: #333; }}
+        .search-clear.hidden {{ display: none; }}
         .print-btn {{ padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; }}
         .toc {{ background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
         .toc-title {{ font-weight: bold; margin-bottom: 1rem; }}
@@ -253,7 +257,10 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
                 html += '<p>Prepared by ' + escapeHtml(data.meta.creator_name) + '</p>';
             }}
             html += '<div class="toolbar">';
-            html += '<input type="text" id="searchInput" class="search-input" placeholder="Search..." oninput="debounceSearch(this.value)">';
+            html += '<div class="search-wrapper">';
+            html += '<input type="text" id="searchInput" class="search-input" placeholder="Search..." oninput="debounceSearch(this.value)" onkeydown="if(event.key===\'Escape\')clearSearch()">';
+            html += '<button class="search-clear hidden" id="searchClear" onclick="clearSearch()" title="Clear search (Esc)">✕</button>';
+            html += '</div>';
             html += '<button class="print-btn" onclick="window.print()">Print</button>';
             html += '</div>';
             html += '<div class="search-controls" id="searchControls" style="display:none;">';
@@ -697,7 +704,25 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
         let searchTimeout;
         function debounceSearch(term) {{
             clearTimeout(searchTimeout);
+            const clearBtn = document.getElementById('searchClear');
+            if (term) {{
+                clearBtn.classList.remove('hidden');
+            }} else {{
+                clearBtn.classList.add('hidden');
+            }}
             searchTimeout = setTimeout(() => performSearch(term), 300);
+        }}
+
+        function clearSearch() {{
+            const input = document.getElementById('searchInput');
+            input.value = '';
+            document.getElementById('searchClear').classList.add('hidden');
+            clearTimeout(searchTimeout);
+            clearHighlights();
+            document.getElementById('searchControls').style.display = 'none';
+            searchState.term = '';
+            searchState.matches = [];
+            searchState.currentIndex = -1;
         }}
 
         function performSearch(term) {{
