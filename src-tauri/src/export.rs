@@ -793,7 +793,8 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
                 // Find positions of all matches in this node
                 const highlights = [];
                 for (const m of matches) {{
-                    const regex = new RegExp(m.text.replace(/[.*+?^${{}}()|[\]\\]/g, '\\$&'), 'i');
+                    // Use word boundaries to match whole words only
+                    const regex = new RegExp('\\b' + m.text.replace(/[.*+?^${{}}()|[\]\\]/g, '\\$&') + '\\b', 'i');
                     const result = regex.exec(text);
                     if (result) {{
                         highlights.push({{
