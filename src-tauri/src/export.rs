@@ -103,7 +103,7 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
         .error {{ color: #dc3545; margin-top: 1rem; }}
         .content {{ display: none; }}
         .content.visible {{ display: block; }}
-        .header {{ background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
+        .header {{ background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; }}
         .header-title {{ font-size: 1.5rem; }}
         .toolbar {{ display: flex; gap: 1rem; margin-top: 1rem; }}
         .search-input {{ flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; }}
@@ -702,9 +702,11 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
 
         function performSearch(term) {{
             clearHighlights();
+            buildSearchIndex();
             searchState.term = term.toLowerCase();
             searchState.matches = [];
             searchState.currentIndex = -1;
+            searchState.filters = {{ exact: true, contains: true, spelling: true, phonetic: true }};
 
             if (!term || term.length < 2) {{
                 document.getElementById('searchControls').style.display = 'none';
@@ -836,9 +838,9 @@ function updateSearchUI() {{
         if (counts[type] === 0) {{
             el.classList.add('disabled');
             el.classList.remove('active');
-            searchState.filters[type] = false;
         }} else {{
             el.classList.remove('disabled');
+            el.classList.toggle('active', searchState.filters[type]);
         }}
     }});
 
@@ -903,7 +905,48 @@ function toggleFilter(el) {{
     searchState.filters[type] = !searchState.filters[type];
     el.classList.toggle('active', searchState.filters[type]);
 
+    // Clear and rebuild index since nodes were replaced
     clearHighlights();
+    buildSearchIndex();
+
+    // Re-run matching with current term
+    const term = searchState.term;
+    const termMeta = metaphone(term);
+    const matchMap = new Map();
+
+    searchIndex.forEach(entry => {{
+        const key = entry.node.textContent + '|' + entry.text;
+        if (matchMap.has(key)) return;
+
+        const wordLower = entry.lowerText;
+        const termLower = term.toLowerCase();
+
+        if (wordLower === termLower) {{
+            matchMap.set(key, {{ ...entry, type: 'exact' }});
+            return;
+        }}
+
+        if (term.length >= 3 && wordLower.includes(termLower)) {{
+            matchMap.set(key, {{ ...entry, type: 'contains' }});
+            return;
+        }}
+
+        const maxDist = term.length >= 8 ? 3 : 2;
+        const dist = levenshtein(wordLower, termLower);
+        if (dist > 0 && dist <= maxDist) {{
+            matchMap.set(key, {{ ...entry, type: 'spelling', distance: dist }});
+            return;
+        }}
+
+        if (term.length >= 3 && termMeta && entry.metaphone === termMeta) {{
+            matchMap.set(key, {{ ...entry, type: 'phonetic' }});
+        }}
+    }});
+
+    const typeOrder = {{ exact: 0, contains: 1, spelling: 2, phonetic: 3 }};
+    searchState.matches = Array.from(matchMap.values())
+        .sort((a, b) => typeOrder[a.type] - typeOrder[b.type]);
+
     highlightMatches();
 
     const visible = getVisibleMatches();
