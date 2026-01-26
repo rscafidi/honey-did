@@ -577,6 +577,73 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
             return matrix[b.length][a.length];
         }}
 
+        function metaphone(word) {{
+            if (!word || word.length < 2) return '';
+            word = word.toUpperCase().replace(/[^A-Z]/g, '');
+            if (!word) return '';
+
+            const start = word.slice(0, 2);
+            if (['KN', 'GN', 'PN', 'AE', 'WR'].includes(start)) word = word.slice(1);
+            if (word[0] === 'X') word = 'S' + word.slice(1);
+            if (start === 'WH') word = 'W' + word.slice(2);
+
+            let result = '';
+            let i = 0;
+            const len = word.length;
+
+            while (i < len && result.length < 6) {{
+                const c = word[i];
+                const next = word[i + 1] || '';
+                const prev = word[i - 1] || '';
+
+                if ('AEIOU'.includes(c)) {{
+                    if (i === 0) result += c;
+                }} else if (c === 'B') {{
+                    if (!(i === len - 1 && prev === 'M')) result += 'B';
+                }} else if (c === 'C') {{
+                    if (next === 'H') {{ result += 'X'; i++; }}
+                    else if ('IEY'.includes(next)) result += 'S';
+                    else result += 'K';
+                }} else if (c === 'D') {{
+                    if (next === 'G' && 'IEY'.includes(word[i + 2] || '')) {{ result += 'J'; i++; }}
+                    else result += 'T';
+                }} else if (c === 'G') {{
+                    if (next === 'H') {{ if (!'AEIOU'.includes(word[i + 2] || '')) i++; }}
+                    else if (next === 'N' && word[i + 2] === 'E' && word[i + 3] === 'D') {{}}
+                    else if ('IEY'.includes(next)) result += 'J';
+                    else result += 'K';
+                }} else if (c === 'H') {{
+                    if ('AEIOU'.includes(next) && !'CSPTG'.includes(prev)) result += 'H';
+                }} else if (c === 'K') {{
+                    if (prev !== 'C') result += 'K';
+                }} else if (c === 'P') {{
+                    result += (next === 'H') ? (i++, 'F') : 'P';
+                }} else if (c === 'Q') {{
+                    result += 'K';
+                }} else if (c === 'S') {{
+                    if (next === 'H') {{ result += 'X'; i++; }}
+                    else if (next === 'I' && 'OA'.includes(word[i + 2] || '')) {{ result += 'X'; i++; }}
+                    else result += 'S';
+                }} else if (c === 'T') {{
+                    if (next === 'H') {{ result += '0'; i++; }}
+                    else if (next === 'I' && 'OA'.includes(word[i + 2] || '')) {{ result += 'X'; i++; }}
+                    else result += 'T';
+                }} else if (c === 'V') {{
+                    result += 'F';
+                }} else if (c === 'W' || c === 'Y') {{
+                    if ('AEIOU'.includes(next)) result += c;
+                }} else if (c === 'X') {{
+                    result += 'KS';
+                }} else if (c === 'Z') {{
+                    result += 'S';
+                }} else if ('FJLMNR'.includes(c)) {{
+                    result += c;
+                }}
+                i++;
+            }}
+            return result;
+        }}
+
         function search(term) {{
             const content = document.getElementById('documentContent');
 
