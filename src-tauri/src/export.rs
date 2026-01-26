@@ -821,6 +821,102 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
         function getVisibleMatches() {{
             return searchState.matches.filter(m => searchState.filters[m.type]);
         }}
+
+function updateSearchUI() {{
+    const counts = {{ exact: 0, contains: 0, spelling: 0, phonetic: 0 }};
+    searchState.matches.forEach(m => counts[m.type]++);
+
+    document.getElementById('exactCount').textContent = counts.exact;
+    document.getElementById('containsCount').textContent = counts.contains;
+    document.getElementById('spellingCount').textContent = counts.spelling;
+    document.getElementById('phoneticCount').textContent = counts.phonetic;
+
+    ['exact', 'contains', 'spelling', 'phonetic'].forEach(type => {{
+        const el = document.querySelector(`.search-filter[data-type="${{type}}"]`);
+        if (counts[type] === 0) {{
+            el.classList.add('disabled');
+            el.classList.remove('active');
+            searchState.filters[type] = false;
+        }} else {{
+            el.classList.remove('disabled');
+        }}
+    }});
+
+    const visible = getVisibleMatches();
+    const counter = document.getElementById('searchCounter');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+
+    if (visible.length === 0) {{
+        counter.textContent = 'No matches';
+        prevBtn.disabled = true;
+        nextBtn.disabled = true;
+    }} else {{
+        const current = searchState.currentIndex + 1;
+        counter.textContent = `Match ${{current}} of ${{visible.length}}`;
+        prevBtn.disabled = visible.length <= 1;
+        nextBtn.disabled = visible.length <= 1;
+    }}
+
+    updateCurrentHighlight();
+}}
+
+function updateCurrentHighlight() {{
+    document.querySelectorAll('mark.highlight.current').forEach(el => el.classList.remove('current'));
+    const visible = getVisibleMatches();
+    if (searchState.currentIndex >= 0 && searchState.currentIndex < visible.length) {{
+        const mark = document.querySelector(`mark.highlight[data-match-index="${{searchState.currentIndex}}"]`);
+        if (mark) mark.classList.add('current');
+    }}
+}}
+
+function scrollToCurrentMatch() {{
+    updateCurrentHighlight();
+    const mark = document.querySelector('mark.highlight.current');
+    if (mark) {{
+        mark.scrollIntoView({{ behavior: 'smooth', block: 'center' }});
+    }}
+    updateSearchUI();
+}}
+
+function nextMatch() {{
+    const visible = getVisibleMatches();
+    if (visible.length === 0) return;
+    searchState.currentIndex = (searchState.currentIndex + 1) % visible.length;
+    scrollToCurrentMatch();
+}}
+
+function prevMatch() {{
+    const visible = getVisibleMatches();
+    if (visible.length === 0) return;
+    searchState.currentIndex = (searchState.currentIndex - 1 + visible.length) % visible.length;
+    scrollToCurrentMatch();
+}}
+
+function toggleFilter(el) {{
+    const type = el.dataset.type;
+    const counts = {{ exact: 0, contains: 0, spelling: 0, phonetic: 0 }};
+    searchState.matches.forEach(m => counts[m.type]++);
+
+    if (counts[type] === 0) return;
+
+    searchState.filters[type] = !searchState.filters[type];
+    el.classList.toggle('active', searchState.filters[type]);
+
+    clearHighlights();
+    highlightMatches();
+
+    const visible = getVisibleMatches();
+    if (visible.length > 0) {{
+        searchState.currentIndex = Math.min(searchState.currentIndex, visible.length - 1);
+        if (searchState.currentIndex < 0) searchState.currentIndex = 0;
+    }} else {{
+        searchState.currentIndex = -1;
+    }}
+
+    updateSearchUI();
+    if (searchState.currentIndex >= 0) scrollToCurrentMatch();
+}}
     </script>
 </body>
 </html>"##,
