@@ -6,7 +6,6 @@ use regex::Regex;
 pub enum ExportError {
     EncryptionError(EncryptionError),
     SerializationError(String),
-    IoError(String),
     ParseError(String),
 }
 
@@ -15,7 +14,6 @@ impl std::fmt::Display for ExportError {
         match self {
             ExportError::EncryptionError(e) => write!(f, "Encryption error: {}", e),
             ExportError::SerializationError(msg) => write!(f, "Serialization error: {}", msg),
-            ExportError::IoError(msg) => write!(f, "IO error: {}", msg),
             ExportError::ParseError(msg) => write!(f, "Parse error: {}", msg),
         }
     }
@@ -100,9 +98,10 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
         .unlock-btn {{ padding: 12px 24px; font-size: 1rem; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; }}
         .unlock-btn:hover {{ background: #0056b3; }}
         .error {{ color: #dc3545; margin-top: 1rem; }}
-        .content {{ display: none; }}
-        .content.visible {{ display: flex; }}
+        .content {{ display: none; width: 100%; }}
+        .content.visible {{ display: block; width: 100%; }}
         .layout {{ display: flex; min-height: 100vh; width: 100%; }}
+        .container {{ width: 100%; }}
         .sidebar {{ width: 280px; min-width: 280px; background: white; border-right: 1px solid #ddd; height: 100vh; position: fixed; left: 0; top: 0; overflow-y: auto; display: flex; flex-direction: column; z-index: 100; }}
         .sidebar-header {{ padding: 20px; border-bottom: 1px solid #eee; }}
         .sidebar-title {{ font-size: 1.25rem; margin-bottom: 0.25rem; }}
