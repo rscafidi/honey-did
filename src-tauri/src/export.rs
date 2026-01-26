@@ -774,50 +774,84 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
 
         function highlightMatches() {{
             const visible = getVisibleMatches();
-            const termLower = searchState.term.toLowerCase();
 
+            // Group matches by their text node to handle multiple matches in same node
+            const nodeGroups = new Map();
             visible.forEach((match, idx) => {{
-                const node = match.node;
+                if (!nodeGroups.has(match.node)) {{
+                    nodeGroups.set(match.node, []);
+                }}
+                nodeGroups.get(match.node).push({{ ...match, visibleIdx: idx }});
+            }});
+
+            // Process each node once
+            for (const [node, matches] of nodeGroups) {{
+                if (!node.parentNode) continue;
+
                 const text = node.textContent;
-                const regex = new RegExp('(' + match.text.replace(/[.*+?^${{}}()|[\]\\]/g, '\\$&') + ')', 'gi');
 
-                if (!regex.test(text)) return;
-                regex.lastIndex = 0;
+                // Find positions of all matches in this node
+                const highlights = [];
+                for (const m of matches) {{
+                    const regex = new RegExp(m.text.replace(/[.*+?^${{}}()|[\]\\]/g, '\\$&'), 'i');
+                    const result = regex.exec(text);
+                    if (result) {{
+                        highlights.push({{
+                            start: result.index,
+                            end: result.index + result[0].length,
+                            matchedText: result[0],
+                            type: m.type,
+                            idx: m.visibleIdx
+                        }});
+                    }}
+                }}
 
+                if (highlights.length === 0) continue;
+
+                // Sort by start position
+                highlights.sort((a, b) => a.start - b.start);
+
+                // Remove overlapping highlights (keep earlier one)
+                const nonOverlapping = [];
+                let lastEnd = 0;
+                for (const h of highlights) {{
+                    if (h.start >= lastEnd) {{
+                        nonOverlapping.push(h);
+                        lastEnd = h.end;
+                    }}
+                }}
+
+                // Build fragment with all highlights
                 const fragment = document.createDocumentFragment();
-                let lastIndex = 0;
-                let m;
+                let pos = 0;
 
-                while ((m = regex.exec(text)) !== null) {{
-                    if (m.index > lastIndex) {{
-                        fragment.appendChild(document.createTextNode(text.slice(lastIndex, m.index)));
+                for (const h of nonOverlapping) {{
+                    if (h.start > pos) {{
+                        fragment.appendChild(document.createTextNode(text.slice(pos, h.start)));
                     }}
 
                     const mark = document.createElement('mark');
                     mark.className = 'highlight';
-                    mark.dataset.matchIndex = idx;
-                    mark.dataset.matchType = match.type;
-                    mark.textContent = m[0];
+                    mark.dataset.matchIndex = h.idx;
+                    mark.dataset.matchType = h.type;
+                    mark.textContent = h.matchedText;
                     fragment.appendChild(mark);
 
                     const badge = document.createElement('span');
                     badge.className = 'match-badge';
-                    badge.textContent = match.type === 'spelling' ? '~spelling' :
-                                       match.type === 'phonetic' ? 'sounds like' : match.type;
+                    badge.textContent = h.type === 'spelling' ? '~spelling' :
+                                       h.type === 'phonetic' ? 'sounds like' : h.type;
                     fragment.appendChild(badge);
 
-                    lastIndex = regex.lastIndex;
-                    break;
+                    pos = h.end;
                 }}
 
-                if (lastIndex < text.length) {{
-                    fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+                if (pos < text.length) {{
+                    fragment.appendChild(document.createTextNode(text.slice(pos)));
                 }}
 
-                if (lastIndex > 0) {{
-                    node.parentNode.replaceChild(fragment, node);
-                }}
-            }});
+                node.parentNode.replaceChild(fragment, node);
+            }}
         }}
 
         function getVisibleMatches() {{
