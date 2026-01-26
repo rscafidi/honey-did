@@ -241,7 +241,7 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
                 html += '<p>Prepared by ' + escapeHtml(data.meta.creator_name) + '</p>';
             }}
             html += '<div class="toolbar">';
-            html += '<input type="text" class="search-input" placeholder="Search..." oninput="search(this.value)">';
+            html += '<input type="text" id="searchInput" class="search-input" placeholder="Search..." oninput="search(this.value)">';
             html += '<button class="print-btn" onclick="window.print()">Print</button>';
             html += '</div></div>';
 
@@ -544,12 +544,25 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
         }}
 
         function search(term) {{
+            const searchInput = document.getElementById('searchInput');
+            const currentValue = searchInput ? searchInput.value : '';
             const content = document.getElementById('documentContent');
+
             // Remove existing highlights
             content.innerHTML = content.innerHTML.replace(/<mark class="highlight">(.*?)<\/mark>/g, '$1');
+
             if (term && term.length > 1) {{
                 const regex = new RegExp(`(${{term.replace(/[.*+?^${{}}()|[\]\\]/g, '\\$&')}})`, 'gi');
                 content.innerHTML = content.innerHTML.replace(regex, '<mark class="highlight">$1</mark>');
+            }}
+
+            // Restore search input focus and value after innerHTML replacement
+            const newSearchInput = document.getElementById('searchInput');
+            if (newSearchInput) {{
+                newSearchInput.value = currentValue;
+                newSearchInput.focus();
+                // Move cursor to end
+                newSearchInput.setSelectionRange(currentValue.length, currentValue.length);
             }}
         }}
     </script>

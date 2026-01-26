@@ -34,10 +34,68 @@ fn export_html(state: State<AppState>, passphrase: String) -> Result<String, Str
 }
 
 #[tauri::command]
-fn import_file(_encrypted_html: String, _passphrase: String) -> Result<LegacyDocument, String> {
-    // Extract encrypted data from HTML and decrypt
-    // This is a simplified version - full implementation would parse the HTML
-    Err("Import not yet implemented".to_string())
+fn save_export(state: State<AppState>, passphrase: String, file_path: String) -> Result<(), String> {
+    let doc = state.document.lock().map_err(|e| e.to_string())?;
+    let html = export::generate_encrypted_html(&doc, &passphrase).map_err(|e| e.to_string())?;
+    std::fs::write(&file_path, html).map_err(|e| format!("Failed to save file: {}", e))
+}
+
+#[tauri::command]
+async fn save_export_with_dialog(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    passphrase: String,
+) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+
+    let doc = state.document.lock().map_err(|e| e.to_string())?;
+    let html = export::generate_encrypted_html(&doc, &passphrase).map_err(|e| e.to_string())?;
+    drop(doc); // Release lock before dialog
+
+    // Generate filename with current date
+    let date = chrono::Local::now().format("%Y-%m-%d").to_string();
+    let default_name = format!("honey-did-{}.html", date);
+
+    let file_path = app.dialog()
+        .file()
+        .set_file_name(&default_name)
+        .add_filter("HTML Files", &["html", "htm"])
+        .blocking_save_file();
+
+    match file_path {
+        Some(path) => {
+            let path_str = path.to_string();
+            std::fs::write(&path_str, html)
+                .map_err(|e| format!("Failed to save file: {}", e))?;
+            Ok(Some(path_str))
+        }
+        None => Ok(None), // User cancelled
+    }
+}
+
+#[tauri::command]
+fn get_print_html(state: State<AppState>) -> Result<String, String> {
+    let doc = state.document.lock().map_err(|e| e.to_string())?;
+    Ok(export::generate_print_html(&doc))
+}
+
+#[tauri::command]
+fn import_file(encrypted_html: String, passphrase: String) -> Result<LegacyDocument, String> {
+    export::import_from_html(&encrypted_html, &passphrase).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn read_file(file_path: String) -> Result<String, String> {
+    std::fs::read_to_string(&file_path)
+        .map_err(|e| format!("Failed to read file: {}", e))
+}
+
+#[tauri::command]
+fn merge_document(state: State<AppState>, imported: LegacyDocument) -> Result<(), String> {
+    let mut doc = state.document.lock().map_err(|e| e.to_string())?;
+    *doc = imported;
+    storage::save_document(&doc).map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 #[tauri::command]
@@ -64,6 +122,7 @@ fn main() {
         .unwrap_or_default();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .manage(AppState {
             document: Mutex::new(document),
         })
@@ -71,7 +130,12 @@ fn main() {
             get_document,
             update_document,
             export_html,
+            save_export,
+            save_export_with_dialog,
+            get_print_html,
             import_file,
+            read_file,
+            merge_document,
             generate_passphrase,
         ])
         .run(tauri::generate_context!())

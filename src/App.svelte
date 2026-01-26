@@ -2,6 +2,20 @@
   import { onMount } from 'svelte';
   import { document } from './lib/stores/document';
   import FinancialSection from './lib/sections/FinancialSection.svelte';
+  import InsuranceSection from './lib/sections/InsuranceSection.svelte';
+  import BillsSection from './lib/sections/BillsSection.svelte';
+  import PropertySection from './lib/sections/PropertySection.svelte';
+  import LegalSection from './lib/sections/LegalSection.svelte';
+  import DigitalSection from './lib/sections/DigitalSection.svelte';
+  import HouseholdSection from './lib/sections/HouseholdSection.svelte';
+  import PersonalSection from './lib/sections/PersonalSection.svelte';
+  import ContactsSection from './lib/sections/ContactsSection.svelte';
+  import MedicalSection from './lib/sections/MedicalSection.svelte';
+  import PetsSection from './lib/sections/PetsSection.svelte';
+  import ExportDialog from './lib/components/ExportDialog.svelte';
+  import ImportDialog from './lib/components/ImportDialog.svelte';
+  import GuidedWizard from './lib/wizard/GuidedWizard.svelte';
+  import { isDocumentEmpty } from './lib/stores/document';
 
   type Section =
     | 'financial' | 'insurance' | 'bills' | 'property' | 'legal'
@@ -9,6 +23,9 @@
 
   let currentSection: Section = 'financial';
   let showExportDialog = false;
+  let showImportDialog = false;
+  let isGuidedMode = false;
+  let hasCheckedEmpty = false;
 
   const sections: { id: Section; label: string; icon: string }[] = [
     { id: 'financial', label: 'Financial', icon: '💰' },
@@ -29,51 +46,112 @@
     return 'empty';
   }
 
-  onMount(() => {
-    document.load();
+  onMount(async () => {
+    await document.load();
+    // Auto-enter guided mode for empty documents
+    if (!hasCheckedEmpty) {
+      hasCheckedEmpty = true;
+      // Use setTimeout to check after store is populated
+      setTimeout(() => {
+        const doc = $document;
+        if (isDocumentEmpty(doc)) {
+          isGuidedMode = true;
+        }
+      }, 100);
+    }
   });
+
+  function enterGuidedMode() {
+    isGuidedMode = true;
+  }
+
+  function exitGuidedMode() {
+    isGuidedMode = false;
+  }
 </script>
 
-<main class="app">
-  <aside class="sidebar">
-    <div class="logo">
-      <h1>honey-did</h1>
-    </div>
-    <nav class="nav">
-      {#each sections as section}
-        <button
-          class="nav-item"
-          class:active={currentSection === section.id}
-          on:click={() => (currentSection = section.id)}
-        >
-          <span class="nav-icon">{section.icon}</span>
-          <span class="nav-label">{section.label}</span>
-          <span class="nav-status" data-status={getSectionStatus(section.id)}></span>
+{#if isGuidedMode}
+  <GuidedWizard on:exit={exitGuidedMode} />
+{:else}
+  <main class="app">
+    <aside class="sidebar">
+      <div class="logo">
+        <h1>honey-did</h1>
+      </div>
+      <nav class="nav">
+        {#each sections as section}
+          <button
+            class="nav-item"
+            class:active={currentSection === section.id}
+            on:click={() => (currentSection = section.id)}
+          >
+            <span class="nav-icon">{section.icon}</span>
+            <span class="nav-label">{section.label}</span>
+            <span class="nav-status" data-status={getSectionStatus(section.id)}></span>
+          </button>
+        {/each}
+      </nav>
+      <div class="sidebar-footer">
+        <button class="btn btn-outline" on:click={enterGuidedMode}>
+          Guided Setup
         </button>
-      {/each}
-    </nav>
-    <div class="sidebar-footer">
-      <button class="btn btn-secondary" on:click={() => {}}>
-        Import File
-      </button>
-      <button class="btn btn-primary" on:click={() => (showExportDialog = true)}>
-        Export
-      </button>
-    </div>
-  </aside>
-  <section class="content">
-    <header class="content-header">
-      <h2>{sections.find((s) => s.id === currentSection)?.label}</h2>
-    </header>
-    <div class="content-body">
-      {#if currentSection === 'financial'}
-        <FinancialSection />
-      {:else}
-        <p>Section content for {currentSection} coming soon...</p>
-      {/if}
-    </div>
-  </section>
-</main>
+        <button class="btn btn-secondary" on:click={() => (showImportDialog = true)}>
+          Import File
+        </button>
+        <button class="btn btn-primary" on:click={() => (showExportDialog = true)}>
+          Export
+        </button>
+      </div>
+    </aside>
+    <section class="content">
+      <header class="content-header">
+        <h2>{sections.find((s) => s.id === currentSection)?.label}</h2>
+      </header>
+      <div class="content-body">
+        {#if currentSection === 'financial'}
+          <FinancialSection />
+        {:else if currentSection === 'insurance'}
+          <InsuranceSection />
+        {:else if currentSection === 'bills'}
+          <BillsSection />
+        {:else if currentSection === 'property'}
+          <PropertySection />
+        {:else if currentSection === 'legal'}
+          <LegalSection />
+        {:else if currentSection === 'digital'}
+          <DigitalSection />
+        {:else if currentSection === 'household'}
+          <HouseholdSection />
+        {:else if currentSection === 'personal'}
+          <PersonalSection />
+        {:else if currentSection === 'contacts'}
+          <ContactsSection />
+        {:else if currentSection === 'medical'}
+          <MedicalSection />
+        {:else if currentSection === 'pets'}
+          <PetsSection />
+        {/if}
+      </div>
+    </section>
+  </main>
+{/if}
+
+<ExportDialog
+  bind:isOpen={showExportDialog}
+  on:close={() => (showExportDialog = false)}
+  on:exported={(e) => {
+    console.log('Exported to:', e.detail.filePath);
+  }}
+/>
+
+<ImportDialog
+  bind:isOpen={showImportDialog}
+  on:close={() => (showImportDialog = false)}
+  on:imported={(e) => {
+    console.log('Imported from:', e.detail.fileName);
+    document.load();
+  }}
+/>
 
 <style>
   .app {
@@ -184,6 +262,16 @@
 
   .btn-secondary:hover {
     background: #d0d0d0;
+  }
+
+  .btn-outline {
+    background: white;
+    color: #1976d2;
+    border: 2px solid #1976d2;
+  }
+
+  .btn-outline:hover {
+    background: #e3f2fd;
   }
 
   .content {

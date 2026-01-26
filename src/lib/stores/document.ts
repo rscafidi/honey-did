@@ -132,3 +132,39 @@ function createDocumentStore() {
 }
 
 export const document = createDocumentStore();
+
+export function isDocumentEmpty(doc: LegacyDocument | null): boolean {
+  if (!doc) return true;
+
+  // Check if any section has data
+  const hasFinancial = doc.financial.bank_accounts.length > 0 ||
+    doc.financial.credit_cards.length > 0 ||
+    doc.financial.investments.length > 0 ||
+    doc.financial.debts.length > 0;
+
+  const hasInsurance = doc.insurance.policies.length > 0;
+  const hasBills = doc.bills.bills.length > 0;
+  const hasProperty = doc.property.properties.length > 0 ||
+    doc.property.vehicles.length > 0 ||
+    doc.property.valuables.length > 0;
+  const hasLegal = doc.legal.trusts.length > 0 ||
+    !!doc.legal.will_location ||
+    !!doc.legal.power_of_attorney;
+  const hasDigital = doc.digital.email_accounts.length > 0 ||
+    doc.digital.social_media.length > 0;
+  const hasHousehold = doc.household.maintenance_items.length > 0 ||
+    doc.household.contractors.length > 0 ||
+    doc.household.how_things_work.length > 0;
+  const hasPersonal = doc.personal.messages.length > 0 ||
+    !!doc.personal.funeral_preferences ||
+    !!doc.personal.obituary_notes;
+  const hasContacts = doc.contacts.emergency_contacts.length > 0 ||
+    doc.contacts.family.length > 0 ||
+    doc.contacts.professionals.length > 0;
+  const hasMedical = doc.medical.family_members.length > 0;
+  const hasPets = doc.pets.pets.length > 0;
+
+  return !hasFinancial && !hasInsurance && !hasBills && !hasProperty &&
+    !hasLegal && !hasDigital && !hasHousehold && !hasPersonal &&
+    !hasContacts && !hasMedical && !hasPets;
+}
