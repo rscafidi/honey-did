@@ -90,7 +90,6 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
     <style>
         * {{ box-sizing: border-box; margin: 0; padding: 0; }}
         body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; background: #f5f5f5; color: #333; }}
-        .container {{ max-width: 800px; margin: 0 auto; padding: 20px; }}
         .lock-screen {{ display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; }}
         .lock-icon {{ font-size: 4rem; margin-bottom: 1rem; }}
         .lock-title {{ font-size: 1.5rem; margin-bottom: 0.5rem; }}
@@ -102,42 +101,56 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
         .unlock-btn:hover {{ background: #0056b3; }}
         .error {{ color: #dc3545; margin-top: 1rem; }}
         .content {{ display: none; }}
-        .content.visible {{ display: block; }}
-        .header {{ background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; }}
-        .header-title {{ font-size: 1.5rem; }}
-        .toolbar {{ display: flex; gap: 1rem; margin-top: 1rem; }}
-        .search-wrapper {{ flex: 1; position: relative; display: flex; align-items: center; }}
-        .search-input {{ width: 100%; padding: 8px 32px 8px 12px; border: 1px solid #ddd; border-radius: 4px; }}
+        .content.visible {{ display: flex; }}
+        .layout {{ display: flex; min-height: 100vh; width: 100%; }}
+        .sidebar {{ width: 280px; min-width: 280px; background: white; border-right: 1px solid #ddd; height: 100vh; position: fixed; left: 0; top: 0; overflow-y: auto; display: flex; flex-direction: column; z-index: 100; }}
+        .sidebar-header {{ padding: 20px; border-bottom: 1px solid #eee; }}
+        .sidebar-title {{ font-size: 1.25rem; margin-bottom: 0.25rem; }}
+        .sidebar-subtitle {{ font-size: 0.85rem; color: #666; }}
+        .sidebar-search {{ padding: 15px; border-bottom: 1px solid #eee; }}
+        .search-wrapper {{ position: relative; display: flex; align-items: center; }}
+        .search-input {{ width: 100%; padding: 8px 32px 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem; }}
         .search-clear {{ position: absolute; right: 8px; background: none; border: none; cursor: pointer; color: #999; font-size: 1.1rem; padding: 0 4px; line-height: 1; }}
         .search-clear:hover {{ color: #333; }}
         .search-clear.hidden {{ display: none; }}
-        .print-btn {{ padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; }}
-        .toc {{ background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
-        .toc-title {{ font-weight: bold; margin-bottom: 1rem; }}
-        .toc-list {{ list-style: none; }}
-        .toc-list li {{ margin: 0.5rem 0; }}
-        .toc-list a {{ color: #007bff; text-decoration: none; }}
-        .toc-list a:hover {{ text-decoration: underline; }}
+        .search-controls {{ padding: 10px 15px; border-bottom: 1px solid #eee; display: none; }}
+        .search-controls.visible {{ display: block; }}
+        .search-nav {{ display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }}
+        .search-nav button {{ padding: 4px 10px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 1rem; }}
+        .search-nav button:hover:not(:disabled) {{ background: #f0f0f0; }}
+        .search-nav button:disabled {{ opacity: 0.5; cursor: not-allowed; }}
+        .search-counter {{ color: #666; font-size: 0.85rem; }}
+        .search-filters {{ display: flex; gap: 0.25rem; flex-wrap: wrap; }}
+        .search-filter {{ padding: 3px 6px; border: 1px solid #ddd; background: #f8f9fa; border-radius: 4px; font-size: 0.75rem; cursor: pointer; user-select: none; }}
+        .search-filter.active {{ background: #007bff; color: white; border-color: #007bff; }}
+        .search-filter.disabled {{ opacity: 0.5; cursor: not-allowed; }}
+        .sidebar-nav {{ flex: 1; overflow-y: auto; padding: 15px; }}
+        .nav-title {{ font-weight: bold; font-size: 0.8rem; text-transform: uppercase; color: #666; margin-bottom: 0.75rem; letter-spacing: 0.5px; }}
+        .nav-list {{ list-style: none; }}
+        .nav-list li {{ margin: 0.25rem 0; }}
+        .nav-list a {{ color: #333; text-decoration: none; display: block; padding: 6px 10px; border-radius: 4px; font-size: 0.9rem; }}
+        .nav-list a:hover {{ background: #f0f0f0; color: #007bff; }}
+        .sidebar-footer {{ padding: 15px; border-top: 1px solid #eee; }}
+        .print-btn {{ width: 100%; padding: 10px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }}
+        .print-btn:hover {{ background: #218838; }}
+        .main-content {{ flex: 1; margin-left: 280px; padding: 20px; max-width: 900px; }}
         .section {{ background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
         .section-title {{ font-size: 1.25rem; border-bottom: 2px solid #007bff; padding-bottom: 0.5rem; margin-bottom: 1rem; }}
         .item {{ background: #f8f9fa; padding: 15px; border-radius: 4px; margin-bottom: 10px; }}
         .item-title {{ font-weight: bold; margin-bottom: 0.5rem; }}
         .item-detail {{ color: #666; font-size: 0.9rem; }}
         .notes {{ background: #fff3cd; padding: 10px; border-radius: 4px; margin-top: 1rem; font-style: italic; }}
-        .search-controls {{ display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-top: 0.5rem; }}
-        .search-nav {{ display: flex; align-items: center; gap: 0.5rem; }}
-        .search-nav button {{ padding: 4px 10px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 1rem; }}
-        .search-nav button:hover:not(:disabled) {{ background: #f0f0f0; }}
-        .search-nav button:disabled {{ opacity: 0.5; cursor: not-allowed; }}
-        .search-counter {{ color: #666; font-size: 0.9rem; min-width: 100px; }}
-        .search-filters {{ display: flex; gap: 0.5rem; flex-wrap: wrap; }}
-        .search-filter {{ padding: 4px 8px; border: 1px solid #ddd; background: #f8f9fa; border-radius: 4px; font-size: 0.8rem; cursor: pointer; user-select: none; }}
-        .search-filter.active {{ background: #007bff; color: white; border-color: #007bff; }}
-        .search-filter.disabled {{ opacity: 0.5; cursor: not-allowed; }}
         .match-badge {{ font-size: 0.7rem; color: #666; background: #e9ecef; padding: 1px 4px; border-radius: 3px; margin-left: 2px; vertical-align: middle; }}
         .highlight {{ background: #ffeb3b; padding: 1px 0; }}
         .highlight.current {{ background: #ff9800; outline: 2px solid #e65100; }}
-        @media print {{ .toolbar, .toc {{ display: none; }} .section {{ break-inside: avoid; }} }}
+        .menu-toggle {{ display: none; position: fixed; top: 10px; left: 10px; z-index: 200; background: #007bff; color: white; border: none; border-radius: 4px; padding: 8px 12px; cursor: pointer; }}
+        @media (max-width: 768px) {{
+            .menu-toggle {{ display: block; }}
+            .sidebar {{ transform: translateX(-100%); transition: transform 0.3s ease; }}
+            .sidebar.open {{ transform: translateX(0); box-shadow: 2px 0 10px rgba(0,0,0,0.2); }}
+            .main-content {{ margin-left: 0; padding: 60px 15px 15px 15px; }}
+        }}
+        @media print {{ .sidebar, .menu-toggle {{ display: none; }} .main-content {{ margin-left: 0; }} .section {{ break-inside: avoid; }} }}
     </style>
 </head>
 <body>
@@ -251,19 +264,33 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
             const container = document.getElementById('documentContent');
             let html = '';
 
-            // Header
-            html += '<div class="header"><h1 class="header-title">Legacy Document</h1>';
+            // Mobile menu toggle button
+            html += '<button class="menu-toggle" onclick="toggleSidebar()">☰ Menu</button>';
+
+            // Layout wrapper
+            html += '<div class="layout">';
+
+            // Sidebar
+            html += '<div class="sidebar" id="sidebar">';
+
+            // Sidebar header
+            html += '<div class="sidebar-header">';
+            html += '<div class="sidebar-title">Legacy Document</div>';
             if (data.meta && data.meta.creator_name) {{
-                html += '<p>Prepared by ' + escapeHtml(data.meta.creator_name) + '</p>';
+                html += '<div class="sidebar-subtitle">Prepared by ' + escapeHtml(data.meta.creator_name) + '</div>';
             }}
-            html += '<div class="toolbar">';
+            html += '</div>';
+
+            // Search section
+            html += '<div class="sidebar-search">';
             html += '<div class="search-wrapper">';
             html += '<input type="text" id="searchInput" class="search-input" placeholder="Search..." oninput="debounceSearch(this.value)" onkeydown="if(event.key===\'Escape\')clearSearch()">';
             html += '<button class="search-clear hidden" id="searchClear" onclick="clearSearch()" title="Clear search (Esc)">✕</button>';
             html += '</div>';
-            html += '<button class="print-btn" onclick="window.print()">Print</button>';
             html += '</div>';
-            html += '<div class="search-controls" id="searchControls" style="display:none;">';
+
+            // Search controls
+            html += '<div class="search-controls" id="searchControls">';
             html += '<div class="search-nav">';
             html += '<button onclick="prevMatch()" id="prevBtn" disabled>◀</button>';
             html += '<button onclick="nextMatch()" id="nextBtn" disabled>▶</button>';
@@ -275,16 +302,29 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
             html += '<span class="search-filter active" data-type="spelling" onclick="toggleFilter(this)">Spelling (<span id="spellingCount">0</span>)</span>';
             html += '<span class="search-filter active" data-type="phonetic" onclick="toggleFilter(this)">Sounds-like (<span id="phoneticCount">0</span>)</span>';
             html += '</div>';
-            html += '</div></div>';
+            html += '</div>';
 
-            // Table of Contents
-            html += '<div class="toc"><div class="toc-title">Contents</div><ul class="toc-list">';
+            // Navigation
+            html += '<div class="sidebar-nav">';
+            html += '<div class="nav-title">Contents</div>';
+            html += '<ul class="nav-list">';
             const sections = ['financial', 'insurance', 'bills', 'property', 'legal', 'digital', 'household', 'personal', 'contacts', 'medical', 'pets'];
             const sectionLabels = {{'financial': 'Financial', 'insurance': 'Insurance', 'bills': 'Bills', 'property': 'Property', 'legal': 'Legal', 'digital': 'Digital Life', 'household': 'Household', 'personal': 'Personal', 'contacts': 'Contacts', 'medical': 'Medical', 'pets': 'Pets'}};
             sections.forEach(s => {{
-                html += '<li><a href="#' + s + '">' + sectionLabels[s] + '</a></li>';
+                html += '<li><a href="#' + s + '" onclick="closeSidebarOnMobile()">' + sectionLabels[s] + '</a></li>';
             }});
-            html += '</ul></div>';
+            html += '</ul>';
+            html += '</div>';
+
+            // Sidebar footer with print button
+            html += '<div class="sidebar-footer">';
+            html += '<button class="print-btn" onclick="window.print()">🖨️ Print Document</button>';
+            html += '</div>';
+
+            html += '</div>'; // End sidebar
+
+            // Main content area
+            html += '<div class="main-content" id="mainContent">';
 
             // Financial Section
             if (data.financial) {{
@@ -570,10 +610,23 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
                 html += renderSection('Pets', 'pets', content);
             }}
 
+            html += '</div>'; // End main-content
+            html += '</div>'; // End layout
+
             container.innerHTML = html;
             document.getElementById('lockScreen').style.display = 'none';
             document.getElementById('content').classList.add('visible');
             buildSearchIndex();
+        }}
+
+        function toggleSidebar() {{
+            document.getElementById('sidebar').classList.toggle('open');
+        }}
+
+        function closeSidebarOnMobile() {{
+            if (window.innerWidth <= 768) {{
+                document.getElementById('sidebar').classList.remove('open');
+            }}
         }}
 
         function levenshtein(a, b) {{
@@ -675,10 +728,10 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
 
         function buildSearchIndex() {{
             searchIndex = [];
-            const content = document.getElementById('documentContent');
+            const content = document.getElementById('mainContent');
+            if (!content) return;
             const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT, {{
                 acceptNode: (node) => {{
-                    if (node.parentElement.closest('.toolbar')) return NodeFilter.FILTER_REJECT;
                     return node.textContent.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
                 }}
             }});
@@ -719,7 +772,7 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
             document.getElementById('searchClear').classList.add('hidden');
             clearTimeout(searchTimeout);
             clearHighlights();
-            document.getElementById('searchControls').style.display = 'none';
+            document.getElementById('searchControls').classList.remove('visible');
             searchState.term = '';
             searchState.matches = [];
             searchState.currentIndex = -1;
@@ -734,12 +787,12 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
             searchState.filters = {{ exact: true, contains: true, spelling: true, phonetic: true }};
 
             if (!term || term.length < 2) {{
-                document.getElementById('searchControls').style.display = 'none';
+                document.getElementById('searchControls').classList.remove('visible');
                 updateSearchUI();
                 return;
             }}
 
-            document.getElementById('searchControls').style.display = 'flex';
+            document.getElementById('searchControls').classList.add('visible');
             const termMeta = metaphone(term);
             const matchMap = new Map();
 
