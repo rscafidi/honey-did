@@ -31,6 +31,7 @@ impl From<EncryptionError> for ExportError {
 pub fn generate_encrypted_html(
     document: &LegacyDocument,
     passphrase: &str,
+    include_welcome_screen: bool,
 ) -> Result<String, ExportError> {
     // Serialize document to JSON
     let json = serde_json::to_string(document)
@@ -43,8 +44,24 @@ pub fn generate_encrypted_html(
     let encrypted_json = serde_json::to_string(&encrypted)
         .map_err(|e| ExportError::SerializationError(e.to_string()))?;
 
+    // Prepare welcome screen data if enabled
+    let welcome_screen_json = if include_welcome_screen {
+        if let Some(ref welcome) = document.welcome_screen {
+            if welcome.enabled && !welcome.slides.is_empty() {
+                serde_json::to_string(&welcome.slides)
+                    .map_err(|e| ExportError::SerializationError(e.to_string()))?
+            } else {
+                "[]".to_string()
+            }
+        } else {
+            "[]".to_string()
+        }
+    } else {
+        "[]".to_string()
+    };
+
     // Generate the HTML
-    let html = generate_html_template(&encrypted_json, &document.meta.creator_name);
+    let html = generate_html_template(&encrypted_json, &document.meta.creator_name, &welcome_screen_json);
 
     Ok(html)
 }
@@ -77,7 +94,7 @@ pub fn import_from_html(html: &str, passphrase: &str) -> Result<LegacyDocument, 
     Ok(document)
 }
 
-fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
+fn generate_html_template(encrypted_data: &str, creator_name: &str, welcome_slides_json: &str) -> String {
     format!(
         r##"<!DOCTYPE html>
 <html lang="en">
@@ -155,10 +172,31 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
             .main-content {{ margin-left: 0; padding: 70px 16px 20px 16px; }}
         }}
         @media print {{ .sidebar, .menu-toggle {{ display: none; }} .main-content {{ margin-left: 0; }} .section {{ break-inside: avoid; box-shadow: none; border: 1px solid #D4D4D4; }} }}
+        /* Welcome Screen Styles */
+        .welcome-screen {{ position: fixed; inset: 0; background: linear-gradient(145deg, #283618 0%, #1a2410 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; opacity: 1; transition: opacity 0.5s ease; }}
+        .welcome-screen.hidden {{ opacity: 0; pointer-events: none; }}
+        .welcome-slide {{ max-width: 600px; padding: 40px; text-align: center; opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease, transform 0.5s ease; }}
+        .welcome-slide.visible {{ opacity: 1; transform: translateY(0); }}
+        .welcome-slide-text {{ font-size: 1.5rem; line-height: 1.8; color: #F0EFEB; font-weight: 400; white-space: pre-wrap; }}
+        .welcome-continue {{ margin-top: 40px; padding: 14px 32px; background: rgba(240, 239, 235, 0.15); color: #F0EFEB; border: 2px solid rgba(240, 239, 235, 0.3); border-radius: 10px; cursor: pointer; font-size: 1rem; font-weight: 500; transition: all 0.2s; }}
+        .welcome-continue:hover {{ background: rgba(240, 239, 235, 0.25); border-color: rgba(240, 239, 235, 0.5); }}
+        .welcome-progress {{ position: absolute; bottom: 40px; display: flex; gap: 8px; }}
+        .welcome-dot {{ width: 8px; height: 8px; border-radius: 50%; background: rgba(240, 239, 235, 0.3); transition: background 0.3s; }}
+        .welcome-dot.active {{ background: #F0EFEB; }}
+        .welcome-timer {{ position: absolute; bottom: 20px; width: 200px; height: 3px; background: rgba(240, 239, 235, 0.2); border-radius: 2px; overflow: hidden; }}
+        .welcome-timer-bar {{ height: 100%; background: #F0EFEB; width: 0%; transition: width linear; }}
     </style>
 </head>
 <body>
-    <div id="lockScreen" class="lock-screen">
+    <div id="welcomeScreen" class="welcome-screen hidden">
+        <div id="welcomeSlide" class="welcome-slide">
+            <div id="welcomeText" class="welcome-slide-text"></div>
+            <button id="welcomeContinue" class="welcome-continue" onclick="nextWelcomeSlide()">Continue</button>
+        </div>
+        <div id="welcomeProgress" class="welcome-progress"></div>
+        <div id="welcomeTimer" class="welcome-timer"><div id="welcomeTimerBar" class="welcome-timer-bar"></div></div>
+    </div>
+    <div id="lockScreen" class="lock-screen" style="display: none;">
         <div class="lock-icon">🔐</div>
         <h1 class="lock-title">Honey Did</h1>
         <p class="lock-subtitle">This document was prepared by {creator_name}<br>to help you in their absence.</p>
@@ -174,6 +212,118 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
     <script>
         const ENCRYPTED_DATA = {encrypted_data};
         const PBKDF2_ITERATIONS = 600000;
+        const WELCOME_SLIDES = {welcome_slides_json};
+
+        // Welcome Screen State
+        let welcomeCurrentSlide = 0;
+        let welcomeTimerInterval = null;
+
+        function initWelcomeScreen() {{
+            if (WELCOME_SLIDES.length === 0) {{
+                showLockScreen();
+                return;
+            }}
+
+            const welcomeScreen = document.getElementById('welcomeScreen');
+            const progressContainer = document.getElementById('welcomeProgress');
+
+            // Create progress dots
+            progressContainer.innerHTML = '';
+            for (let i = 0; i < WELCOME_SLIDES.length; i++) {{
+                const dot = document.createElement('div');
+                dot.className = 'welcome-dot' + (i === 0 ? ' active' : '');
+                progressContainer.appendChild(dot);
+            }}
+
+            welcomeScreen.classList.remove('hidden');
+            document.getElementById('lockScreen').style.display = 'none';
+            showWelcomeSlide(0);
+        }}
+
+        function showWelcomeSlide(index) {{
+            if (index >= WELCOME_SLIDES.length) {{
+                endWelcomeScreen();
+                return;
+            }}
+
+            welcomeCurrentSlide = index;
+            const slide = WELCOME_SLIDES[index];
+            const slideEl = document.getElementById('welcomeSlide');
+            const textEl = document.getElementById('welcomeText');
+            const continueBtn = document.getElementById('welcomeContinue');
+            const timerEl = document.getElementById('welcomeTimer');
+            const timerBar = document.getElementById('welcomeTimerBar');
+
+            // Update progress dots
+            const dots = document.querySelectorAll('.welcome-dot');
+            dots.forEach((dot, i) => {{
+                dot.classList.toggle('active', i === index);
+            }});
+
+            // Clear any existing timer
+            if (welcomeTimerInterval) {{
+                clearInterval(welcomeTimerInterval);
+                welcomeTimerInterval = null;
+            }}
+
+            // Hide slide for transition
+            slideEl.classList.remove('visible');
+
+            setTimeout(() => {{
+                textEl.textContent = slide.text;
+
+                // Handle transition type
+                if (slide.transition.type === 'click') {{
+                    continueBtn.style.display = 'block';
+                    timerEl.style.display = 'none';
+                }} else if (slide.transition.type === 'auto') {{
+                    continueBtn.style.display = 'none';
+                    timerEl.style.display = 'block';
+                    timerBar.style.width = '0%';
+                    timerBar.style.transition = 'none';
+
+                    // Force reflow
+                    timerBar.offsetHeight;
+
+                    const duration = slide.transition.seconds * 1000;
+                    timerBar.style.transition = 'width ' + duration + 'ms linear';
+                    timerBar.style.width = '100%';
+
+                    welcomeTimerInterval = setTimeout(() => {{
+                        nextWelcomeSlide();
+                    }}, duration);
+                }}
+
+                // Show slide with transition
+                slideEl.classList.add('visible');
+            }}, 100);
+        }}
+
+        function nextWelcomeSlide() {{
+            if (welcomeTimerInterval) {{
+                clearTimeout(welcomeTimerInterval);
+                welcomeTimerInterval = null;
+            }}
+            showWelcomeSlide(welcomeCurrentSlide + 1);
+        }}
+
+        function endWelcomeScreen() {{
+            const welcomeScreen = document.getElementById('welcomeScreen');
+            welcomeScreen.classList.add('hidden');
+
+            setTimeout(() => {{
+                welcomeScreen.style.display = 'none';
+                showLockScreen();
+            }}, 500);
+        }}
+
+        function showLockScreen() {{
+            document.getElementById('lockScreen').style.display = 'flex';
+            document.getElementById('passphrase').focus();
+        }}
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', initWelcomeScreen);
 
         async function deriveKey(passphrase, salt) {{
             const encoder = new TextEncoder();
@@ -313,7 +463,7 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
             html += '<div class="nav-title">Contents</div>';
             html += '<ul class="nav-list">';
             const sections = ['financial', 'insurance', 'bills', 'property', 'legal', 'digital', 'household', 'personal', 'contacts', 'medical', 'pets'];
-            const sectionLabels = {{'financial': 'Financial', 'insurance': 'Insurance', 'bills': 'Bills', 'property': 'Property', 'legal': 'Legal', 'digital': 'Digital Life', 'household': 'Household', 'personal': 'Personal', 'contacts': 'Contacts', 'medical': 'Medical', 'pets': 'Pets'}};
+            const sectionLabels = {{'financial': '💰 Financial', 'insurance': '🛡️ Insurance', 'bills': '📄 Bills', 'property': '🏠 Property', 'legal': '⚖️ Legal', 'digital': '💻 Digital Life', 'household': '🔧 Household', 'personal': '👤 Personal', 'contacts': '📇 Contacts', 'medical': '🏥 Medical', 'pets': '🐾 Pets'}};
             sections.forEach(s => {{
                 html += '<li><a href="#' + s + '" onclick="closeSidebarOnMobile()">' + sectionLabels[s] + '</a></li>';
             }});
@@ -372,7 +522,7 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
                     }});
                 }}
                 if (data.financial.notes) content += '<div class="notes">' + escapeHtml(data.financial.notes) + '</div>';
-                html += renderSection('Financial Information', 'financial', content);
+                html += renderSection('💰 Financial Information', 'financial', content);
             }}
 
             // Insurance Section
@@ -387,7 +537,7 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
                     content += '</div>';
                 }});
                 if (data.insurance.notes) content += '<div class="notes">' + escapeHtml(data.insurance.notes) + '</div>';
-                html += renderSection('Insurance', 'insurance', content);
+                html += renderSection('🛡️ Insurance', 'insurance', content);
             }}
 
             // Bills Section
@@ -403,7 +553,7 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
                     content += '</div>';
                 }});
                 if (data.bills.notes) content += '<div class="notes">' + escapeHtml(data.bills.notes) + '</div>';
-                html += renderSection('Bills', 'bills', content);
+                html += renderSection('📄 Bills', 'bills', content);
             }}
 
             // Property Section
@@ -437,7 +587,7 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
                     }});
                 }}
                 if (data.property.notes) content += '<div class="notes">' + escapeHtml(data.property.notes) + '</div>';
-                html += renderSection('Property', 'property', content);
+                html += renderSection('🏠 Property', 'property', content);
             }}
 
             // Legal Section
@@ -458,7 +608,7 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
                     }});
                 }}
                 if (data.legal.notes) content += '<div class="notes">' + escapeHtml(data.legal.notes) + '</div>';
-                html += renderSection('Legal Documents', 'legal', content);
+                html += renderSection('⚖️ Legal Documents', 'legal', content);
             }}
 
             // Digital Section
@@ -491,7 +641,7 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
                     }});
                 }}
                 if (data.digital.notes) content += '<div class="notes">' + escapeHtml(data.digital.notes) + '</div>';
-                html += renderSection('Digital Life', 'digital', content);
+                html += renderSection('💻 Digital Life', 'digital', content);
             }}
 
             // Household Section
@@ -522,7 +672,7 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
                     }});
                 }}
                 if (data.household.notes) content += '<div class="notes">' + escapeHtml(data.household.notes) + '</div>';
-                html += renderSection('Household', 'household', content);
+                html += renderSection('🔧 Household', 'household', content);
             }}
 
             // Personal Section
@@ -543,7 +693,7 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
                     }});
                 }}
                 if (data.personal.notes) content += '<div class="notes">' + escapeHtml(data.personal.notes) + '</div>';
-                html += renderSection('Personal Wishes', 'personal', content);
+                html += renderSection('👤 Personal Wishes', 'personal', content);
             }}
 
             // Contacts Section
@@ -568,7 +718,7 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
                     }});
                 }}
                 if (data.contacts.notes) content += '<div class="notes">' + escapeHtml(data.contacts.notes) + '</div>';
-                html += renderSection('Important Contacts', 'contacts', content);
+                html += renderSection('📇 Important Contacts', 'contacts', content);
             }}
 
             // Medical Section
@@ -589,7 +739,7 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
                     content += '</div>';
                 }});
                 if (data.medical.notes) content += '<div class="notes">' + escapeHtml(data.medical.notes) + '</div>';
-                html += renderSection('Medical Information', 'medical', content);
+                html += renderSection('🏥 Medical Information', 'medical', content);
             }}
 
             // Pets Section
@@ -611,7 +761,7 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
                     content += '</div>';
                 }});
                 if (data.pets.notes) content += '<div class="notes">' + escapeHtml(data.pets.notes) + '</div>';
-                html += renderSection('Pets', 'pets', content);
+                html += renderSection('🐾 Pets', 'pets', content);
             }}
 
             html += '</div>'; // End main-content

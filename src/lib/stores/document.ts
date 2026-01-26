@@ -14,6 +14,7 @@ export interface LegacyDocument {
   contacts: ContactsSection;
   medical: MedicalSection;
   pets: PetsSection;
+  welcome_screen?: WelcomeScreen;
 }
 
 export interface DocumentMeta {
@@ -92,6 +93,17 @@ export interface MedicalSection {
 export interface PetsSection {
   pets: any[];
   notes: string;
+}
+
+export interface MessageSlide {
+  id: string;
+  text: string;
+  transition: { type: 'click' } | { type: 'auto'; seconds: number };
+}
+
+export interface WelcomeScreen {
+  enabled: boolean;
+  slides: MessageSlide[];
 }
 
 function createDocumentStore() {

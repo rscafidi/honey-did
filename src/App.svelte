@@ -14,6 +14,7 @@
   import ContactsSection from './lib/sections/ContactsSection.svelte';
   import MedicalSection from './lib/sections/MedicalSection.svelte';
   import PetsSection from './lib/sections/PetsSection.svelte';
+  import WelcomeScreenSection from './lib/sections/WelcomeScreenSection.svelte';
   import ExportDialog from './lib/components/ExportDialog.svelte';
   import ImportDialog from './lib/components/ImportDialog.svelte';
   import GuidedWizard from './lib/wizard/GuidedWizard.svelte';
@@ -23,7 +24,7 @@
 
   type Section =
     | 'financial' | 'insurance' | 'bills' | 'property' | 'legal'
-    | 'digital' | 'household' | 'personal' | 'contacts' | 'medical' | 'pets';
+    | 'digital' | 'household' | 'personal' | 'contacts' | 'medical' | 'pets' | 'welcome';
 
   let currentSection: Section = 'financial';
   let showExportDialog = false;
@@ -50,12 +51,8 @@
     { id: 'contacts', label: 'Contacts', icon: '📞' },
     { id: 'medical', label: 'Medical', icon: '🏥' },
     { id: 'pets', label: 'Pets', icon: '🐾' },
+    { id: 'welcome', label: 'Welcome Screen', icon: '👋' },
   ];
-
-  function getSectionStatus(sectionId: Section): 'empty' | 'partial' | 'complete' {
-    // TODO: Implement actual status checking
-    return 'empty';
-  }
 
   onMount(async () => {
     // Check if app has a password set
@@ -163,7 +160,7 @@
   <main class="app">
     <aside class="sidebar">
       <div class="logo">
-        <h1>honey-did</h1>
+        <h1>Honey Did</h1>
       </div>
       <nav class="nav">
         {#each sections as section}
@@ -174,7 +171,6 @@
           >
             <span class="nav-icon">{section.icon}</span>
             <span class="nav-label">{section.label}</span>
-            <span class="nav-status" data-status={getSectionStatus(section.id)}></span>
           </button>
         {/each}
       </nav>
@@ -222,6 +218,8 @@
           <MedicalSection />
         {:else if currentSection === 'pets'}
           <PetsSection />
+        {:else if currentSection === 'welcome'}
+          <WelcomeScreenSection />
         {/if}
       </div>
     </section>
@@ -258,39 +256,47 @@
 />
 
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+  :global(html), :global(body) {
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
   .loading {
     display: flex;
     align-items: center;
     justify-content: center;
     height: 100vh;
-    background: #f5f5f5;
+    background: #F0EFEB;
     font-size: 1.2rem;
-    color: #666;
+    color: #283618;
   }
 
   .app {
     display: flex;
     height: 100vh;
-    background: #f5f5f5;
+    background: #F0EFEB;
   }
 
   .sidebar {
     width: 240px;
-    background: white;
-    border-right: 1px solid #e0e0e0;
+    background: #283618;
     display: flex;
     flex-direction: column;
   }
 
   .logo {
     padding: 20px;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   .logo h1 {
     margin: 0;
     font-size: 1.5rem;
-    color: #333;
+    color: #F0EFEB;
+    font-weight: 600;
   }
 
   .nav {
@@ -310,15 +316,18 @@
     cursor: pointer;
     text-align: left;
     gap: 12px;
+    color: #B7B7A4;
+    transition: all 0.15s ease;
   }
 
   .nav-item:hover {
-    background: #f0f0f0;
+    background: rgba(255, 255, 255, 0.1);
+    color: #F0EFEB;
   }
 
   .nav-item.active {
-    background: #e3f2fd;
-    color: #1976d2;
+    background: #F0EFEB;
+    color: #283618;
   }
 
   .nav-icon {
@@ -327,26 +336,12 @@
 
   .nav-label {
     flex: 1;
-  }
-
-  .nav-status {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #e0e0e0;
-  }
-
-  .nav-status[data-status='partial'] {
-    background: #ffc107;
-  }
-
-  .nav-status[data-status='complete'] {
-    background: #4caf50;
+    font-weight: 500;
   }
 
   .sidebar-footer {
     padding: 15px;
-    border-top: 1px solid #e0e0e0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -368,14 +363,15 @@
     align-items: center;
     justify-content: center;
     border: none;
-    background: #f0f0f0;
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 6px;
     cursor: pointer;
     font-size: 1.2rem;
+    transition: background 0.15s ease;
   }
 
   .btn-icon:hover {
-    background: #e0e0e0;
+    background: rgba(255, 255, 255, 0.2);
   }
 
   .btn {
@@ -384,34 +380,39 @@
     border-radius: 6px;
     cursor: pointer;
     font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.15s ease;
   }
 
   .btn-primary {
-    background: #1976d2;
-    color: white;
+    background: #F0EFEB;
+    color: #283618;
   }
 
   .btn-primary:hover {
-    background: #1565c0;
+    background: #D4D4D4;
   }
 
   .btn-secondary {
-    background: #e0e0e0;
-    color: #333;
+    background: rgba(255, 255, 255, 0.1);
+    color: #B7B7A4;
   }
 
   .btn-secondary:hover {
-    background: #d0d0d0;
+    background: rgba(255, 255, 255, 0.2);
+    color: #F0EFEB;
   }
 
   .btn-outline {
-    background: white;
-    color: #1976d2;
-    border: 2px solid #1976d2;
+    background: transparent;
+    color: #B7B7A4;
+    border: 2px solid #B7B7A4;
   }
 
   .btn-outline:hover {
-    background: #e3f2fd;
+    background: rgba(255, 255, 255, 0.1);
+    color: #F0EFEB;
+    border-color: #F0EFEB;
   }
 
   .content {
@@ -424,11 +425,13 @@
   .content-header {
     padding: 20px;
     background: white;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid #D4D4D4;
   }
 
   .content-header h2 {
     margin: 0;
+    color: #283618;
+    font-weight: 600;
   }
 
   .content-body {

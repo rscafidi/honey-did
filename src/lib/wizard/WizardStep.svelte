@@ -50,7 +50,7 @@
 
   .progress {
     font-size: 0.9rem;
-    color: #666;
+    color: #606060;
     margin-bottom: 8px;
   }
 
@@ -61,11 +61,12 @@
 
   h2 {
     margin: 0;
-    color: #333;
+    color: #283618;
+    font-weight: 600;
   }
 
   .why-it-matters {
-    background: #e3f2fd;
+    background: #DDE5B6;
     padding: 16px 20px;
     border-radius: 8px;
     margin-bottom: 24px;
@@ -74,25 +75,26 @@
   .why-it-matters h3 {
     margin: 0 0 8px 0;
     font-size: 0.95rem;
-    color: #1565c0;
+    color: #283618;
+    font-weight: 600;
   }
 
   .why-it-matters p {
     margin: 0;
-    color: #333;
+    color: #283618;
     line-height: 1.5;
   }
 
   .form-area {
     background: white;
-    border: 1px solid #e0e0e0;
+    border: 1px solid #D4D4D4;
     border-radius: 8px;
     padding: 20px;
     margin-bottom: 24px;
   }
 
   .prompts {
-    background: #fff8e1;
+    background: #FDF6E3;
     padding: 16px 20px;
     border-radius: 8px;
     margin-bottom: 24px;
@@ -101,7 +103,8 @@
   .prompts h3 {
     margin: 0 0 12px 0;
     font-size: 0.95rem;
-    color: #f57c00;
+    color: #856404;
+    font-weight: 600;
   }
 
   .prompts ul {
@@ -111,11 +114,11 @@
 
   .prompts li {
     margin: 8px 0;
-    color: #333;
+    color: #283618;
   }
 
   .example {
-    background: #f5f5f5;
+    background: #F0EFEB;
     padding: 16px 20px;
     border-radius: 8px;
   }
@@ -123,12 +126,13 @@
   .example h3 {
     margin: 0 0 8px 0;
     font-size: 0.95rem;
-    color: #666;
+    color: #606060;
+    font-weight: 600;
   }
 
   .example-text {
     margin: 0;
     font-style: italic;
-    color: #333;
+    color: #283618;
   }
 </style>

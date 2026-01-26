@@ -28,15 +28,15 @@ fn update_document(state: State<AppState>, document: LegacyDocument) -> Result<(
 }
 
 #[tauri::command]
-fn export_html(state: State<AppState>, passphrase: String) -> Result<String, String> {
+fn export_html(state: State<AppState>, passphrase: String, include_welcome_screen: Option<bool>) -> Result<String, String> {
     let doc = state.document.lock().map_err(|e| e.to_string())?;
-    export::generate_encrypted_html(&doc, &passphrase).map_err(|e| e.to_string())
+    export::generate_encrypted_html(&doc, &passphrase, include_welcome_screen.unwrap_or(false)).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-fn save_export(state: State<AppState>, passphrase: String, file_path: String) -> Result<(), String> {
+fn save_export(state: State<AppState>, passphrase: String, file_path: String, include_welcome_screen: Option<bool>) -> Result<(), String> {
     let doc = state.document.lock().map_err(|e| e.to_string())?;
-    let html = export::generate_encrypted_html(&doc, &passphrase).map_err(|e| e.to_string())?;
+    let html = export::generate_encrypted_html(&doc, &passphrase, include_welcome_screen.unwrap_or(false)).map_err(|e| e.to_string())?;
     std::fs::write(&file_path, html).map_err(|e| format!("Failed to save file: {}", e))
 }
 
@@ -45,11 +45,12 @@ async fn save_export_with_dialog(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
     passphrase: String,
+    include_welcome_screen: bool,
 ) -> Result<Option<String>, String> {
     use tauri_plugin_dialog::DialogExt;
 
     let doc = state.document.lock().map_err(|e| e.to_string())?;
-    let html = export::generate_encrypted_html(&doc, &passphrase).map_err(|e| e.to_string())?;
+    let html = export::generate_encrypted_html(&doc, &passphrase, include_welcome_screen).map_err(|e| e.to_string())?;
     drop(doc); // Release lock before dialog
 
     // Generate filename with current date

@@ -22,7 +22,7 @@
 <style>
   .item-card {
     background: white;
-    border: 1px solid #e0e0e0;
+    border: 1px solid #D4D4D4;
     border-radius: 8px;
     margin-bottom: 12px;
   }
@@ -32,28 +32,29 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    background: #f8f9fa;
-    border-bottom: 1px solid #e0e0e0;
+    background: #F0EFEB;
+    border-bottom: 1px solid #D4D4D4;
     border-radius: 8px 8px 0 0;
   }
 
   .item-title {
     font-weight: 600;
-    color: #333;
+    color: #283618;
   }
 
   .delete-btn {
     background: none;
     border: none;
     font-size: 1.5rem;
-    color: #999;
+    color: #B7B7A4;
     cursor: pointer;
     padding: 0;
     line-height: 1;
+    transition: color 0.15s ease;
   }
 
   .delete-btn:hover {
-    color: #dc3545;
+    color: #9B2C2C;
   }
 
   .item-content {

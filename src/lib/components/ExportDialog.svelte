@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
+  import { document } from '../stores/document';
 
   export let isOpen = false;
 
@@ -9,8 +10,13 @@
   let passphrase = '';
   let confirmPassphrase = '';
   let includePrint = false;
+  let includeWelcomeScreen = true;
   let isExporting = false;
   let error = '';
+
+  $: welcomeScreenAvailable = $document?.welcome_screen?.enabled &&
+                              ($document?.welcome_screen?.slides?.length || 0) > 0;
+  $: slideCount = $document?.welcome_screen?.slides?.length || 0;
 
   $: passphraseStrength = calculateStrength(passphrase);
   $: passphrasesMatch = passphrase === confirmPassphrase;
@@ -50,7 +56,10 @@
 
     try {
       // Show native save dialog and save the encrypted file
-      const filePath = await invoke<string | null>('save_export_with_dialog', { passphrase });
+      const filePath = await invoke<string | null>('save_export_with_dialog', {
+        passphrase,
+        includeWelcomeScreen: welcomeScreenAvailable && includeWelcomeScreen
+      });
 
       if (filePath === null) {
         // User cancelled the dialog
@@ -85,6 +94,7 @@
     passphrase = '';
     confirmPassphrase = '';
     includePrint = false;
+    includeWelcomeScreen = true;
     error = '';
     dispatch('close');
   }
@@ -142,6 +152,13 @@
           </p>
         {/if}
 
+        {#if welcomeScreenAvailable}
+          <label class="checkbox-field">
+            <input type="checkbox" bind:checked={includeWelcomeScreen} />
+            <span>Include welcome screen ({slideCount} slide{slideCount === 1 ? '' : 's'})</span>
+          </label>
+        {/if}
+
         {#if error}
           <p class="error-message">{error}</p>
         {/if}
@@ -166,7 +183,7 @@
   .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(40, 54, 24, 0.5);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -179,12 +196,13 @@
     padding: 24px;
     width: 100%;
     max-width: 450px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 20px 60px rgba(40, 54, 24, 0.3);
   }
 
   h2 {
     margin: 0 0 20px 0;
-    color: #333;
+    color: #283618;
+    font-weight: 600;
   }
 
   .form {
@@ -197,13 +215,13 @@
     display: block;
     margin-bottom: 6px;
     font-weight: 500;
-    color: #333;
+    color: #283618;
   }
 
   .field input {
     width: 100%;
     padding: 10px 12px;
-    border: 2px solid #ddd;
+    border: 2px solid #D4D4D4;
     border-radius: 6px;
     font-size: 1rem;
     box-sizing: border-box;
@@ -211,7 +229,7 @@
 
   .field input:focus {
     outline: none;
-    border-color: #1976d2;
+    border-color: #283618;
   }
 
   .passphrase-input {
@@ -225,21 +243,23 @@
 
   .generate-btn {
     padding: 10px 16px;
-    background: #e3f2fd;
+    background: #DDE5B6;
     border: none;
     border-radius: 6px;
-    color: #1976d2;
+    color: #283618;
     cursor: pointer;
     white-space: nowrap;
+    font-weight: 500;
+    transition: background 0.15s ease;
   }
 
   .generate-btn:hover {
-    background: #bbdefb;
+    background: #ADC178;
   }
 
   .strength-meter {
     height: 4px;
-    background: #e0e0e0;
+    background: #D4D4D4;
     border-radius: 2px;
     margin-top: 8px;
     overflow: hidden;
@@ -257,7 +277,7 @@
   }
 
   .error-text {
-    color: #dc3545;
+    color: #9B2C2C;
     font-size: 0.85rem;
     margin-top: 4px;
   }
@@ -267,6 +287,7 @@
     align-items: center;
     gap: 8px;
     cursor: pointer;
+    color: #283618;
   }
 
   .checkbox-field input {
@@ -276,16 +297,16 @@
 
   .warning {
     padding: 10px 12px;
-    background: #fff3cd;
+    background: #FEFCBF;
     border-radius: 6px;
     font-size: 0.9rem;
-    color: #856404;
+    color: #744210;
     margin: 0;
   }
 
   .error-message {
-    color: #dc3545;
-    background: #f8d7da;
+    color: #9B2C2C;
+    background: #FED7D7;
     padding: 10px 12px;
     border-radius: 6px;
     margin: 0;
@@ -304,28 +325,30 @@
     border-radius: 6px;
     font-size: 1rem;
     cursor: pointer;
+    font-weight: 500;
+    transition: all 0.15s ease;
   }
 
   .btn-primary {
-    background: #1976d2;
-    color: white;
+    background: #283618;
+    color: #F0EFEB;
   }
 
   .btn-primary:hover:not(:disabled) {
-    background: #1565c0;
+    background: #1f2a12;
   }
 
   .btn-primary:disabled {
-    background: #90caf9;
+    background: #B7B7A4;
     cursor: not-allowed;
   }
 
   .btn-secondary {
-    background: #e0e0e0;
-    color: #333;
+    background: #D4D4D4;
+    color: #283618;
   }
 
   .btn-secondary:hover {
-    background: #d0d0d0;
+    background: #B7B7A4;
   }
 </style>

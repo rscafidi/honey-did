@@ -44,7 +44,9 @@
       "Bash(npx svelte-check)",
       "Bash(git push:*)",
       "Bash(cargo build:*)",
-      "Bash(git init:*)"
+      "Bash(git init:*)",
+      "Bash(npm run check:*)",
+      "Bash(npm run:*)"
     ]
   }
 }

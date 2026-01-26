@@ -141,7 +141,7 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
-    background: #f5f5f5;
+    background: #F0EFEB;
   }
 
   .wizard-header {
@@ -149,25 +149,27 @@
     justify-content: space-between;
     align-items: center;
     padding: 16px 24px;
-    background: white;
-    border-bottom: 1px solid #e0e0e0;
+    background: #283618;
+    border-bottom: none;
   }
 
   .wizard-header h1 {
     margin: 0;
     font-size: 1.25rem;
-    color: #333;
+    color: #F0EFEB;
+    font-weight: 600;
   }
 
   .exit-link {
     background: none;
     border: none;
-    color: #1976d2;
+    color: #B7B7A4;
     cursor: pointer;
     font-size: 0.9rem;
   }
 
   .exit-link:hover {
+    color: #F0EFEB;
     text-decoration: underline;
   }
 
@@ -183,7 +185,7 @@
     align-items: center;
     padding: 16px 24px;
     background: white;
-    border-top: 1px solid #e0e0e0;
+    border-top: 1px solid #D4D4D4;
   }
 
   .footer-left, .footer-right {
@@ -195,13 +197,13 @@
   .skip-link {
     background: none;
     border: none;
-    color: #666;
+    color: #606060;
     cursor: pointer;
     font-size: 0.9rem;
   }
 
   .skip-link:hover {
-    color: #333;
+    color: #283618;
   }
 
   .btn {
@@ -210,24 +212,26 @@
     border-radius: 6px;
     cursor: pointer;
     font-size: 0.95rem;
+    font-weight: 500;
+    transition: all 0.15s ease;
   }
 
   .btn-primary {
-    background: #1976d2;
-    color: white;
+    background: #283618;
+    color: #F0EFEB;
   }
 
   .btn-primary:hover {
-    background: #1565c0;
+    background: #1f2a12;
   }
 
   .btn-secondary {
-    background: #e0e0e0;
-    color: #333;
+    background: #D4D4D4;
+    color: #283618;
   }
 
   .btn-secondary:hover {
-    background: #d0d0d0;
+    background: #B7B7A4;
   }
 
   .continue-prompt, .complete-prompt {
@@ -237,7 +241,7 @@
     padding: 40px;
     background: white;
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px rgba(40, 54, 24, 0.1);
   }
 
   .prompt-icon {
@@ -247,12 +251,13 @@
 
   .continue-prompt h2, .complete-prompt h2 {
     margin: 0 0 16px 0;
-    color: #333;
+    color: #283618;
+    font-weight: 600;
   }
 
   .continue-prompt p, .complete-prompt p {
     margin: 0 0 24px 0;
-    color: #666;
+    color: #606060;
     line-height: 1.5;
   }
 

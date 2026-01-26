@@ -13,18 +13,20 @@
     align-items: center;
     gap: 8px;
     padding: 12px 16px;
-    background: #f0f7ff;
-    border: 2px dashed #1976d2;
+    background: #F0EFEB;
+    border: 2px dashed #283618;
     border-radius: 8px;
-    color: #1976d2;
+    color: #283618;
     font-size: 0.95rem;
     cursor: pointer;
     width: 100%;
     justify-content: center;
+    font-weight: 500;
+    transition: all 0.15s ease;
   }
 
   .add-btn:hover {
-    background: #e3f2fd;
+    background: #DDE5B6;
   }
 
   .plus {

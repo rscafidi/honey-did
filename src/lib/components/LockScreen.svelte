@@ -62,7 +62,7 @@
 <div class="lock-screen">
   <div class="lock-container">
     <div class="lock-icon">🔒</div>
-    <h1>honey-did</h1>
+    <h1>Honey Did</h1>
     <p class="subtitle">Enter your password to unlock</p>
 
     {#if !showClearConfirm}
@@ -118,7 +118,7 @@
   .lock-screen {
     position: fixed;
     inset: 0;
-    background: #f5f5f5;
+    background: #F0EFEB;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -137,11 +137,12 @@
 
   h1 {
     margin: 0 0 8px 0;
-    color: #333;
+    color: #283618;
+    font-weight: 600;
   }
 
   .subtitle {
-    color: #666;
+    color: #606060;
     margin: 0 0 24px 0;
   }
 
@@ -154,25 +155,26 @@
   input {
     padding: 12px;
     font-size: 1rem;
-    border: 2px solid #ddd;
+    border: 2px solid #D4D4D4;
     border-radius: 8px;
     text-align: center;
+    background: white;
   }
 
   input:focus {
     outline: none;
-    border-color: #1976d2;
+    border-color: #283618;
   }
 
   .error {
-    color: #dc3545;
+    color: #9B2C2C;
     margin: 0;
     font-size: 0.9rem;
   }
 
   .warning {
-    color: #856404;
-    background: #fff3cd;
+    color: #744210;
+    background: #FEFCBF;
     padding: 12px;
     border-radius: 8px;
     font-size: 0.9rem;
@@ -185,38 +187,40 @@
     border: none;
     border-radius: 8px;
     cursor: pointer;
+    font-weight: 500;
+    transition: all 0.15s ease;
   }
 
   .btn-primary {
-    background: #1976d2;
-    color: white;
+    background: #283618;
+    color: #F0EFEB;
   }
 
   .btn-primary:hover:not(:disabled) {
-    background: #1565c0;
+    background: #1f2a12;
   }
 
   .btn-primary:disabled {
-    background: #90caf9;
+    background: #B7B7A4;
     cursor: not-allowed;
   }
 
   .btn-secondary {
-    background: #e0e0e0;
-    color: #333;
+    background: #D4D4D4;
+    color: #283618;
   }
 
   .btn-secondary:hover {
-    background: #d0d0d0;
+    background: #B7B7A4;
   }
 
   .btn-danger {
-    background: #dc3545;
+    background: #9B2C2C;
     color: white;
   }
 
   .btn-danger:hover {
-    background: #c82333;
+    background: #822727;
   }
 
   .button-row {
@@ -231,14 +235,14 @@
   .clear-link {
     background: none;
     border: none;
-    color: #666;
+    color: #606060;
     font-size: 0.85rem;
     margin-top: 24px;
     cursor: pointer;
   }
 
   .clear-link:hover {
-    color: #dc3545;
+    color: #9B2C2C;
     text-decoration: underline;
   }
 </style>

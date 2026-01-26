@@ -19,20 +19,20 @@
   .notes-field {
     margin-top: 20px;
     padding-top: 20px;
-    border-top: 1px solid #e0e0e0;
+    border-top: 1px solid #D4D4D4;
   }
 
   .label-text {
     display: block;
     font-weight: 600;
     margin-bottom: 8px;
-    color: #666;
+    color: #606060;
   }
 
   textarea {
     width: 100%;
     padding: 12px;
-    border: 1px solid #ddd;
+    border: 1px solid #D4D4D4;
     border-radius: 6px;
     font-family: inherit;
     font-size: 0.95rem;
@@ -42,6 +42,6 @@
 
   textarea:focus {
     outline: none;
-    border-color: #1976d2;
+    border-color: #283618;
   }
 </style>

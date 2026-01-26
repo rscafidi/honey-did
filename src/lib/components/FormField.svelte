@@ -45,14 +45,14 @@
   .label-text {
     display: block;
     font-size: 0.85rem;
-    color: #666;
+    color: #606060;
     margin-bottom: 4px;
   }
 
   input[type="text"], textarea {
     width: 100%;
     padding: 8px 12px;
-    border: 1px solid #ddd;
+    border: 1px solid #D4D4D4;
     border-radius: 4px;
     font-size: 0.95rem;
     box-sizing: border-box;
@@ -60,7 +60,7 @@
 
   input:focus, textarea:focus {
     outline: none;
-    border-color: #1976d2;
+    border-color: #283618;
   }
 
   .checkbox label {
@@ -68,6 +68,7 @@
     align-items: center;
     gap: 8px;
     cursor: pointer;
+    color: #283618;
   }
 
   .checkbox input {

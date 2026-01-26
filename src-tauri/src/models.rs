@@ -14,6 +14,7 @@ pub struct LegacyDocument {
     pub contacts: ContactsSection,
     pub medical: MedicalSection,
     pub pets: PetsSection,
+    pub welcome_screen: Option<WelcomeScreen>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -280,4 +281,34 @@ pub struct Pet {
     pub medications: Vec<Medication>,
     pub feeding: String,
     pub care_notes: String,
+}
+
+// --- Welcome Screen Section ---
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct MessageSlide {
+    pub id: String,
+    pub text: String,
+    pub transition: SlideTransition,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum SlideTransition {
+    #[serde(rename = "click")]
+    Click,
+    #[serde(rename = "auto")]
+    Auto { seconds: u32 },
+}
+
+impl Default for SlideTransition {
+    fn default() -> Self {
+        SlideTransition::Click
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct WelcomeScreen {
+    pub enabled: bool,
+    pub slides: Vec<MessageSlide>,
 }

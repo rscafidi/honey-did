@@ -195,7 +195,7 @@
   .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(40, 54, 24, 0.5);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -208,17 +208,18 @@
     padding: 24px;
     width: 100%;
     max-width: 420px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 20px 60px rgba(40, 54, 24, 0.3);
   }
 
   h2 {
     margin: 0 0 20px 0;
-    color: #333;
+    color: #283618;
+    font-weight: 600;
   }
 
   h3 {
     margin: 0 0 16px 0;
-    color: #666;
+    color: #606060;
     font-size: 0.9rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -236,23 +237,25 @@
     align-items: center;
     width: 100%;
     padding: 12px 16px;
-    background: #f5f5f5;
+    background: #F0EFEB;
     border: none;
     border-radius: 8px;
     cursor: pointer;
     text-align: left;
+    color: #283618;
+    transition: background 0.15s ease;
   }
 
   .setting-button:hover {
-    background: #eeeeee;
+    background: #D4D4D4;
   }
 
   .setting-button.danger {
-    color: #dc3545;
+    color: #9B2C2C;
   }
 
   .setting-button.danger:hover {
-    background: #f8d7da;
+    background: #FED7D7;
   }
 
   .setting-toggle {
@@ -260,9 +263,10 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    background: #f5f5f5;
+    background: #F0EFEB;
     border-radius: 8px;
     cursor: pointer;
+    color: #283618;
   }
 
   .setting-label {
@@ -272,12 +276,12 @@
   .setting-hint {
     display: block;
     font-size: 0.8rem;
-    color: #666;
+    color: #606060;
     font-weight: normal;
   }
 
   .setting-arrow {
-    color: #999;
+    color: #B7B7A4;
   }
 
   .setting-toggle input {
@@ -286,8 +290,8 @@
   }
 
   .warning {
-    color: #856404;
-    background: #fff3cd;
+    color: #744210;
+    background: #FEFCBF;
     padding: 12px;
     border-radius: 8px;
     font-size: 0.9rem;
@@ -304,13 +308,13 @@
     display: block;
     margin-bottom: 6px;
     font-weight: 500;
-    color: #333;
+    color: #283618;
   }
 
   .field input {
     width: 100%;
     padding: 10px 12px;
-    border: 2px solid #ddd;
+    border: 2px solid #D4D4D4;
     border-radius: 6px;
     font-size: 1rem;
     box-sizing: border-box;
@@ -318,19 +322,19 @@
 
   .field input:focus {
     outline: none;
-    border-color: #1976d2;
+    border-color: #283618;
   }
 
   .error-hint {
-    color: #dc3545;
+    color: #9B2C2C;
     font-size: 0.85rem;
     margin-top: 4px;
     display: block;
   }
 
   .error-message {
-    color: #dc3545;
-    background: #f8d7da;
+    color: #9B2C2C;
+    background: #FED7D7;
     padding: 10px 12px;
     border-radius: 6px;
     margin: 0;
@@ -349,37 +353,39 @@
     border-radius: 6px;
     font-size: 1rem;
     cursor: pointer;
+    font-weight: 500;
+    transition: all 0.15s ease;
   }
 
   .btn-primary {
-    background: #1976d2;
-    color: white;
+    background: #283618;
+    color: #F0EFEB;
   }
 
   .btn-primary:hover:not(:disabled) {
-    background: #1565c0;
+    background: #1f2a12;
   }
 
   .btn-primary:disabled {
-    background: #90caf9;
+    background: #B7B7A4;
     cursor: not-allowed;
   }
 
   .btn-secondary {
-    background: #e0e0e0;
-    color: #333;
+    background: #D4D4D4;
+    color: #283618;
   }
 
   .btn-secondary:hover {
-    background: #d0d0d0;
+    background: #B7B7A4;
   }
 
   .btn-danger {
-    background: #dc3545;
+    background: #9B2C2C;
     color: white;
   }
 
   .btn-danger:hover {
-    background: #c82333;
+    background: #822727;
   }
 </style>
