@@ -133,7 +133,7 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
         .sidebar-footer {{ padding: 15px; border-top: 1px solid #eee; }}
         .print-btn {{ width: 100%; padding: 10px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }}
         .print-btn:hover {{ background: #218838; }}
-        .main-content {{ flex: 1; margin-left: 280px; padding: 20px; max-width: 900px; }}
+        .main-content {{ flex: 1; margin-left: 280px; padding: 20px 40px; }}
         .section {{ background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
         .section-title {{ font-size: 1.25rem; border-bottom: 2px solid #007bff; padding-bottom: 0.5rem; margin-bottom: 1rem; }}
         .item {{ background: #f8f9fa; padding: 15px; border-radius: 4px; margin-bottom: 10px; }}
