@@ -553,6 +553,7 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
             container.innerHTML = html;
             document.getElementById('lockScreen').style.display = 'none';
             document.getElementById('content').classList.add('visible');
+            buildSearchIndex();
         }}
 
         function levenshtein(a, b) {{
@@ -642,6 +643,42 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str) -> String {
                 i++;
             }}
             return result;
+        }}
+
+        let searchIndex = [];
+        let searchState = {{
+            term: '',
+            matches: [],
+            filters: {{ exact: true, contains: true, spelling: true, phonetic: true }},
+            currentIndex: -1
+        }};
+
+        function buildSearchIndex() {{
+            searchIndex = [];
+            const content = document.getElementById('documentContent');
+            const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT, {{
+                acceptNode: (node) => {{
+                    if (node.parentElement.closest('.toolbar')) return NodeFilter.FILTER_REJECT;
+                    return node.textContent.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+                }}
+            }});
+
+            let node;
+            while (node = walker.nextNode()) {{
+                const text = node.textContent;
+                const words = text.match(/\b[\w']+\b/g) || [];
+                words.forEach(word => {{
+                    if (word.length >= 2) {{
+                        searchIndex.push({{
+                            text: word,
+                            lowerText: word.toLowerCase(),
+                            metaphone: metaphone(word),
+                            node: node,
+                            fullText: text
+                        }});
+                    }}
+                }});
+            }}
         }}
 
         function search(term) {{
