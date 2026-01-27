@@ -1,0 +1,29 @@
+<svg viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="256" fill="#283618"/>
+
+  <!-- Scroll body -->
+  <rect x="136" y="96" width="240" height="320" rx="8" fill="#F0EFEB"/>
+
+  <!-- Top roll shadow -->
+  <ellipse cx="256" cy="96" rx="128" ry="28" fill="#B7B7A4"/>
+  <!-- Top roll -->
+  <ellipse cx="256" cy="96" rx="128" ry="24" fill="#DDE5B6"/>
+  <ellipse cx="256" cy="96" rx="112" ry="16" fill="#F0EFEB"/>
+
+  <!-- Bottom roll shadow -->
+  <ellipse cx="256" cy="416" rx="128" ry="28" fill="#B7B7A4"/>
+  <!-- Bottom roll -->
+  <ellipse cx="256" cy="416" rx="128" ry="24" fill="#DDE5B6"/>
+  <ellipse cx="256" cy="416" rx="112" ry="16" fill="#F0EFEB"/>
+
+  <!-- H letter as path -->
+  <path d="M175 180 L175 320 M175 250 L225 250 M225 180 L225 320" stroke="#283618" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- D letter as path -->
+  <path d="M280 180 L280 320 M280 180 L310 180 Q360 180 360 250 Q360 320 310 320 L280 320" stroke="#283618" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Decorative lines -->
+  <line x1="176" y1="360" x2="336" y2="360" stroke="#B7B7A4" stroke-width="12" stroke-linecap="round"/>
+  <line x1="200" y1="385" x2="312" y2="385" stroke="#B7B7A4" stroke-width="8" stroke-linecap="round"/>
+</svg>

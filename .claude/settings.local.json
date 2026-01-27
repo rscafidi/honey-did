@@ -49,7 +49,11 @@
       "Bash(npm run:*)",
       "Bash(file:*)",
       "Bash(git diff:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(apt-cache search:*)",
+      "Bash(identify:*)",
+      "Bash(npx --yes png2icons:*)",
+      "Bash(ls:*)"
     ]
   }
 }

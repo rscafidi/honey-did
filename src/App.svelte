@@ -218,7 +218,22 @@
   <main class="app">
     <aside class="sidebar">
       <div class="logo">
-        <h1>Honey Did</h1>
+        <svg class="logo-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Scroll body -->
+          <rect x="8" y="6" width="32" height="36" rx="2" fill="#F0EFEB" stroke="#DDE5B6" stroke-width="1.5"/>
+          <!-- Top roll -->
+          <ellipse cx="24" cy="6" rx="16" ry="3" fill="#DDE5B6"/>
+          <ellipse cx="24" cy="6" rx="14" ry="2" fill="#F0EFEB"/>
+          <!-- Bottom roll -->
+          <ellipse cx="24" cy="42" rx="16" ry="3" fill="#DDE5B6"/>
+          <ellipse cx="24" cy="42" rx="14" ry="2" fill="#F0EFEB"/>
+          <!-- Cursive HD text -->
+          <text x="24" y="28" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="16" font-weight="600" fill="#283618">HD</text>
+          <!-- Decorative lines -->
+          <line x1="14" y1="34" x2="34" y2="34" stroke="#B7B7A4" stroke-width="1" stroke-linecap="round"/>
+          <line x1="16" y1="37" x2="32" y2="37" stroke="#B7B7A4" stroke-width="0.75" stroke-linecap="round"/>
+        </svg>
+        <span class="logo-text">Honey Did</span>
       </div>
       <nav class="nav">
         {#each sections as section}
@@ -405,13 +420,21 @@
   }
 
   .logo {
-    padding: 20px;
+    padding: 16px 20px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
   }
 
-  .logo h1 {
-    margin: 0;
-    font-size: 1.5rem;
+  .logo-icon {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+  }
+
+  .logo-text {
+    font-size: 1.25rem;
     color: #F0EFEB;
     font-weight: 600;
   }

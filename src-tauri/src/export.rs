@@ -1,6 +1,6 @@
-use crate::encryption::{decrypt_from_browser, encrypt_for_browser, encrypt_key_with_passphrase, encrypt_with_raw_key, generate_document_key, EncryptedPayload, EncryptionError};
-use crate::models::{CustomSection, FieldType, LegacyDocument, SlideType};
-use regex::Regex;
+use crate::encryption::{decrypt_from_browser, decrypt_key_with_passphrase, decrypt_with_raw_key, encrypt_for_browser, encrypt_key_with_passphrase, encrypt_with_raw_key, generate_document_key, EncryptedPayload, EncryptionError};
+use serde::Deserialize;
+use crate::models::{FieldType, LegacyDocument, SlideType};
 use serde::Serialize;
 
 #[derive(Debug)]
@@ -195,32 +195,104 @@ pub fn generate_encrypted_html_with_questions(
     Ok(html)
 }
 
+/// Structure for question-based encrypted data (used for import detection)
+#[derive(Deserialize)]
+struct QuestionBasedEncryptedData {
+    question_key: EncryptedPayload,
+    passphrase_key: Option<EncryptedPayload>,
+    document: DocumentPayloadImport,
+}
+
+#[derive(Deserialize)]
+struct DocumentPayloadImport {
+    nonce: String,
+    ciphertext: String,
+}
+
+/// Extracts JSON object from HTML starting at the given marker
+fn extract_json_from_html(html: &str, marker: &str) -> Result<String, ExportError> {
+    let start_pos = html.find(marker)
+        .ok_or_else(|| ExportError::ParseError(format!("Could not find '{}' in HTML file", marker)))?;
+
+    let json_start = start_pos + marker.len();
+
+    // Find the matching closing brace by counting braces
+    let mut brace_count = 0;
+    let mut json_end = json_start;
+    let mut in_string = false;
+    let mut escape_next = false;
+
+    for (i, c) in html[json_start..].char_indices() {
+        if escape_next {
+            escape_next = false;
+            continue;
+        }
+
+        match c {
+            '\\' if in_string => escape_next = true,
+            '"' => in_string = !in_string,
+            '{' if !in_string => brace_count += 1,
+            '}' if !in_string => {
+                brace_count -= 1;
+                if brace_count == 0 {
+                    json_end = json_start + i + 1;
+                    break;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    if brace_count != 0 {
+        return Err(ExportError::ParseError("Malformed JSON in HTML file".into()));
+    }
+
+    Ok(html[json_start..json_end].to_string())
+}
+
 /// Imports a legacy document from an encrypted HTML file
 pub fn import_from_html(html: &str, passphrase: &str) -> Result<LegacyDocument, ExportError> {
-    // Extract the encrypted data from the HTML
-    // Look for: const ENCRYPTED_DATA = {...};
-    let re = Regex::new(r"const\s+ENCRYPTED_DATA\s*=\s*(\{[^}]+\})")
-        .map_err(|e| ExportError::ParseError(format!("Regex error: {}", e)))?;
+    let encrypted_json = extract_json_from_html(html, "const ENCRYPTED_DATA = ")?;
 
-    let captures = re.captures(html)
-        .ok_or_else(|| ExportError::ParseError("Could not find encrypted data in HTML file".into()))?;
+    // Try to detect if this is a question-based export by checking for question_key field
+    if encrypted_json.contains("\"question_key\"") {
+        // This is a question-based export
+        let data: QuestionBasedEncryptedData = serde_json::from_str(&encrypted_json)
+            .map_err(|e| ExportError::ParseError(format!("Invalid question-based encrypted data: {}", e)))?;
 
-    let encrypted_json = captures.get(1)
-        .ok_or_else(|| ExportError::ParseError("Could not extract encrypted data".into()))?
-        .as_str();
+        // Check if passphrase_key is available
+        let passphrase_key = data.passphrase_key.ok_or_else(|| {
+            ExportError::ParseError(
+                "This file was exported with question-based unlock and no fallback passphrase. \
+                 It can only be opened by answering the original questions in a browser.".into()
+            )
+        })?;
 
-    // Parse the encrypted payload
-    let payload: EncryptedPayload = serde_json::from_str(encrypted_json)
-        .map_err(|e| ExportError::ParseError(format!("Invalid encrypted data format: {}", e)))?;
+        // Decrypt the document key using the passphrase
+        let doc_key = decrypt_key_with_passphrase(&passphrase_key, passphrase)?;
 
-    // Decrypt the payload
-    let decrypted_json = decrypt_from_browser(&payload, passphrase)?;
+        // Decrypt the document using the document key
+        let decrypted_json = decrypt_with_raw_key(&data.document.nonce, &data.document.ciphertext, &doc_key)?;
 
-    // Parse the decrypted JSON into a LegacyDocument
-    let document: LegacyDocument = serde_json::from_str(&decrypted_json)
-        .map_err(|e| ExportError::SerializationError(format!("Invalid document format: {}", e)))?;
+        // Parse the decrypted JSON into a LegacyDocument
+        let document: LegacyDocument = serde_json::from_str(&decrypted_json)
+            .map_err(|e| ExportError::SerializationError(format!("Invalid document format: {}", e)))?;
 
-    Ok(document)
+        Ok(document)
+    } else {
+        // This is a passphrase-based export (original format)
+        let payload: EncryptedPayload = serde_json::from_str(&encrypted_json)
+            .map_err(|e| ExportError::ParseError(format!("Invalid encrypted data format: {}", e)))?;
+
+        // Decrypt the payload
+        let decrypted_json = decrypt_from_browser(&payload, passphrase)?;
+
+        // Parse the decrypted JSON into a LegacyDocument
+        let document: LegacyDocument = serde_json::from_str(&decrypted_json)
+            .map_err(|e| ExportError::SerializationError(format!("Invalid document format: {}", e)))?;
+
+        Ok(document)
+    }
 }
 
 // ============================================================================
@@ -236,7 +308,9 @@ const SHARED_CSS: &str = r##"
         .layout { display: flex; min-height: 100vh; width: 100%; }
         .container { width: 100%; }
         .sidebar { width: 280px; min-width: 280px; background: #FFFFFF; border-right: 1px solid #D4D4D4; height: 100vh; position: fixed; left: 0; top: 0; overflow-y: auto; display: flex; flex-direction: column; z-index: 100; }
-        .sidebar-header { padding: 24px 20px; border-bottom: 1px solid #D4D4D4; background: #283618; }
+        .sidebar-header { padding: 16px 20px; border-bottom: 1px solid #D4D4D4; background: #283618; display: flex; align-items: center; gap: 12px; }
+        .logo-icon { width: 40px; height: 40px; flex-shrink: 0; }
+        .logo-text { flex: 1; }
         .sidebar-title { font-size: 1.25rem; font-weight: 600; color: #F0EFEB; margin-bottom: 0.25rem; }
         .sidebar-subtitle { font-size: 0.8rem; color: #B7B7A4; }
         .sidebar-search { padding: 16px; border-bottom: 1px solid #D4D4D4; }
@@ -755,6 +829,17 @@ const SHARED_JS_SEARCH: &str = r##"
             updateSearchUI();
             if (searchState.currentIndex >= 0) scrollToCurrentMatch();
         }
+
+        // Clear search when clicking on main content area
+        document.addEventListener('click', (e) => {
+            const mainContent = document.getElementById('mainContent');
+            if (mainContent && mainContent.contains(e.target) && searchState.matches.length > 0) {
+                // Don't clear if clicking on a highlight (user might want to see it)
+                if (!e.target.closest('mark.highlight')) {
+                    clearSearch();
+                }
+            }
+        });
 "##;
 
 /// Shared JavaScript for rendering the document content
@@ -766,11 +851,22 @@ const SHARED_JS_RENDER_DOCUMENT: &str = r##"
             html += '<button class="menu-toggle" onclick="toggleSidebar()">&#9776; Menu</button>';
             html += '<div class="layout">';
             html += '<div class="sidebar" id="sidebar">';
-            html += '<div class="sidebar-header"><div class="sidebar-title">Honey Did</div>';
+            html += '<div class="sidebar-header">';
+            html += '<svg class="logo-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">';
+            html += '<rect x="8" y="6" width="32" height="36" rx="2" fill="#F0EFEB" stroke="#DDE5B6" stroke-width="1.5"/>';
+            html += '<ellipse cx="24" cy="6" rx="16" ry="3" fill="#DDE5B6"/>';
+            html += '<ellipse cx="24" cy="6" rx="14" ry="2" fill="#F0EFEB"/>';
+            html += '<ellipse cx="24" cy="42" rx="16" ry="3" fill="#DDE5B6"/>';
+            html += '<ellipse cx="24" cy="42" rx="14" ry="2" fill="#F0EFEB"/>';
+            html += '<text x="24" y="28" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="16" font-weight="600" fill="#283618">HD</text>';
+            html += '<line x1="14" y1="34" x2="34" y2="34" stroke="#B7B7A4" stroke-width="1" stroke-linecap="round"/>';
+            html += '<line x1="16" y1="37" x2="32" y2="37" stroke="#B7B7A4" stroke-width="0.75" stroke-linecap="round"/>';
+            html += '</svg>';
+            html += '<div class="logo-text"><div class="sidebar-title">Honey Did</div>';
             if (data.meta && data.meta.creator_name) {
                 html += '<div class="sidebar-subtitle">By ' + escapeHtml(data.meta.creator_name) + '</div>';
             }
-            html += '</div>';
+            html += '</div></div>';
             html += '<div class="sidebar-search">';
             html += '<div class="search-wrapper">';
             html += '<input type="text" id="searchInput" class="search-input" placeholder="Search..." oninput="debounceSearch(this.value)" onkeydown="if(event.key===\'Escape\')clearSearch()">';
@@ -1318,6 +1414,17 @@ const PASSPHRASE_JS_WELCOME: &str = r##"
         }
 
         document.addEventListener('DOMContentLoaded', initWelcome);
+
+        // Allow Enter key to advance welcome slides
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const welcomeScreen = document.getElementById('welcomeScreen');
+                if (welcomeScreen && !welcomeScreen.classList.contains('hidden')) {
+                    e.preventDefault();
+                    nextWelcomeSlide();
+                }
+            }
+        });
 "##;
 
 // ============================================================================
@@ -1607,6 +1714,17 @@ const QUESTION_JS_SLIDES: &str = r##"
             if (e.key === 'Enter') unlockWithPassphrase();
         });
 
+        // Allow Enter key to advance slides
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const slideScreen = document.getElementById('slideScreen');
+                if (slideScreen && !slideScreen.classList.contains('hidden')) {
+                    e.preventDefault();
+                    nextSlide();
+                }
+            }
+        });
+
         document.addEventListener('DOMContentLoaded', initSlides);
 "##;
 
@@ -1861,24 +1979,22 @@ pub fn generate_print_html(document: &LegacyDocument) -> String {
     }
 
     // Custom Sections
-    if let Some(ref custom_sections) = document.custom_sections {
-        for section in custom_sections {
-            html.push_str(&format!("<h2>📋 {}</h2>\n", section.name));
-            for subsection in &section.subsections {
-                html.push_str(&format!("<h3>{}</h3>\n", subsection.name));
-                for item in &subsection.items {
-                    html.push_str("<div class=\"item\">");
-                    for field_def in &subsection.field_definitions {
-                        if let Some(value) = item.values.get(&field_def.id) {
-                            let display_value = match field_def.field_type {
-                                FieldType::Boolean => if value == "true" { "Yes" } else { "No" }.to_string(),
-                                _ => value.clone(),
-                            };
-                            html.push_str(&format!("<div class=\"item-detail\"><strong>{}:</strong> {}</div>", field_def.name, display_value));
-                        }
+    for section in &document.custom_sections {
+        html.push_str(&format!("<h2>📋 {}</h2>\n", section.name));
+        for subsection in &section.subsections {
+            html.push_str(&format!("<h3>{}</h3>\n", subsection.name));
+            for item in &subsection.items {
+                html.push_str("<div class=\"item\">");
+                for field_def in &subsection.field_definitions {
+                    if let Some(value) = item.values.get(&field_def.id) {
+                        let display_value: String = match field_def.field_type {
+                            FieldType::Boolean => if value == "true" { "Yes".to_string() } else { "No".to_string() },
+                            _ => value.clone(),
+                        };
+                        html.push_str(&format!("<div class=\"item-detail\"><strong>{}:</strong> {}</div>", field_def.name, display_value));
                     }
-                    html.push_str("</div>\n");
                 }
+                html.push_str("</div>\n");
             }
         }
     }

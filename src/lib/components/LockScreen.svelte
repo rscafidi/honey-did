@@ -61,8 +61,19 @@
 
 <div class="lock-screen">
   <div class="lock-container">
-    <div class="lock-icon">🔒</div>
-    <h1>Honey Did</h1>
+    <div class="logo-wrapper">
+      <svg class="logo-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="8" y="6" width="32" height="36" rx="2" fill="#F0EFEB" stroke="#DDE5B6" stroke-width="1.5"/>
+        <ellipse cx="24" cy="6" rx="16" ry="3" fill="#DDE5B6"/>
+        <ellipse cx="24" cy="6" rx="14" ry="2" fill="#F0EFEB"/>
+        <ellipse cx="24" cy="42" rx="16" ry="3" fill="#DDE5B6"/>
+        <ellipse cx="24" cy="42" rx="14" ry="2" fill="#F0EFEB"/>
+        <text x="24" y="28" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="16" font-weight="600" fill="#283618">HD</text>
+        <line x1="14" y1="34" x2="34" y2="34" stroke="#B7B7A4" stroke-width="1" stroke-linecap="round"/>
+        <line x1="16" y1="37" x2="32" y2="37" stroke="#B7B7A4" stroke-width="0.75" stroke-linecap="round"/>
+      </svg>
+      <h1>Honey Did</h1>
+    </div>
     <p class="subtitle">Enter your password to unlock</p>
 
     {#if !showClearConfirm}
@@ -130,15 +141,24 @@
     padding: 40px;
   }
 
-  .lock-icon {
-    font-size: 4rem;
-    margin-bottom: 16px;
+  .logo-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  .logo-icon {
+    width: 48px;
+    height: 48px;
   }
 
   h1 {
-    margin: 0 0 8px 0;
+    margin: 0;
     color: #283618;
     font-weight: 600;
+    font-size: 1.75rem;
   }
 
   .subtitle {
