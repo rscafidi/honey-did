@@ -8,7 +8,7 @@
   let error = '';
   let isVerifying = false;
   let showClearConfirm = false;
-  let clearPassword = '';
+  let clearConfirmation = '';
   let clearError = '';
 
   async function handleUnlock() {
@@ -42,19 +42,19 @@
   }
 
   async function handleClearData() {
-    if (!clearPassword) {
-      clearError = 'Enter your password to confirm';
+    if (clearConfirmation.toUpperCase() !== 'DELETE ALL DATA') {
+      clearError = 'Type DELETE ALL DATA to confirm';
       return;
     }
 
     clearError = '';
 
     try {
-      await invoke('clear_all_data', { password: clearPassword });
+      await invoke('force_clear_all_data', { confirmation: clearConfirmation });
       dispatch('cleared');
     } catch (e) {
       clearError = `${e}`;
-      clearPassword = '';
+      clearConfirmation = '';
     }
   }
 </script>
@@ -91,11 +91,11 @@
       </button>
     {:else}
       <div class="form">
-        <p class="warning">This will permanently delete all your data. Enter your password to confirm.</p>
+        <p class="warning">This will permanently delete all your data. Type DELETE ALL DATA to confirm.</p>
         <input
-          type="password"
-          bind:value={clearPassword}
-          placeholder="Enter password to confirm"
+          type="text"
+          bind:value={clearConfirmation}
+          placeholder="Type DELETE ALL DATA"
           autofocus
         />
         {#if clearError}

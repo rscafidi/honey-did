@@ -177,6 +177,23 @@ fn clear_all_data(state: State<AppState>, password: String) -> Result<(), String
 }
 
 #[tauri::command]
+fn force_clear_all_data(state: State<AppState>, confirmation: String) -> Result<(), String> {
+    // Require exact confirmation phrase (case-insensitive)
+    if confirmation.to_uppercase() != "DELETE ALL DATA" {
+        return Err("Please type DELETE ALL DATA to confirm".to_string());
+    }
+
+    // Clear everything without password verification
+    storage::delete_document().map_err(|e| e.to_string())?;
+    storage::delete_password_hash().map_err(|e| e.to_string())?;
+    storage::delete_settings().map_err(|e| e.to_string())?;
+    // Reset in-memory state
+    let mut doc = state.document.lock().map_err(|e| e.to_string())?;
+    *doc = LegacyDocument::default();
+    Ok(())
+}
+
+#[tauri::command]
 fn get_clear_on_exit() -> Result<bool, String> {
     storage::load_settings().map_err(|e| e.to_string())
 }
@@ -224,6 +241,7 @@ fn main() {
             has_app_password,
             change_app_password,
             clear_all_data,
+            force_clear_all_data,
             get_clear_on_exit,
             set_clear_on_exit,
             clear_data_on_exit,
