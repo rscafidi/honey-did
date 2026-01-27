@@ -840,6 +840,43 @@ const SHARED_JS_SEARCH: &str = r##"
                 }
             }
         });
+
+        // Keyboard navigation for search results
+        document.addEventListener('keydown', (e) => {
+            // Escape clears search when active
+            if (e.key === 'Escape' && (searchState.matches.length > 0 || searchState.term)) {
+                e.preventDefault();
+                clearSearch();
+                return;
+            }
+
+            if (searchState.matches.length === 0) return;
+
+            const searchInput = document.getElementById('searchInput');
+            const isInSearchInput = e.target === searchInput;
+
+            // In search input: Enter = next, Shift+Enter = prev
+            if (isInSearchInput && e.key === 'Enter') {
+                e.preventDefault();
+                if (e.shiftKey) {
+                    prevMatch();
+                } else {
+                    nextMatch();
+                }
+                return;
+            }
+
+            // Outside inputs: arrow keys navigate
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                e.preventDefault();
+                nextMatch();
+            } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                e.preventDefault();
+                prevMatch();
+            }
+        });
 "##;
 
 /// Shared JavaScript for rendering the document content
@@ -887,9 +924,45 @@ const SHARED_JS_RENDER_DOCUMENT: &str = r##"
             html += '</div>';
             html += '</div>';
             html += '<div class="sidebar-nav"><div class="nav-title">Contents</div><ul class="nav-list">';
-            const sections = ['financial', 'insurance', 'bills', 'property', 'legal', 'digital', 'household', 'personal', 'contacts', 'medical', 'pets'];
+
+            // Check which sections have content
             const sectionLabels = {'financial': '💰 Financial', 'insurance': '🛡️ Insurance', 'bills': '📄 Bills', 'property': '🏠 Property', 'legal': '⚖️ Legal', 'digital': '💻 Digital Life', 'household': '🔧 Household', 'personal': '👤 Personal', 'contacts': '📇 Contacts', 'medical': '🏥 Medical', 'pets': '🐾 Pets'};
-            sections.forEach(s => { html += '<li><a href="#' + s + '" onclick="closeSidebarOnMobile()">' + sectionLabels[s] + '</a></li>'; });
+
+            function hasContent(section) {
+                if (!data[section]) return false;
+                const d = data[section];
+                switch(section) {
+                    case 'financial': return (d.bank_accounts?.length || d.credit_cards?.length || d.investments?.length || d.debts?.length || d.notes);
+                    case 'insurance': return (d.policies?.length || d.notes);
+                    case 'bills': return (d.bills?.length || d.notes);
+                    case 'property': return (d.properties?.length || d.vehicles?.length || d.valuables?.length || d.notes);
+                    case 'legal': return (d.will_location || d.power_of_attorney || d.trusts?.length || d.attorney?.name || d.notes);
+                    case 'digital': return (d.email_accounts?.length || d.social_media?.length || d.password_manager?.name || d.notes);
+                    case 'household': return (d.maintenance_items?.length || d.contractors?.length || d.how_things_work?.length || d.notes);
+                    case 'personal': return (d.funeral_preferences || d.obituary_notes || d.messages?.length || d.notes);
+                    case 'contacts': return (d.emergency_contacts?.length || d.family?.length || d.professionals?.length || d.notes);
+                    case 'medical': return (d.family_members?.length || d.notes);
+                    case 'pets': return (d.pets?.length || d.notes);
+                    default: return false;
+                }
+            }
+
+            const sections = ['financial', 'insurance', 'bills', 'property', 'legal', 'digital', 'household', 'personal', 'contacts', 'medical', 'pets'];
+            sections.forEach(s => {
+                if (hasContent(s)) {
+                    html += '<li><a href="#' + s + '" onclick="closeSidebarOnMobile()">' + sectionLabels[s] + '</a></li>';
+                }
+            });
+
+            // Add custom sections to nav
+            if (data.custom_sections && data.custom_sections.length) {
+                const topLevel = data.custom_sections.filter(s => !s.parent);
+                topLevel.forEach(section => {
+                    if (section.subsections && section.subsections.some(sub => sub.items && sub.items.length)) {
+                        html += '<li><a href="#custom-' + section.id + '" onclick="closeSidebarOnMobile()">📋 ' + escapeHtml(section.name) + '</a></li>';
+                    }
+                });
+            }
             html += '</ul></div>';
             html += '<div class="sidebar-footer"><button class="print-btn" onclick="window.print()">Print Document</button></div>';
             html += '</div>';

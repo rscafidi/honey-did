@@ -65,7 +65,6 @@
 <div class="wizard">
   <header class="wizard-header">
     <h1>Guided Setup</h1>
-    <button class="exit-link" on:click={exitWizard}>Exit to Full View</button>
   </header>
 
   <main class="wizard-content">
@@ -121,16 +120,16 @@
 
   {#if phase !== 'askContinue' && phase !== 'complete'}
     <footer class="wizard-footer">
-      <div class="footer-left">
+      <div class="footer-center">
         {#if currentStepIndex > 0}
           <button class="btn btn-secondary" on:click={back}>Back</button>
         {/if}
-      </div>
-      <div class="footer-right">
-        <button class="skip-link" on:click={skip}>Skip this section</button>
+        <button class="skip-link" on:click={skip}>Skip</button>
         <button class="btn btn-primary" on:click={next}>
           {currentStepIndex === steps.length - 1 ? (phase === 'priority' ? 'Continue' : 'Finish') : 'Next'}
         </button>
+        <span class="footer-divider"></span>
+        <button class="exit-btn" on:click={exitWizard}>Exit to Full View</button>
       </div>
     </footer>
   {/if}
@@ -146,7 +145,7 @@
 
   .wizard-header {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     padding: 16px 24px;
     background: #283618;
@@ -160,19 +159,6 @@
     font-weight: 600;
   }
 
-  .exit-link {
-    background: none;
-    border: none;
-    color: #B7B7A4;
-    cursor: pointer;
-    font-size: 0.9rem;
-  }
-
-  .exit-link:hover {
-    color: #F0EFEB;
-    text-decoration: underline;
-  }
-
   .wizard-content {
     flex: 1;
     overflow-y: auto;
@@ -181,17 +167,24 @@
 
   .wizard-footer {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     padding: 16px 24px;
     background: white;
     border-top: 1px solid #D4D4D4;
   }
 
-  .footer-left, .footer-right {
+  .footer-center {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
+  }
+
+  .footer-divider {
+    width: 1px;
+    height: 24px;
+    background: #D4D4D4;
+    margin: 0 8px;
   }
 
   .skip-link {
@@ -200,10 +193,25 @@
     color: #606060;
     cursor: pointer;
     font-size: 0.9rem;
+    padding: 10px 16px;
   }
 
   .skip-link:hover {
     color: #283618;
+  }
+
+  .exit-btn {
+    background: none;
+    border: none;
+    color: #606060;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 10px 16px;
+  }
+
+  .exit-btn:hover {
+    color: #283618;
+    text-decoration: underline;
   }
 
   .btn {
