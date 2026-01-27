@@ -47,7 +47,9 @@
       "Bash(git init:*)",
       "Bash(npm run check:*)",
       "Bash(npm run:*)",
-      "Bash(file:*)"
+      "Bash(file:*)",
+      "Bash(git diff:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

@@ -4,6 +4,7 @@
   import AddButton from '../components/AddButton.svelte';
   import FormField from '../components/FormField.svelte';
   import NotesField from '../components/NotesField.svelte';
+  import CustomSubsections from '../components/CustomSubsections.svelte';
 
   const emptyAccount = { name: '', username: '', recovery_hint: '', notes: '' };
   const emptyPwManager = { name: '', master_password_hint: '', recovery_method: '', notes: '' };
@@ -95,6 +96,8 @@
   </div>
 
   <NotesField value={digital.notes} on:change={updateNotes} />
+
+  <CustomSubsections parentId="digital" />
 </div>
 
 <style>

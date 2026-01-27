@@ -4,6 +4,7 @@
   import AddButton from '../components/AddButton.svelte';
   import FormField from '../components/FormField.svelte';
   import NotesField from '../components/NotesField.svelte';
+  import CustomSubsections from '../components/CustomSubsections.svelte';
 
   const emptyContact = { name: '', relationship: '', phone: '', email: '', notes: '' };
   const emptyMedication = { name: '', dosage: '', frequency: '', prescriber: '', notes: '' };
@@ -117,6 +118,8 @@
 
   <AddButton label="Add Family Member" on:click={addFamilyMember} />
   <NotesField value={medical.notes} on:change={updateNotes} />
+
+  <CustomSubsections parentId="medical" />
 </div>
 
 <style>

@@ -15,6 +15,7 @@ export interface LegacyDocument {
   medical: MedicalSection;
   pets: PetsSection;
   welcome_screen?: WelcomeScreen;
+  custom_sections?: CustomSection[];
 }
 
 export interface DocumentMeta {
@@ -109,6 +110,34 @@ export interface WelcomeScreen {
   enabled: boolean;
   slides: MessageSlide[];
   fallback_passphrase?: string;
+}
+
+// Custom Sections
+export interface CustomSection {
+  id: string;
+  name: string;
+  parent?: string;  // undefined = top-level, "financial" = subsection of financial
+  subsections: CustomSubsection[];
+}
+
+export interface CustomSubsection {
+  id: string;
+  name: string;
+  field_definitions: FieldDefinition[];
+  items: CustomItem[];
+}
+
+export interface FieldDefinition {
+  id: string;
+  name: string;
+  field_type: FieldType;
+}
+
+export type FieldType = 'text' | 'number' | 'date' | 'boolean';
+
+export interface CustomItem {
+  id: string;
+  values: Record<string, string>;  // field_id -> value
 }
 
 function createDocumentStore() {
@@ -226,8 +255,11 @@ export function isDocumentEmpty(doc: LegacyDocument | null): boolean {
     doc.contacts.professionals.length > 0;
   const hasMedical = doc.medical.family_members.length > 0;
   const hasPets = doc.pets.pets.length > 0;
+  const hasCustomSections = (doc.custom_sections || []).some(section =>
+    section.subsections.some(sub => sub.items.length > 0)
+  );
 
   return !hasFinancial && !hasInsurance && !hasBills && !hasProperty &&
     !hasLegal && !hasDigital && !hasHousehold && !hasPersonal &&
-    !hasContacts && !hasMedical && !hasPets;
+    !hasContacts && !hasMedical && !hasPets && !hasCustomSections;
 }

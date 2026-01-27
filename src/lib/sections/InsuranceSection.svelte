@@ -4,6 +4,7 @@
   import AddButton from '../components/AddButton.svelte';
   import FormField from '../components/FormField.svelte';
   import NotesField from '../components/NotesField.svelte';
+  import CustomSubsections from '../components/CustomSubsections.svelte';
 
   $: insurance = $document?.insurance ?? { policies: [], notes: '' };
 
@@ -56,6 +57,8 @@
 
   <AddButton label="Add Insurance Policy" on:click={addPolicy} />
   <NotesField value={insurance.notes} on:change={updateNotes} />
+
+  <CustomSubsections parentId="insurance" />
 </div>
 
 <style>

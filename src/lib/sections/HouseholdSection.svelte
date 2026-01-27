@@ -4,6 +4,7 @@
   import AddButton from '../components/AddButton.svelte';
   import FormField from '../components/FormField.svelte';
   import NotesField from '../components/NotesField.svelte';
+  import CustomSubsections from '../components/CustomSubsections.svelte';
 
   const emptyContact = { name: '', relationship: '', phone: '', email: '', notes: '' };
 
@@ -109,6 +110,8 @@
   </div>
 
   <NotesField value={household.notes} on:change={updateNotes} />
+
+  <CustomSubsections parentId="household" />
 </div>
 
 <style>

@@ -4,6 +4,7 @@
   import AddButton from '../components/AddButton.svelte';
   import FormField from '../components/FormField.svelte';
   import NotesField from '../components/NotesField.svelte';
+  import CustomSubsections from '../components/CustomSubsections.svelte';
 
   $: bills = $document?.bills ?? { bills: [], notes: '' };
 
@@ -58,6 +59,8 @@
 
   <AddButton label="Add Bill/Subscription" on:click={addBill} />
   <NotesField value={bills.notes} on:change={updateNotes} />
+
+  <CustomSubsections parentId="bills" />
 </div>
 
 <style>

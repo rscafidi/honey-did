@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
   import { getCurrentWindow } from '@tauri-apps/api/window';
-  import { document, isDocumentEmpty, setPasswordRequired } from './lib/stores/document';
+  import { document, isDocumentEmpty, setPasswordRequired, type CustomSection } from './lib/stores/document';
   import FinancialSection from './lib/sections/FinancialSection.svelte';
   import InsuranceSection from './lib/sections/InsuranceSection.svelte';
   import BillsSection from './lib/sections/BillsSection.svelte';
@@ -15,6 +15,7 @@
   import MedicalSection from './lib/sections/MedicalSection.svelte';
   import PetsSection from './lib/sections/PetsSection.svelte';
   import WelcomeScreenSection from './lib/sections/WelcomeScreenSection.svelte';
+  import CustomSectionPage from './lib/sections/CustomSectionPage.svelte';
   import ExportDialog from './lib/components/ExportDialog.svelte';
   import ImportDialog from './lib/components/ImportDialog.svelte';
   import GuidedWizard from './lib/wizard/GuidedWizard.svelte';
@@ -26,7 +27,7 @@
     | 'financial' | 'insurance' | 'bills' | 'property' | 'legal'
     | 'digital' | 'household' | 'personal' | 'contacts' | 'medical' | 'pets' | 'welcome';
 
-  let currentSection: Section = 'financial';
+  let currentSection: Section | string = 'financial';
   let showExportDialog = false;
   let showImportDialog = false;
   let isGuidedMode = false;
@@ -38,6 +39,10 @@
   let showSetPasswordModal = false;
   let showSettings = false;
   let isLoading = true;
+
+  // Custom section state
+  let showAddSectionForm = false;
+  let newSectionName = '';
 
   const sections: { id: Section; label: string; icon: string }[] = [
     { id: 'financial', label: 'Financial', icon: '💰' },
@@ -53,6 +58,59 @@
     { id: 'pets', label: 'Pets', icon: '🐾' },
     { id: 'welcome', label: 'Welcome Screen', icon: '👋' },
   ];
+
+  // Custom top-level sections (no parent)
+  $: customTopLevelSections = ($document?.custom_sections || []).filter(s => !s.parent);
+
+  function generateId(): string {
+    return Math.random().toString(36).substring(2, 9);
+  }
+
+  function addCustomSection() {
+    if (!newSectionName.trim() || !$document) return;
+
+    const newSection: CustomSection = {
+      id: generateId(),
+      name: newSectionName.trim(),
+      parent: undefined,
+      subsections: [],
+    };
+
+    document.updateSection('custom_sections', [...($document.custom_sections || []), newSection]);
+    currentSection = `custom-${newSection.id}`;
+    newSectionName = '';
+    showAddSectionForm = false;
+  }
+
+  function deleteCustomSection(sectionId: string) {
+    if (!$document) return;
+    document.updateSection(
+      'custom_sections',
+      ($document.custom_sections || []).filter(s => s.id !== sectionId)
+    );
+    if (currentSection === `custom-${sectionId}`) {
+      currentSection = 'financial';
+    }
+  }
+
+  function renameCustomSection(sectionId: string, newName: string) {
+    if (!$document) return;
+    document.updateSection(
+      'custom_sections',
+      ($document.custom_sections || []).map(s =>
+        s.id === sectionId ? { ...s, name: newName } : s
+      )
+    );
+  }
+
+  function getCurrentSectionLabel(): string {
+    if (currentSection.startsWith('custom-')) {
+      const customId = currentSection.replace('custom-', '');
+      const custom = customTopLevelSections.find(s => s.id === customId);
+      return custom?.name || 'Custom Section';
+    }
+    return sections.find((s) => s.id === currentSection)?.label || '';
+  }
 
   onMount(async () => {
     // Check if app has a password set
@@ -173,6 +231,46 @@
             <span class="nav-label">{section.label}</span>
           </button>
         {/each}
+
+        <!-- Custom top-level sections -->
+        {#each customTopLevelSections as customSection (customSection.id)}
+          <div class="nav-item-wrapper">
+            <button
+              class="nav-item"
+              class:active={currentSection === `custom-${customSection.id}`}
+              on:click={() => (currentSection = `custom-${customSection.id}`)}
+            >
+              <span class="nav-icon">📁</span>
+              <span class="nav-label">{customSection.name}</span>
+            </button>
+            <button
+              class="nav-delete"
+              on:click|stopPropagation={() => deleteCustomSection(customSection.id)}
+              title="Delete section"
+            >×</button>
+          </div>
+        {/each}
+
+        <!-- Add Section Button -->
+        {#if showAddSectionForm}
+          <div class="add-section-form">
+            <input
+              type="text"
+              class="add-section-input"
+              placeholder="Section name"
+              bind:value={newSectionName}
+              on:keydown={(e) => e.key === 'Enter' && addCustomSection()}
+            />
+            <div class="add-section-actions">
+              <button class="btn-small btn-cancel" on:click={() => { showAddSectionForm = false; newSectionName = ''; }}>Cancel</button>
+              <button class="btn-small btn-create" on:click={addCustomSection}>Create</button>
+            </div>
+          </div>
+        {:else}
+          <button class="add-section-btn" on:click={() => (showAddSectionForm = true)}>
+            + Add Section
+          </button>
+        {/if}
       </nav>
       <div class="sidebar-footer">
         <div class="footer-row">
@@ -193,7 +291,7 @@
     </aside>
     <section class="content">
       <header class="content-header">
-        <h2>{sections.find((s) => s.id === currentSection)?.label}</h2>
+        <h2>{getCurrentSectionLabel()}</h2>
       </header>
       <div class="content-body">
         {#if currentSection === 'financial'}
@@ -220,6 +318,25 @@
           <PetsSection />
         {:else if currentSection === 'welcome'}
           <WelcomeScreenSection />
+        {:else if currentSection.startsWith('custom-')}
+          {@const customId = currentSection.replace('custom-', '')}
+          {@const customSection = customTopLevelSections.find(s => s.id === customId)}
+          {#if customSection}
+            <CustomSectionPage
+              section={customSection}
+              on:update={(e) => {
+                if ($document) {
+                  document.updateSection(
+                    'custom_sections',
+                    ($document.custom_sections || []).map(s =>
+                      s.id === customSection.id ? e.detail : s
+                    )
+                  );
+                }
+              }}
+              on:rename={(e) => renameCustomSection(customSection.id, e.detail)}
+            />
+          {/if}
         {/if}
       </div>
     </section>
@@ -337,6 +454,115 @@
   .nav-label {
     flex: 1;
     font-weight: 500;
+  }
+
+  .nav-item-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .nav-item-wrapper .nav-item {
+    flex: 1;
+  }
+
+  .nav-delete {
+    position: absolute;
+    right: 8px;
+    background: none;
+    border: none;
+    color: #B7B7A4;
+    font-size: 1.2rem;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s ease, color 0.15s ease;
+    padding: 4px 8px;
+  }
+
+  .nav-item-wrapper:hover .nav-delete {
+    opacity: 1;
+  }
+
+  .nav-delete:hover {
+    color: #9B2C2C;
+  }
+
+  .add-section-btn {
+    display: block;
+    width: calc(100% - 20px);
+    margin: 10px;
+    padding: 10px 12px;
+    background: none;
+    border: 1px dashed rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    color: #B7B7A4;
+    cursor: pointer;
+    text-align: left;
+    font-size: 0.9rem;
+    transition: all 0.15s ease;
+  }
+
+  .add-section-btn:hover {
+    border-color: rgba(255, 255, 255, 0.5);
+    color: #F0EFEB;
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .add-section-form {
+    padding: 10px;
+  }
+
+  .add-section-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #F0EFEB;
+    font-size: 0.9rem;
+    box-sizing: border-box;
+  }
+
+  .add-section-input::placeholder {
+    color: #B7B7A4;
+  }
+
+  .add-section-input:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+
+  .add-section-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .btn-small {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+
+  .btn-cancel {
+    background: rgba(255, 255, 255, 0.1);
+    color: #B7B7A4;
+  }
+
+  .btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .btn-create {
+    background: #DDE5B6;
+    color: #283618;
+  }
+
+  .btn-create:hover {
+    background: #ADC178;
   }
 
   .sidebar-footer {

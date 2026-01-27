@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct LegacyDocument {
@@ -15,6 +16,8 @@ pub struct LegacyDocument {
     pub medical: MedicalSection,
     pub pets: PetsSection,
     pub welcome_screen: Option<WelcomeScreen>,
+    #[serde(default)]
+    pub custom_sections: Vec<CustomSection>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -325,4 +328,46 @@ pub struct WelcomeScreen {
     pub slides: Vec<MessageSlide>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fallback_passphrase: Option<String>,
+}
+
+// --- Custom Sections ---
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct CustomSection {
+    pub id: String,
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parent: Option<String>,  // None = top-level, Some("financial") = subsection
+    pub subsections: Vec<CustomSubsection>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct CustomSubsection {
+    pub id: String,
+    pub name: String,
+    pub field_definitions: Vec<FieldDefinition>,
+    pub items: Vec<CustomItem>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct FieldDefinition {
+    pub id: String,
+    pub name: String,
+    pub field_type: FieldType,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum FieldType {
+    #[default]
+    Text,
+    Number,
+    Date,
+    Boolean,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct CustomItem {
+    pub id: String,
+    pub values: HashMap<String, String>,  // field_id -> value
 }

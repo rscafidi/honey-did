@@ -4,6 +4,7 @@
   import AddButton from '../components/AddButton.svelte';
   import FormField from '../components/FormField.svelte';
   import NotesField from '../components/NotesField.svelte';
+  import CustomSubsections from '../components/CustomSubsections.svelte';
 
   $: personal = $document?.personal ?? {
     funeral_preferences: '',
@@ -75,6 +76,8 @@
   </div>
 
   <NotesField value={personal.notes} on:change={updateNotes} />
+
+  <CustomSubsections parentId="personal" />
 </div>
 
 <style>

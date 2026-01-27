@@ -4,6 +4,7 @@
   import AddButton from '../components/AddButton.svelte';
   import FormField from '../components/FormField.svelte';
   import NotesField from '../components/NotesField.svelte';
+  import CustomSubsections from '../components/CustomSubsections.svelte';
 
   $: property = $document?.property ?? { properties: [], vehicles: [], valuables: [], notes: '' };
 
@@ -98,6 +99,8 @@
   </div>
 
   <NotesField value={property.notes} on:change={updateNotes} />
+
+  <CustomSubsections parentId="property" />
 </div>
 
 <style>

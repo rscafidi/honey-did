@@ -4,6 +4,7 @@
   import AddButton from '../components/AddButton.svelte';
   import FormField from '../components/FormField.svelte';
   import NotesField from '../components/NotesField.svelte';
+  import CustomSubsections from '../components/CustomSubsections.svelte';
 
   $: financial = $document?.financial ?? {
     bank_accounts: [],
@@ -181,6 +182,8 @@
   </div>
 
   <NotesField value={financial.notes} on:change={updateNotes} />
+
+  <CustomSubsections parentId="financial" />
 </div>
 
 <style>
