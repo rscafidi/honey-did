@@ -114,6 +114,24 @@ export interface WelcomeScreen {
 function createDocumentStore() {
   const { subscribe, set, update } = writable<LegacyDocument | null>(null);
 
+  // Debounce save operations to prevent lag when typing
+  let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+  let pendingDocument: LegacyDocument | null = null;
+
+  const debouncedSave = (doc: LegacyDocument) => {
+    pendingDocument = doc;
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+    }
+    saveTimeout = setTimeout(() => {
+      if (pendingDocument) {
+        invoke('update_document', { document: pendingDocument }).catch(console.error);
+        pendingDocument = null;
+      }
+      saveTimeout = null;
+    }, 300); // Save 300ms after last change
+  };
+
   return {
     subscribe,
     load: async () => {
@@ -125,6 +143,12 @@ function createDocumentStore() {
       }
     },
     save: async (doc: LegacyDocument) => {
+      // Immediate save - cancel any pending debounced save
+      if (saveTimeout) {
+        clearTimeout(saveTimeout);
+        saveTimeout = null;
+        pendingDocument = null;
+      }
       try {
         await invoke('update_document', { document: doc });
         set(doc);
@@ -147,7 +171,8 @@ function createDocumentStore() {
             passwordRequiredCallback();
           }
 
-          invoke('update_document', { document: updated }).catch(console.error);
+          // Debounce the save to prevent lag when typing
+          debouncedSave(updated);
           return updated;
         }
         return doc;
