@@ -188,7 +188,6 @@ pub fn generate_encrypted_html_with_questions(
     // Generate the HTML with question-based unlock
     let html = generate_question_html_template(
         &encrypted_json,
-        &document.meta.creator_name,
         &slides_json,
         has_passphrase_fallback,
     );
@@ -1365,7 +1364,7 @@ function toggleFilter(el) {{
     )
 }
 
-fn generate_question_html_template(encrypted_data: &str, creator_name: &str, slides_json: &str, has_passphrase_fallback: bool) -> String {
+fn generate_question_html_template(encrypted_data: &str, slides_json: &str, has_passphrase_fallback: bool) -> String {
     let fallback_link = if has_passphrase_fallback {
         r#"<button class="fallback-link" onclick="showPassphraseScreen()">Use passphrase instead</button>"#
     } else {
@@ -1837,8 +1836,7 @@ fn generate_question_html_template(encrypted_data: &str, creator_name: &str, sli
         encrypted_data = encrypted_data,
         slides_json = slides_json,
         has_passphrase = has_passphrase_fallback,
-        fallback_link = fallback_link,
-        creator_name = creator_name
+        fallback_link = fallback_link
     )
 }
 
