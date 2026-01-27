@@ -178,6 +178,69 @@ pub fn decrypt_from_browser(payload: &EncryptedPayload, passphrase: &str) -> Res
         .map_err(|_| EncryptionError::Decryption("Invalid UTF-8".into()))
 }
 
+/// Generates a random 32-byte document key
+pub fn generate_document_key() -> [u8; 32] {
+    let mut key = [0u8; 32];
+    use rand::RngCore;
+    OsRng.fill_bytes(&mut key);
+    key
+}
+
+/// Encrypts raw bytes with a raw key using AES-256-GCM
+pub fn encrypt_with_raw_key(plaintext: &[u8], key: &[u8; 32]) -> Result<EncryptedPayload, EncryptionError> {
+    let mut nonce_bytes = [0u8; 12];
+    use rand::RngCore;
+    OsRng.fill_bytes(&mut nonce_bytes);
+
+    let unbound_key = UnboundKey::new(&AES_256_GCM, key)
+        .map_err(|_| EncryptionError::Encryption("Failed to create key".into()))?;
+    let aead_key = LessSafeKey::new(unbound_key);
+
+    let nonce = Nonce::assume_unique_for_key(nonce_bytes);
+    let mut in_out = plaintext.to_vec();
+    aead_key.seal_in_place_append_tag(nonce, Aad::empty(), &mut in_out)
+        .map_err(|_| EncryptionError::Encryption("Encryption failed".into()))?;
+
+    Ok(EncryptedPayload {
+        salt: String::new(), // Not used for raw key encryption
+        nonce: BASE64.encode(nonce_bytes),
+        ciphertext: BASE64.encode(in_out),
+    })
+}
+
+/// Encrypts the document key with a passphrase-derived key using PBKDF2
+pub fn encrypt_key_with_passphrase(document_key: &[u8; 32], passphrase: &str) -> Result<EncryptedPayload, EncryptionError> {
+    let salt = generate_salt();
+    let mut nonce_bytes = [0u8; 12];
+    use rand::RngCore;
+    OsRng.fill_bytes(&mut nonce_bytes);
+
+    // Derive key using PBKDF2
+    let mut key_bytes = [0u8; 32];
+    pbkdf2::derive(
+        pbkdf2::PBKDF2_HMAC_SHA256,
+        NonZeroU32::new(PBKDF2_ITERATIONS).unwrap(),
+        &salt,
+        passphrase.as_bytes(),
+        &mut key_bytes,
+    );
+
+    let unbound_key = UnboundKey::new(&AES_256_GCM, &key_bytes)
+        .map_err(|_| EncryptionError::Encryption("Failed to create key".into()))?;
+    let aead_key = LessSafeKey::new(unbound_key);
+
+    let nonce = Nonce::assume_unique_for_key(nonce_bytes);
+    let mut in_out = document_key.to_vec();
+    aead_key.seal_in_place_append_tag(nonce, Aad::empty(), &mut in_out)
+        .map_err(|_| EncryptionError::Encryption("Encryption failed".into()))?;
+
+    Ok(EncryptedPayload {
+        salt: BASE64.encode(salt),
+        nonce: BASE64.encode(nonce_bytes),
+        ciphertext: BASE64.encode(in_out),
+    })
+}
+
 /// Decrypts an encrypted payload using a passphrase
 pub fn decrypt(payload: &EncryptedPayload, passphrase: &str) -> Result<String, EncryptionError> {
     // Decode base64 values

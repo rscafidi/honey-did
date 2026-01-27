@@ -95,15 +95,20 @@ export interface PetsSection {
   notes: string;
 }
 
+export type SlideType = 'message' | 'question';
+
 export interface MessageSlide {
   id: string;
+  type: SlideType;
   text: string;
+  answer?: string;
   transition: { type: 'click' } | { type: 'auto'; seconds: number };
 }
 
 export interface WelcomeScreen {
   enabled: boolean;
   slides: MessageSlide[];
+  fallback_passphrase?: string;
 }
 
 function createDocumentStore() {

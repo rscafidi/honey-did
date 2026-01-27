@@ -75,6 +75,38 @@ async fn save_export_with_dialog(
 }
 
 #[tauri::command]
+async fn save_export_with_questions(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    include_welcome_screen: bool,
+) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+
+    let doc = state.document.lock().map_err(|e| e.to_string())?;
+    let html = export::generate_encrypted_html_with_questions(&doc, include_welcome_screen).map_err(|e| e.to_string())?;
+    drop(doc);
+
+    let date = chrono::Local::now().format("%Y-%m-%d").to_string();
+    let default_name = format!("honey-did-{}.html", date);
+
+    let file_path = app.dialog()
+        .file()
+        .set_file_name(&default_name)
+        .add_filter("HTML Files", &["html", "htm"])
+        .blocking_save_file();
+
+    match file_path {
+        Some(path) => {
+            let path_str = path.to_string();
+            std::fs::write(&path_str, html)
+                .map_err(|e| format!("Failed to save file: {}", e))?;
+            Ok(Some(path_str))
+        }
+        None => Ok(None),
+    }
+}
+
+#[tauri::command]
 fn get_print_html(state: State<AppState>) -> Result<String, String> {
     let doc = state.document.lock().map_err(|e| e.to_string())?;
     Ok(export::generate_print_html(&doc))
@@ -231,6 +263,7 @@ fn main() {
             export_html,
             save_export,
             save_export_with_dialog,
+            save_export_with_questions,
             get_print_html,
             import_file,
             read_file,

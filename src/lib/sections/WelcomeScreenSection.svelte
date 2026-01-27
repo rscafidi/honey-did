@@ -1,20 +1,12 @@
 <script lang="ts">
-  import { document } from '../stores/document';
-  import AddButton from '../components/AddButton.svelte';
+  import { document, type MessageSlide, type WelcomeScreen, type SlideType } from '../stores/document';
+  import { invoke } from '@tauri-apps/api/core';
 
-  interface MessageSlide {
-    id: string;
-    text: string;
-    transition: { type: 'click' } | { type: 'auto'; seconds: number };
-  }
-
-  interface WelcomeScreen {
-    enabled: boolean;
-    slides: MessageSlide[];
-  }
-
-  $: welcomeScreen = ($document?.welcome_screen || { enabled: false, slides: [] }) as WelcomeScreen;
+  $: welcomeScreen = ($document?.welcome_screen || { enabled: false, slides: [], fallback_passphrase: undefined }) as WelcomeScreen;
   $: slides = welcomeScreen.slides || [];
+  $: questionCount = slides.filter(s => s.type === 'question').length;
+  $: hasMinQuestions = questionCount >= 2;
+  $: hasMaxQuestions = questionCount >= 5;
 
   let editingSlideId: string | null = null;
 
@@ -33,10 +25,12 @@
     });
   }
 
-  function addSlide() {
+  function addSlide(slideType: SlideType) {
     const newSlide: MessageSlide = {
       id: generateId(),
+      type: slideType,
       text: '',
+      answer: slideType === 'question' ? '' : undefined,
       transition: { type: 'click' },
     };
     saveWelcomeScreen({
@@ -80,7 +74,23 @@
 
   function getSlidePreview(slide: MessageSlide): string {
     const text = slide.text || '(empty)';
-    return text.length > 40 ? text.substring(0, 40) + '...' : text;
+    return text.length > 35 ? text.substring(0, 35) + '...' : text;
+  }
+
+  function updateFallbackPassphrase(value: string) {
+    saveWelcomeScreen({
+      ...welcomeScreen,
+      fallback_passphrase: value || undefined,
+    });
+  }
+
+  async function generatePassphrase() {
+    try {
+      const passphrase = await invoke<string>('generate_passphrase');
+      updateFallbackPassphrase(passphrase);
+    } catch (e) {
+      console.error('Failed to generate passphrase:', e);
+    }
   }
 </script>
 
@@ -97,49 +107,67 @@
       <h3>Slides</h3>
 
       {#if slides.length === 0}
-        <p class="empty-message">No slides yet. Add a slide to create your welcome message.</p>
+        <p class="empty-message">No slides yet. Add messages and questions to create your welcome experience.</p>
       {/if}
 
       {#each slides as slide, index (slide.id)}
-        <div class="slide-item">
+        <div class="slide-item" class:question={slide.type === 'question'}>
           <!-- svelte-ignore a11y-click-events-have-key-events -->
           <!-- svelte-ignore a11y-no-static-element-interactions -->
           <div class="slide-header" on:click={() => (editingSlideId = editingSlideId === slide.id ? null : slide.id)}>
+            <span class="slide-icon">{slide.type === 'question' ? '?' : '#'}</span>
             <span class="slide-number">{index + 1}.</span>
             <span class="slide-preview">"{getSlidePreview(slide)}"</span>
+            {#if slide.type === 'question' && slide.answer}
+              <span class="answer-preview">Answer: {slide.answer}</span>
+            {/if}
             <div class="slide-actions">
               <button
                 class="action-btn"
                 on:click|stopPropagation={() => moveSlide(slide.id, 'up')}
                 disabled={index === 0}
                 title="Move up"
-              >↑</button>
+              >^</button>
               <button
                 class="action-btn"
                 on:click|stopPropagation={() => moveSlide(slide.id, 'down')}
                 disabled={index === slides.length - 1}
                 title="Move down"
-              >↓</button>
+              >v</button>
               <button
                 class="action-btn delete"
                 on:click|stopPropagation={() => deleteSlide(slide.id)}
                 title="Delete"
-              >×</button>
+              >x</button>
             </div>
           </div>
 
           {#if editingSlideId === slide.id}
             <div class="slide-editor">
               <div class="field">
-                <label for="slide-text-{slide.id}">Message</label>
+                <label for="slide-text-{slide.id}">{slide.type === 'question' ? 'Question' : 'Message'}</label>
                 <textarea
                   id="slide-text-{slide.id}"
                   value={slide.text}
                   on:input={(e) => updateSlide(slide.id, { text: e.currentTarget.value })}
-                  placeholder="Enter your message..."
+                  placeholder={slide.type === 'question' ? 'Enter your question...' : 'Enter your message...'}
                   rows="3"
                 ></textarea>
               </div>
+
+              {#if slide.type === 'question'}
+                <div class="field">
+                  <label for="slide-answer-{slide.id}">Expected Answer</label>
+                  <input
+                    type="text"
+                    id="slide-answer-{slide.id}"
+                    value={slide.answer || ''}
+                    on:input={(e) => updateSlide(slide.id, { answer: e.currentTarget.value.toLowerCase().trim() })}
+                    placeholder="Enter the expected answer..."
+                  />
+                  <span class="field-hint">Answers are case-insensitive</span>
+                </div>
+              {/if}
 
               <div class="field">
                 <label>Transition</label>
@@ -188,7 +216,32 @@
         </div>
       {/each}
 
-      <AddButton label="Add Slide" on:click={addSlide} />
+      <div class="add-buttons">
+        <button class="btn btn-add" on:click={() => addSlide('message')}>+ Add Message</button>
+        <button class="btn btn-add" on:click={() => addSlide('question')} disabled={hasMaxQuestions}>+ Add Question</button>
+      </div>
+
+      <div class="question-counter" class:warning={!hasMinQuestions} class:ok={hasMinQuestions}>
+        Questions: {questionCount} of 2-5 required
+      </div>
+    </div>
+
+    <div class="fallback-section">
+      <h3>Fallback Passphrase (optional)</h3>
+      <div class="passphrase-input-row">
+        <input
+          type="text"
+          value={welcomeScreen.fallback_passphrase || ''}
+          on:input={(e) => updateFallbackPassphrase(e.currentTarget.value)}
+          placeholder="Enter a fallback passphrase..."
+        />
+        <button class="btn btn-secondary" on:click={generatePassphrase}>Generate</button>
+      </div>
+      {#if !welcomeScreen.fallback_passphrase}
+        <p class="warning-message">Without a passphrase, there's no recovery if the recipient forgets the answers.</p>
+      {:else}
+        <p class="success-message">Fallback passphrase set</p>
+      {/if}
     </div>
   {/if}
 </div>
@@ -221,7 +274,8 @@
     height: 20px;
   }
 
-  .slides-section h3 {
+  .slides-section h3,
+  .fallback-section h3 {
     margin: 0 0 16px 0;
     color: #283618;
     font-size: 1rem;
@@ -241,16 +295,28 @@
     overflow: hidden;
   }
 
+  .slide-item.question {
+    border-left: 4px solid #606C38;
+  }
+
   .slide-header {
     display: flex;
     align-items: center;
     padding: 12px 16px;
     cursor: pointer;
-    gap: 12px;
+    gap: 8px;
   }
 
   .slide-header:hover {
     background: #F0EFEB;
+  }
+
+  .slide-icon {
+    font-weight: 700;
+    color: #606C38;
+    font-size: 1.1rem;
+    min-width: 20px;
+    text-align: center;
   }
 
   .slide-number {
@@ -265,6 +331,15 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .answer-preview {
+    color: #606C38;
+    font-size: 0.85rem;
+    margin-left: 8px;
+    padding: 2px 8px;
+    background: #E8EDE0;
+    border-radius: 4px;
   }
 
   .slide-actions {
@@ -318,20 +393,32 @@
     color: #283618;
   }
 
-  .field textarea {
+  .field textarea,
+  .field input[type="text"] {
     width: 100%;
     padding: 10px 12px;
     border: 1px solid #D4D4D4;
     border-radius: 6px;
     font-family: inherit;
     font-size: 0.95rem;
-    resize: vertical;
     box-sizing: border-box;
   }
 
-  .field textarea:focus {
+  .field textarea {
+    resize: vertical;
+  }
+
+  .field textarea:focus,
+  .field input[type="text"]:focus {
     outline: none;
     border-color: #283618;
+  }
+
+  .field-hint {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.85rem;
+    color: #606060;
   }
 
   .radio-group {
@@ -374,7 +461,6 @@
     cursor: pointer;
     font-size: 0.9rem;
     font-weight: 500;
-    align-self: flex-start;
   }
 
   .btn-secondary {
@@ -384,5 +470,88 @@
 
   .btn-secondary:hover {
     background: #B7B7A4;
+  }
+
+  .btn-add {
+    background: white;
+    border: 1px dashed #D4D4D4;
+    color: #606060;
+  }
+
+  .btn-add:hover:not(:disabled) {
+    border-color: #283618;
+    color: #283618;
+  }
+
+  .btn-add:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .add-buttons {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+  }
+
+  .question-counter {
+    margin-top: 12px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+  }
+
+  .question-counter.warning {
+    background: #FEF3C7;
+    color: #92400E;
+  }
+
+  .question-counter.ok {
+    background: #E8EDE0;
+    color: #606C38;
+  }
+
+  .fallback-section {
+    background: white;
+    border: 1px solid #D4D4D4;
+    border-radius: 8px;
+    padding: 16px;
+  }
+
+  .passphrase-input-row {
+    display: flex;
+    gap: 12px;
+  }
+
+  .passphrase-input-row input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid #D4D4D4;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.95rem;
+  }
+
+  .passphrase-input-row input:focus {
+    outline: none;
+    border-color: #283618;
+  }
+
+  .warning-message {
+    margin: 12px 0 0 0;
+    padding: 8px 12px;
+    background: #FEF3C7;
+    border-radius: 6px;
+    color: #92400E;
+    font-size: 0.9rem;
+  }
+
+  .success-message {
+    margin: 12px 0 0 0;
+    padding: 8px 12px;
+    background: #E8EDE0;
+    border-radius: 6px;
+    color: #606C38;
+    font-size: 0.9rem;
   }
 </style>

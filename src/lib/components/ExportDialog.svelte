@@ -14,13 +14,23 @@
   let isExporting = false;
   let error = '';
 
-  $: welcomeScreenAvailable = $document?.welcome_screen?.enabled &&
-                              ($document?.welcome_screen?.slides?.length || 0) > 0;
+  // Question-based unlock detection
+  $: questionSlides = $document?.welcome_screen?.slides?.filter(s => s.type === 'question') || [];
+  $: messageSlides = $document?.welcome_screen?.slides?.filter(s => s.type === 'message') || [];
+  $: questionCount = questionSlides.length;
+  $: hasValidQuestionConfig = $document?.welcome_screen?.enabled && questionCount >= 2 && questionCount <= 5;
+  $: hasFallbackPassphrase = !!$document?.welcome_screen?.fallback_passphrase;
+
+  // Legacy welcome screen (message-only slides)
+  $: legacyWelcomeAvailable = $document?.welcome_screen?.enabled &&
+                              ($document?.welcome_screen?.slides?.length || 0) > 0 &&
+                              !hasValidQuestionConfig;
   $: slideCount = $document?.welcome_screen?.slides?.length || 0;
 
   $: passphraseStrength = calculateStrength(passphrase);
   $: passphrasesMatch = passphrase === confirmPassphrase;
-  $: canExport = passphrase.length >= 8 && passphrasesMatch && !isExporting;
+  $: canExportPassphrase = passphrase.length >= 8 && passphrasesMatch && !isExporting;
+  $: canExportQuestions = hasValidQuestionConfig && !isExporting;
 
   function calculateStrength(pass: string): { score: number; label: string; color: string } {
     if (!pass) return { score: 0, label: '', color: '#ddd' };
@@ -31,7 +41,7 @@
     if (/[a-z]/.test(pass) && /[A-Z]/.test(pass)) score += 1;
     if (/\d/.test(pass)) score += 1;
     if (/[^a-zA-Z0-9]/.test(pass)) score += 1;
-    if (pass.includes('-') && pass.split('-').length >= 3) score += 2; // Passphrase bonus
+    if (pass.includes('-') && pass.split('-').length >= 3) score += 2;
 
     if (score <= 2) return { score, label: 'Weak', color: '#dc3545' };
     if (score <= 4) return { score, label: 'Fair', color: '#ffc107' };
@@ -48,30 +58,61 @@
     }
   }
 
-  async function handleExport() {
-    if (!canExport) return;
+  async function handleExportWithQuestions() {
+    if (!canExportQuestions) return;
 
     error = '';
     isExporting = true;
 
     try {
-      // Show native save dialog and save the encrypted file
-      const filePath = await invoke<string | null>('save_export_with_dialog', {
-        passphrase,
-        includeWelcomeScreen: welcomeScreenAvailable && includeWelcomeScreen
+      const filePath = await invoke<string | null>('save_export_with_questions', {
+        includeWelcomeScreen: true
       });
 
       if (filePath === null) {
-        // User cancelled the dialog
         isExporting = false;
         return;
       }
 
       if (includePrint) {
-        // Get unencrypted print-friendly HTML
         const printHtml = await invoke<string>('get_print_html');
+        const printFrame = document.createElement('iframe');
+        printFrame.style.display = 'none';
+        document.body.appendChild(printFrame);
+        printFrame.contentDocument?.write(printHtml);
+        printFrame.contentDocument?.close();
+        printFrame.contentWindow?.print();
+        document.body.removeChild(printFrame);
+      }
 
-        // Open print dialog - create a hidden iframe to print
+      dispatch('exported', { filePath });
+      close();
+    } catch (e) {
+      error = `Export failed: ${e}`;
+    } finally {
+      isExporting = false;
+    }
+  }
+
+  async function handleExportWithPassphrase() {
+    if (!canExportPassphrase) return;
+
+    error = '';
+    isExporting = true;
+
+    try {
+      const filePath = await invoke<string | null>('save_export_with_dialog', {
+        passphrase,
+        includeWelcomeScreen: legacyWelcomeAvailable && includeWelcomeScreen
+      });
+
+      if (filePath === null) {
+        isExporting = false;
+        return;
+      }
+
+      if (includePrint) {
+        const printHtml = await invoke<string>('get_print_html');
         const printFrame = document.createElement('iframe');
         printFrame.style.display = 'none';
         document.body.appendChild(printFrame);
@@ -106,75 +147,142 @@
     <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="export-dialog-title" on:click|stopPropagation on:keydown|stopPropagation>
       <h2 id="export-dialog-title">Create Your Secure File</h2>
 
-      <div class="form">
-        <div class="field">
-          <label for="passphrase">Choose a passphrase</label>
-          <div class="passphrase-input">
-            <input
-              id="passphrase"
-              type="text"
-              bind:value={passphrase}
-              placeholder="Enter a memorable passphrase"
-            />
-            <button type="button" class="generate-btn" on:click={generatePassphrase}>
-              Generate
-            </button>
-          </div>
-          {#if passphrase}
-            <div class="strength-meter">
-              <div class="strength-bar" style="width: {passphraseStrength.score * 12.5}%; background: {passphraseStrength.color}"></div>
+      {#if hasValidQuestionConfig}
+        <!-- Question-based export mode -->
+        <div class="form">
+          <div class="info-box">
+            <div class="info-icon">?</div>
+            <div>
+              <strong>Question-based unlock enabled</strong>
+              <p>Your file will be unlocked by answering {questionCount} question{questionCount === 1 ? '' : 's'} you set up in the Welcome Screen section.</p>
             </div>
-            <span class="strength-label" style="color: {passphraseStrength.color}">{passphraseStrength.label}</span>
+          </div>
+
+          <div class="summary">
+            <div class="summary-item">
+              <span class="summary-label">Messages:</span>
+              <span>{messageSlides.length} slide{messageSlides.length === 1 ? '' : 's'}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Questions:</span>
+              <span>{questionCount} question{questionCount === 1 ? '' : 's'}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Fallback passphrase:</span>
+              {#if hasFallbackPassphrase}
+                <span class="status-ok">Set</span>
+              {:else}
+                <span class="status-warning">Not set</span>
+              {/if}
+            </div>
+          </div>
+
+          {#if !hasFallbackPassphrase}
+            <p class="warning">
+              Without a fallback passphrase, there's no recovery if the recipient forgets the answers.
+            </p>
           {/if}
-        </div>
 
-        <div class="field">
-          <label for="confirm-passphrase">Confirm passphrase</label>
-          <input
-            id="confirm-passphrase"
-            type="password"
-            bind:value={confirmPassphrase}
-            placeholder="Re-enter passphrase"
-          />
-          {#if confirmPassphrase && !passphrasesMatch}
-            <span class="error-text">Passphrases don't match</span>
-          {/if}
-        </div>
-
-        <label class="checkbox-field">
-          <input type="checkbox" bind:checked={includePrint} />
-          <span>Also print a physical copy</span>
-        </label>
-
-        {#if includePrint}
-          <p class="warning">
-            Printed copies can be found by anyone. Store securely.
-          </p>
-        {/if}
-
-        {#if welcomeScreenAvailable}
           <label class="checkbox-field">
-            <input type="checkbox" bind:checked={includeWelcomeScreen} />
-            <span>Include welcome screen ({slideCount} slide{slideCount === 1 ? '' : 's'})</span>
+            <input type="checkbox" bind:checked={includePrint} />
+            <span>Also print a physical copy</span>
           </label>
-        {/if}
 
-        {#if error}
-          <p class="error-message">{error}</p>
-        {/if}
-      </div>
+          {#if includePrint}
+            <p class="warning">
+              Printed copies can be found by anyone. Store securely.
+            </p>
+          {/if}
 
-      <div class="actions">
-        <button type="button" class="btn-secondary" on:click={close}>Cancel</button>
-        <button
-          type="button"
-          class="btn-primary"
-          on:click={handleExport}
-          disabled={!canExport}
-        >
-          {isExporting ? 'Exporting...' : 'Export File'}
-        </button>
-      </div>
+          {#if error}
+            <p class="error-message">{error}</p>
+          {/if}
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn-secondary" on:click={close}>Cancel</button>
+          <button
+            type="button"
+            class="btn-primary"
+            on:click={handleExportWithQuestions}
+            disabled={!canExportQuestions}
+          >
+            {isExporting ? 'Exporting...' : 'Export File'}
+          </button>
+        </div>
+
+      {:else}
+        <!-- Passphrase-based export mode -->
+        <div class="form">
+          <div class="field">
+            <label for="passphrase">Choose a passphrase</label>
+            <div class="passphrase-input">
+              <input
+                id="passphrase"
+                type="text"
+                bind:value={passphrase}
+                placeholder="Enter a memorable passphrase"
+              />
+              <button type="button" class="generate-btn" on:click={generatePassphrase}>
+                Generate
+              </button>
+            </div>
+            {#if passphrase}
+              <div class="strength-meter">
+                <div class="strength-bar" style="width: {passphraseStrength.score * 12.5}%; background: {passphraseStrength.color}"></div>
+              </div>
+              <span class="strength-label" style="color: {passphraseStrength.color}">{passphraseStrength.label}</span>
+            {/if}
+          </div>
+
+          <div class="field">
+            <label for="confirm-passphrase">Confirm passphrase</label>
+            <input
+              id="confirm-passphrase"
+              type="password"
+              bind:value={confirmPassphrase}
+              placeholder="Re-enter passphrase"
+            />
+            {#if confirmPassphrase && !passphrasesMatch}
+              <span class="error-text">Passphrases don't match</span>
+            {/if}
+          </div>
+
+          <label class="checkbox-field">
+            <input type="checkbox" bind:checked={includePrint} />
+            <span>Also print a physical copy</span>
+          </label>
+
+          {#if includePrint}
+            <p class="warning">
+              Printed copies can be found by anyone. Store securely.
+            </p>
+          {/if}
+
+          {#if legacyWelcomeAvailable}
+            <label class="checkbox-field">
+              <input type="checkbox" bind:checked={includeWelcomeScreen} />
+              <span>Include welcome screen ({slideCount} slide{slideCount === 1 ? '' : 's'})</span>
+            </label>
+          {/if}
+
+          {#if error}
+            <p class="error-message">{error}</p>
+          {/if}
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn-secondary" on:click={close}>Cancel</button>
+          <button
+            type="button"
+            class="btn-primary"
+            on:click={handleExportWithPassphrase}
+            disabled={!canExportPassphrase}
+          >
+            {isExporting ? 'Exporting...' : 'Export File'}
+          </button>
+        </div>
+      {/if}
     </div>
   </div>
 {/if}
@@ -209,6 +317,67 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+  }
+
+  .info-box {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    background: #E8EDE0;
+    border-radius: 8px;
+    border-left: 4px solid #606C38;
+  }
+
+  .info-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #606C38;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+  }
+
+  .info-box strong {
+    color: #283618;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .info-box p {
+    margin: 0;
+    color: #606C38;
+    font-size: 0.9rem;
+  }
+
+  .summary {
+    background: #F0EFEB;
+    padding: 12px 16px;
+    border-radius: 8px;
+  }
+
+  .summary-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+  }
+
+  .summary-label {
+    color: #606060;
+  }
+
+  .status-ok {
+    color: #606C38;
+    font-weight: 500;
+  }
+
+  .status-warning {
+    color: #92400E;
+    font-weight: 500;
   }
 
   .field label {

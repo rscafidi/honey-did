@@ -285,10 +285,22 @@ pub struct Pet {
 
 // --- Welcome Screen Section ---
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum SlideType {
+    #[default]
+    Message,
+    Question,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct MessageSlide {
     pub id: String,
+    #[serde(rename = "type")]
+    pub slide_type: SlideType,
     pub text: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub answer: Option<String>,
     pub transition: SlideTransition,
 }
 
@@ -311,4 +323,6 @@ impl Default for SlideTransition {
 pub struct WelcomeScreen {
     pub enabled: bool,
     pub slides: Vec<MessageSlide>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fallback_passphrase: Option<String>,
 }
