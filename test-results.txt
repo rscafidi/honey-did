@@ -1,5 +1,0 @@
-Test run blocked by network issues (cannot download crates from crates.io)
-Tests added but not yet verified:
-- encryption::tests (8 tests)
-- export::tests (4 tests)
-- storage::tests (2 tests)

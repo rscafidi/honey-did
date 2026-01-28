@@ -369,6 +369,13 @@ const SHARED_JS_UTILS: &str = r##"
             return div.innerHTML;
         }
 
+        // Escape for use in HTML attributes (href, id, etc.)
+        // Only allows alphanumeric, dash, underscore for safety
+        function escapeAttr(text) {
+            if (!text) return '';
+            return String(text).replace(/[^a-zA-Z0-9_-]/g, '');
+        }
+
         function renderContact(contact) {
             if (!contact || !contact.name) return '';
             let html = '<div class="contact-info">';
@@ -383,7 +390,7 @@ const SHARED_JS_UTILS: &str = r##"
 
         function renderSection(title, id, content) {
             if (!content) return '';
-            return '<div class="section" id="' + id + '"><h2 class="section-title">' + escapeHtml(title) + '</h2>' + content + '</div>';
+            return '<div class="section" id="' + escapeAttr(id) + '"><h2 class="section-title">' + escapeHtml(title) + '</h2>' + content + '</div>';
         }
 
         function renderCustomSubsection(subsection) {
@@ -959,7 +966,7 @@ const SHARED_JS_RENDER_DOCUMENT: &str = r##"
                 const topLevel = data.custom_sections.filter(s => !s.parent);
                 topLevel.forEach(section => {
                     if (section.subsections && section.subsections.some(sub => sub.items && sub.items.length)) {
-                        html += '<li><a href="#custom-' + section.id + '" onclick="closeSidebarOnMobile()">📋 ' + escapeHtml(section.name) + '</a></li>';
+                        html += '<li><a href="#custom-' + escapeAttr(section.id) + '" onclick="closeSidebarOnMobile()">📋 ' + escapeHtml(section.name) + '</a></li>';
                     }
                 });
             }

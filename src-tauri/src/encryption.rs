@@ -30,11 +30,25 @@ pub enum EncryptionError {
 
 impl std::fmt::Display for EncryptionError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Use generic error messages to avoid information disclosure
         match self {
-            EncryptionError::KeyDerivation(msg) => write!(f, "Key derivation error: {}", msg),
-            EncryptionError::Encryption(msg) => write!(f, "Encryption error: {}", msg),
-            EncryptionError::Decryption(msg) => write!(f, "Decryption error: {}", msg),
-            EncryptionError::InvalidData(msg) => write!(f, "Invalid data: {}", msg),
+            EncryptionError::KeyDerivation(_) => write!(f, "Failed to process security key"),
+            EncryptionError::Encryption(_) => write!(f, "Failed to encrypt data"),
+            EncryptionError::Decryption(_) => write!(f, "Decryption failed - incorrect passphrase or corrupted data"),
+            EncryptionError::InvalidData(_) => write!(f, "Invalid or corrupted data format"),
+        }
+    }
+}
+
+impl EncryptionError {
+    /// Returns detailed error for logging (not for display to users)
+    #[allow(dead_code)]
+    pub fn detail(&self) -> &str {
+        match self {
+            EncryptionError::KeyDerivation(msg) => msg,
+            EncryptionError::Encryption(msg) => msg,
+            EncryptionError::Decryption(msg) => msg,
+            EncryptionError::InvalidData(msg) => msg,
         }
     }
 }

@@ -26,12 +26,27 @@ pub enum StorageError {
 
 impl std::fmt::Display for StorageError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Use generic error messages to avoid information disclosure
         match self {
-            StorageError::IoError(msg) => write!(f, "IO error: {}", msg),
-            StorageError::EncryptionError(e) => write!(f, "Encryption error: {}", e),
-            StorageError::SerializationError(msg) => write!(f, "Serialization error: {}", msg),
-            StorageError::KeyringError(msg) => write!(f, "Keyring error: {}", msg),
-            StorageError::NoDataDirectory => write!(f, "Could not determine data directory"),
+            StorageError::IoError(_) => write!(f, "Failed to read or write data"),
+            StorageError::EncryptionError(e) => write!(f, "{}", e),
+            StorageError::SerializationError(_) => write!(f, "Failed to process data format"),
+            StorageError::KeyringError(_) => write!(f, "Failed to access secure storage"),
+            StorageError::NoDataDirectory => write!(f, "Failed to access application data"),
+        }
+    }
+}
+
+impl StorageError {
+    /// Returns detailed error for logging (not for display to users)
+    #[allow(dead_code)]
+    pub fn detail(&self) -> String {
+        match self {
+            StorageError::IoError(msg) => msg.clone(),
+            StorageError::EncryptionError(e) => e.detail().to_string(),
+            StorageError::SerializationError(msg) => msg.clone(),
+            StorageError::KeyringError(msg) => msg.clone(),
+            StorageError::NoDataDirectory => "No data directory available".to_string(),
         }
     }
 }
@@ -59,12 +74,15 @@ pub fn get_or_create_local_key() -> Result<String, StorageError> {
     match entry.get_password() {
         Ok(key) => Ok(key),
         Err(keyring::Error::NoEntry) => {
-            // Generate a new random key
-            use rand::Rng;
-            let key: String = rand::thread_rng()
-                .sample_iter(&rand::distributions::Alphanumeric)
-                .take(64)
-                .map(char::from)
+            // Generate a new random key using cryptographically secure RNG
+            use rand::RngCore;
+            use rand::rngs::OsRng;
+
+            // Generate 64 random bytes and encode as hex for a 128-character key
+            let mut key_bytes = [0u8; 64];
+            OsRng.fill_bytes(&mut key_bytes);
+            let key: String = key_bytes.iter()
+                .map(|b| format!("{:02x}", b))
                 .collect();
 
             entry.set_password(&key)

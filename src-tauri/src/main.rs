@@ -13,6 +13,45 @@ struct AppState {
     document: Mutex<LegacyDocument>,
 }
 
+// Input validation constants
+const MAX_PASSPHRASE_LENGTH: usize = 1024;
+const MIN_PASSWORD_LENGTH: usize = 8;
+const MAX_PASSWORD_LENGTH: usize = 256;
+const MAX_HTML_CONTENT_LENGTH: usize = 50 * 1024 * 1024; // 50MB
+
+/// Validates passphrase input
+fn validate_passphrase(passphrase: &str) -> Result<(), String> {
+    if passphrase.is_empty() {
+        return Err("Passphrase cannot be empty".to_string());
+    }
+    if passphrase.len() > MAX_PASSPHRASE_LENGTH {
+        return Err("Passphrase is too long".to_string());
+    }
+    Ok(())
+}
+
+/// Validates password input
+fn validate_password(password: &str) -> Result<(), String> {
+    if password.len() < MIN_PASSWORD_LENGTH {
+        return Err(format!("Password must be at least {} characters", MIN_PASSWORD_LENGTH));
+    }
+    if password.len() > MAX_PASSWORD_LENGTH {
+        return Err("Password is too long".to_string());
+    }
+    Ok(())
+}
+
+/// Validates HTML content for import
+fn validate_html_content(html: &str) -> Result<(), String> {
+    if html.is_empty() {
+        return Err("File content cannot be empty".to_string());
+    }
+    if html.len() > MAX_HTML_CONTENT_LENGTH {
+        return Err("File is too large".to_string());
+    }
+    Ok(())
+}
+
 #[tauri::command]
 fn get_document(state: State<AppState>) -> Result<LegacyDocument, String> {
     let doc = state.document.lock().map_err(|e| e.to_string())?;
@@ -29,15 +68,17 @@ fn update_document(state: State<AppState>, document: LegacyDocument) -> Result<(
 
 #[tauri::command]
 fn export_html(state: State<AppState>, passphrase: String, include_welcome_screen: Option<bool>) -> Result<String, String> {
+    validate_passphrase(&passphrase)?;
     let doc = state.document.lock().map_err(|e| e.to_string())?;
     export::generate_encrypted_html(&doc, &passphrase, include_welcome_screen.unwrap_or(false)).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn save_export(state: State<AppState>, passphrase: String, file_path: String, include_welcome_screen: Option<bool>) -> Result<(), String> {
+    validate_passphrase(&passphrase)?;
     let doc = state.document.lock().map_err(|e| e.to_string())?;
     let html = export::generate_encrypted_html(&doc, &passphrase, include_welcome_screen.unwrap_or(false)).map_err(|e| e.to_string())?;
-    std::fs::write(&file_path, html).map_err(|e| format!("Failed to save file: {}", e))
+    std::fs::write(&file_path, html).map_err(|_| "Failed to save file".to_string())
 }
 
 #[tauri::command]
@@ -49,6 +90,7 @@ async fn save_export_with_dialog(
 ) -> Result<Option<String>, String> {
     use tauri_plugin_dialog::DialogExt;
 
+    validate_passphrase(&passphrase)?;
     let doc = state.document.lock().map_err(|e| e.to_string())?;
     let html = export::generate_encrypted_html(&doc, &passphrase, include_welcome_screen).map_err(|e| e.to_string())?;
     drop(doc); // Release lock before dialog
@@ -67,7 +109,7 @@ async fn save_export_with_dialog(
         Some(path) => {
             let path_str = path.to_string();
             std::fs::write(&path_str, html)
-                .map_err(|e| format!("Failed to save file: {}", e))?;
+                .map_err(|_| "Failed to save file".to_string())?;
             Ok(Some(path_str))
         }
         None => Ok(None), // User cancelled
@@ -99,7 +141,7 @@ async fn save_export_with_questions(
         Some(path) => {
             let path_str = path.to_string();
             std::fs::write(&path_str, html)
-                .map_err(|e| format!("Failed to save file: {}", e))?;
+                .map_err(|_| "Failed to save file".to_string())?;
             Ok(Some(path_str))
         }
         None => Ok(None),
@@ -114,13 +156,9 @@ fn get_print_html(state: State<AppState>) -> Result<String, String> {
 
 #[tauri::command]
 fn import_file(encrypted_html: String, passphrase: String) -> Result<LegacyDocument, String> {
+    validate_html_content(&encrypted_html)?;
+    validate_passphrase(&passphrase)?;
     export::import_from_html(&encrypted_html, &passphrase).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-fn read_file(file_path: String) -> Result<String, String> {
-    std::fs::read_to_string(&file_path)
-        .map_err(|e| format!("Failed to read file: {}", e))
 }
 
 #[tauri::command]
@@ -134,21 +172,53 @@ fn merge_document(state: State<AppState>, imported: LegacyDocument) -> Result<()
 #[tauri::command]
 fn generate_passphrase() -> String {
     use rand::seq::SliceRandom;
+    use rand::rngs::OsRng;
 
-    let words = vec![
-        "apple", "banana", "cherry", "dragon", "eagle", "forest", "garden", "harbor",
-        "island", "jungle", "kitchen", "lemon", "mountain", "nectar", "ocean", "piano",
-        "quartz", "river", "sunset", "thunder", "umbrella", "violet", "window", "yellow",
-        "zebra", "anchor", "beacon", "castle", "diamond", "ember", "falcon", "glacier",
+    // Extended word list (256 words) for better entropy
+    // 6 words from 256 = log2(256^6) = 48 bits of entropy
+    let words: Vec<&str> = vec![
+        "apple", "arrow", "anchor", "autumn", "azure", "baker", "banana", "beacon",
+        "berry", "blade", "blanket", "blaze", "bloom", "bottle", "branch", "breeze",
+        "bridge", "bronze", "brush", "bucket", "butter", "cabin", "cactus", "candle",
+        "canvas", "canyon", "carpet", "carrot", "castle", "cedar", "chain", "chair",
+        "cherry", "cider", "circle", "cliff", "cloud", "clover", "coast", "cobalt",
+        "coffee", "comet", "coral", "cotton", "crayon", "creek", "cricket", "crown",
+        "crystal", "curtain", "dagger", "daisy", "dancer", "delta", "desert", "diamond",
+        "dolphin", "dragon", "dream", "drift", "drum", "eagle", "earth", "echo",
+        "elder", "ember", "engine", "fabric", "falcon", "feather", "fern", "field",
+        "fire", "flame", "flint", "flower", "forest", "forge", "fossil", "fountain",
+        "frost", "galaxy", "garden", "garnet", "geyser", "glacier", "globe", "golden",
+        "grain", "grape", "grass", "gravel", "grove", "hammer", "harbor", "harvest",
+        "hawk", "hazel", "heart", "heather", "helmet", "honey", "horizon", "hunter",
+        "ice", "indigo", "iris", "iron", "island", "ivory", "jade", "jasper",
+        "jet", "journal", "jungle", "kelp", "kernel", "kettle", "kingdom", "kitchen",
+        "kite", "lake", "lantern", "lapis", "lark", "lava", "leaf", "lemon",
+        "library", "light", "lily", "linen", "lion", "lotus", "lunar", "magnet",
+        "maple", "marble", "market", "meadow", "melon", "metal", "mirror", "mist",
+        "moon", "moss", "mountain", "mushroom", "nectar", "needle", "night", "north",
+        "oak", "oasis", "ocean", "olive", "onyx", "orange", "orchid", "osprey",
+        "otter", "palm", "panther", "paper", "parrot", "path", "pebble", "pepper",
+        "phoenix", "piano", "pillow", "pine", "planet", "plum", "pond", "poplar",
+        "prism", "pumpkin", "quartz", "queen", "quiet", "rabbit", "radish", "rain",
+        "rainbow", "raven", "reef", "ridge", "river", "robin", "rocket", "rose",
+        "ruby", "sage", "salmon", "sand", "sapphire", "scarlet", "scroll", "shadow",
+        "shell", "shore", "silver", "sky", "slate", "snow", "spark", "spirit",
+        "spruce", "star", "stone", "storm", "stream", "summer", "summit", "sunset",
+        "swift", "temple", "thistle", "thunder", "tiger", "timber", "torch", "trail",
+        "treasure", "tree", "trout", "tulip", "turtle", "twilight", "umbrella", "valley",
+        "velvet", "violet", "volcano", "wave", "wheat", "willow", "wind", "winter",
+        "wolf", "wonder", "woods", "yarn", "yellow", "zebra", "zenith", "zephyr",
+        "zinc", "amber", "aspen", "atlas", "basil", "birch", "brook", "canyon",
     ];
 
-    let mut rng = rand::thread_rng();
-    let selected: Vec<&str> = words.choose_multiple(&mut rng, 4).cloned().collect();
+    let mut rng = OsRng;
+    let selected: Vec<&str> = words.choose_multiple(&mut rng, 6).cloned().collect();
     selected.join("-")
 }
 
 #[tauri::command]
 fn set_app_password(password: String) -> Result<(), String> {
+    validate_password(&password)?;
     let hash = storage::hash_password(&password).map_err(|e| e.to_string())?;
     storage::save_password_hash(&hash).map_err(|e| e.to_string())?;
     Ok(())
@@ -156,6 +226,10 @@ fn set_app_password(password: String) -> Result<(), String> {
 
 #[tauri::command]
 fn verify_app_password(password: String) -> Result<bool, String> {
+    // Don't validate length on verification - user may have old password
+    if password.is_empty() || password.len() > MAX_PASSWORD_LENGTH {
+        return Err("Invalid password".to_string());
+    }
     let hash = storage::load_password_hash()
         .map_err(|e| e.to_string())?
         .ok_or("No password set")?;
@@ -170,6 +244,9 @@ fn has_app_password() -> Result<bool, String> {
 
 #[tauri::command]
 fn change_app_password(old_password: String, new_password: String) -> Result<(), String> {
+    // Validate new password
+    validate_password(&new_password)?;
+
     // Verify old password first
     let hash = storage::load_password_hash()
         .map_err(|e| e.to_string())?
@@ -266,7 +343,6 @@ fn main() {
             save_export_with_questions,
             get_print_html,
             import_file,
-            read_file,
             merge_document,
             generate_passphrase,
             set_app_password,

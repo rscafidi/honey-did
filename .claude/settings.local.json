@@ -53,7 +53,8 @@
       "Bash(apt-cache search:*)",
       "Bash(identify:*)",
       "Bash(npx --yes png2icons:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(grep:*)"
     ]
   }
 }
