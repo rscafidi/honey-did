@@ -106,5 +106,5 @@
 <style>
   .section { max-width: 800px; }
   .subsection { margin-bottom: 32px; }
-  h3 { margin: 0 0 16px 0; color: #333; font-size: 1.1rem; }
+  h3 { margin: 0 0 16px 0; color: var(--text-primary); font-size: 1.1rem; }
 </style>

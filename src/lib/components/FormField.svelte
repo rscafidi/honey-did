@@ -45,22 +45,24 @@
   .label-text {
     display: block;
     font-size: 0.85rem;
-    color: #606060;
+    color: var(--text-secondary);
     margin-bottom: 4px;
   }
 
   input[type="text"], textarea {
     width: 100%;
     padding: 8px 12px;
-    border: 1px solid #D4D4D4;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
     font-size: 0.95rem;
     box-sizing: border-box;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
   }
 
   input:focus, textarea:focus {
     outline: none;
-    border-color: #283618;
+    border-color: var(--accent-primary);
   }
 
   .checkbox label {
@@ -68,7 +70,7 @@
     align-items: center;
     gap: 8px;
     cursor: pointer;
-    color: #283618;
+    color: var(--text-primary);
   }
 
   .checkbox input {

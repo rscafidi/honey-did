@@ -197,7 +197,7 @@
 
   h3 {
     margin: 0 0 16px 0;
-    color: #333;
+    color: var(--text-primary);
     font-size: 1.1rem;
   }
 </style>

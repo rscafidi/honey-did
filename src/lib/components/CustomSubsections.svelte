@@ -119,10 +119,10 @@
     width: 100%;
     padding: 16px;
     margin-top: 24px;
-    background: white;
-    border: 1px dashed #D4D4D4;
+    background: var(--bg-secondary);
+    border: 1px dashed var(--border-color);
     border-radius: 8px;
-    color: #606060;
+    color: var(--text-secondary);
     cursor: pointer;
     font-size: 0.95rem;
     text-align: center;
@@ -130,14 +130,14 @@
   }
 
   .add-custom-btn:hover {
-    border-color: #283618;
-    color: #283618;
-    background: #F0EFEB;
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+    background: var(--bg-tertiary);
   }
 
   .add-custom-form {
-    background: white;
-    border: 1px solid #D4D4D4;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 16px;
     margin-top: 24px;
@@ -146,16 +146,18 @@
   .add-custom-input {
     width: 100%;
     padding: 10px 12px;
-    border: 1px solid #D4D4D4;
+    border: 1px solid var(--border-color);
     border-radius: 6px;
     font-size: 0.95rem;
     box-sizing: border-box;
     margin-bottom: 12px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
   }
 
   .add-custom-input:focus {
     outline: none;
-    border-color: #283618;
+    border-color: var(--accent-primary);
   }
 
   .add-custom-actions {
@@ -174,20 +176,20 @@
   }
 
   .btn-cancel {
-    background: #D4D4D4;
-    color: #283618;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
   }
 
   .btn-cancel:hover {
-    background: #B7B7A4;
+    background: var(--border-color);
   }
 
   .btn-create {
-    background: #283618;
-    color: #F0EFEB;
+    background: var(--accent-primary);
+    color: var(--bg-secondary);
   }
 
   .btn-create:hover {
-    background: #1f2a12;
+    opacity: 0.9;
   }
 </style>

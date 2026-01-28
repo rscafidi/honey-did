@@ -1221,6 +1221,16 @@ const SHARED_JS_RENDER_DOCUMENT: &str = r##"
                         content += '<div class="item"><div class="item-title">' + escapeHtml(m.name) + '</div>';
                         if (m.conditions && m.conditions.length) content += '<div class="item-detail"><strong>Conditions:</strong> ' + m.conditions.map(c => escapeHtml(c)).join(', ') + '</div>';
                         if (m.allergies && m.allergies.length) content += '<div class="item-detail"><strong>Allergies:</strong> ' + m.allergies.map(a => escapeHtml(a)).join(', ') + '</div>';
+                        if (m.doctors && m.doctors.length) {
+                            content += '<div class="item-detail"><strong>Doctors:</strong></div>';
+                            m.doctors.forEach(doc => {
+                                let docInfo = escapeHtml(doc.name);
+                                if (doc.specialty) docInfo += ' (' + escapeHtml(doc.specialty) + ')';
+                                if (doc.phone) docInfo += ' - ' + escapeHtml(doc.phone);
+                                content += '<div class="item-detail">&nbsp;&nbsp;' + docInfo + '</div>';
+                                if (doc.notes) content += '<div class="item-detail">&nbsp;&nbsp;&nbsp;&nbsp;<em>' + escapeHtml(doc.notes) + '</em></div>';
+                            });
+                        }
                         if (m.medications && m.medications.length) {
                             content += '<div class="item-detail"><strong>Medications:</strong></div>';
                             m.medications.forEach(med => {

@@ -50,7 +50,7 @@
 
   .progress {
     font-size: 0.9rem;
-    color: #606060;
+    color: var(--text-secondary);
     margin-bottom: 8px;
   }
 
@@ -61,12 +61,12 @@
 
   h2 {
     margin: 0;
-    color: #283618;
+    color: var(--text-primary);
     font-weight: 600;
   }
 
   .why-it-matters {
-    background: #DDE5B6;
+    background: var(--accent-light);
     padding: 16px 20px;
     border-radius: 8px;
     margin-bottom: 24px;
@@ -75,26 +75,26 @@
   .why-it-matters h3 {
     margin: 0 0 8px 0;
     font-size: 0.95rem;
-    color: #283618;
+    color: var(--text-primary);
     font-weight: 600;
   }
 
   .why-it-matters p {
     margin: 0;
-    color: #283618;
+    color: var(--text-primary);
     line-height: 1.5;
   }
 
   .form-area {
-    background: white;
-    border: 1px solid #D4D4D4;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 20px;
     margin-bottom: 24px;
   }
 
   .prompts {
-    background: #FDF6E3;
+    background: var(--warning-bg);
     padding: 16px 20px;
     border-radius: 8px;
     margin-bottom: 24px;
@@ -103,7 +103,7 @@
   .prompts h3 {
     margin: 0 0 12px 0;
     font-size: 0.95rem;
-    color: #856404;
+    color: var(--warning-text);
     font-weight: 600;
   }
 
@@ -114,11 +114,11 @@
 
   .prompts li {
     margin: 8px 0;
-    color: #283618;
+    color: var(--warning-text);
   }
 
   .example {
-    background: #F0EFEB;
+    background: var(--bg-tertiary);
     padding: 16px 20px;
     border-radius: 8px;
   }
@@ -126,13 +126,13 @@
   .example h3 {
     margin: 0 0 8px 0;
     font-size: 0.95rem;
-    color: #606060;
+    color: var(--text-secondary);
     font-weight: 600;
   }
 
   .example-text {
     margin: 0;
     font-style: italic;
-    color: #283618;
+    color: var(--text-primary);
   }
 </style>

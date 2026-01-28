@@ -89,7 +89,7 @@
 <style>
   .section { max-width: 800px; }
   .subsection { margin-bottom: 32px; }
-  .subsection.emergency { background: #fff3e0; padding: 20px; border-radius: 8px; }
-  h3 { margin: 0 0 8px 0; color: #333; font-size: 1.1rem; }
-  .hint { color: #666; font-size: 0.9rem; margin-bottom: 16px; }
+  .subsection.emergency { background: var(--warning-bg); padding: 20px; border-radius: 8px; }
+  h3 { margin: 0 0 8px 0; color: var(--text-primary); font-size: 1.1rem; }
+  .hint { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 16px; }
 </style>

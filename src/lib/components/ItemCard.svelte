@@ -21,8 +21,8 @@
 
 <style>
   .item-card {
-    background: white;
-    border: 1px solid #D4D4D4;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     margin-bottom: 12px;
   }
@@ -32,21 +32,21 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    background: #F0EFEB;
-    border-bottom: 1px solid #D4D4D4;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
     border-radius: 8px 8px 0 0;
   }
 
   .item-title {
     font-weight: 600;
-    color: #283618;
+    color: var(--text-primary);
   }
 
   .delete-btn {
     background: none;
     border: none;
     font-size: 1.5rem;
-    color: #B7B7A4;
+    color: var(--text-muted);
     cursor: pointer;
     padding: 0;
     line-height: 1;
@@ -54,7 +54,7 @@
   }
 
   .delete-btn:hover {
-    color: #9B2C2C;
+    color: var(--error-color);
   }
 
   .item-content {

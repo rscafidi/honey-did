@@ -129,7 +129,7 @@
   .lock-screen {
     position: fixed;
     inset: 0;
-    background: #F0EFEB;
+    background: var(--bg-primary);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -156,13 +156,13 @@
 
   h1 {
     margin: 0;
-    color: #283618;
+    color: var(--text-primary);
     font-weight: 600;
     font-size: 1.75rem;
   }
 
   .subtitle {
-    color: #606060;
+    color: var(--text-secondary);
     margin: 0 0 24px 0;
   }
 
@@ -175,26 +175,27 @@
   input {
     padding: 12px;
     font-size: 1rem;
-    border: 2px solid #D4D4D4;
+    border: 2px solid var(--border-color);
     border-radius: 8px;
     text-align: center;
-    background: white;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
   }
 
   input:focus {
     outline: none;
-    border-color: #283618;
+    border-color: var(--accent-primary);
   }
 
   .error {
-    color: #9B2C2C;
+    color: var(--error-color);
     margin: 0;
     font-size: 0.9rem;
   }
 
   .warning {
-    color: #744210;
-    background: #FEFCBF;
+    color: var(--warning-text);
+    background: var(--warning-bg);
     padding: 12px;
     border-radius: 8px;
     font-size: 0.9rem;
@@ -212,35 +213,35 @@
   }
 
   .btn-primary {
-    background: #283618;
-    color: #F0EFEB;
+    background: var(--accent-primary);
+    color: var(--bg-secondary);
   }
 
   .btn-primary:hover:not(:disabled) {
-    background: #1f2a12;
+    opacity: 0.9;
   }
 
   .btn-primary:disabled {
-    background: #B7B7A4;
+    opacity: 0.5;
     cursor: not-allowed;
   }
 
   .btn-secondary {
-    background: #D4D4D4;
-    color: #283618;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
   }
 
   .btn-secondary:hover {
-    background: #B7B7A4;
+    background: var(--border-color);
   }
 
   .btn-danger {
-    background: #9B2C2C;
+    background: var(--error-color);
     color: white;
   }
 
   .btn-danger:hover {
-    background: #822727;
+    opacity: 0.9;
   }
 
   .button-row {
@@ -255,14 +256,14 @@
   .clear-link {
     background: none;
     border: none;
-    color: #606060;
+    color: var(--text-secondary);
     font-size: 0.85rem;
     margin-top: 24px;
     cursor: pointer;
   }
 
   .clear-link:hover {
-    color: #9B2C2C;
+    color: var(--error-color);
     text-decoration: underline;
   }
 </style>

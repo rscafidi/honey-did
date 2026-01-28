@@ -1,10 +1,17 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
+  import { themePreference, type ThemePreference } from '../stores/theme';
 
   export let isOpen = false;
 
   const dispatch = createEventDispatcher();
+
+  const themeOptions: { value: ThemePreference; label: string; icon: string }[] = [
+    { value: 'auto', label: 'Auto', icon: '💻' },
+    { value: 'light', label: 'Light', icon: '☀️' },
+    { value: 'dark', label: 'Dark', icon: '🌙' },
+  ];
 
   let clearOnExit = false;
   let showChangePassword = false;
@@ -110,6 +117,22 @@
 
       {#if !showChangePassword && !showClearConfirm}
         <div class="settings-section">
+          <h3>Appearance</h3>
+          <div class="theme-selector">
+            {#each themeOptions as option}
+              <button
+                class="theme-option"
+                class:active={$themePreference === option.value}
+                on:click={() => themePreference.set(option.value)}
+              >
+                <span class="theme-icon">{option.icon}</span>
+                <span class="theme-label">{option.label}</span>
+              </button>
+            {/each}
+          </div>
+        </div>
+
+        <div class="settings-section">
           <h3>Security</h3>
 
           {#if hasPassword}
@@ -195,7 +218,7 @@
   .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(40, 54, 24, 0.5);
+    background: rgba(0, 0, 0, 0.5);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -203,23 +226,23 @@
   }
 
   .dialog {
-    background: white;
+    background: var(--bg-secondary);
     border-radius: 12px;
     padding: 24px;
     width: 100%;
     max-width: 420px;
-    box-shadow: 0 20px 60px rgba(40, 54, 24, 0.3);
+    box-shadow: var(--card-shadow);
   }
 
   h2 {
     margin: 0 0 20px 0;
-    color: #283618;
+    color: var(--text-primary);
     font-weight: 600;
   }
 
   h3 {
     margin: 0 0 16px 0;
-    color: #606060;
+    color: var(--text-secondary);
     font-size: 0.9rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -229,6 +252,45 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    margin-bottom: 24px;
+  }
+
+  .theme-selector {
+    display: flex;
+    gap: 8px;
+  }
+
+  .theme-option {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 8px;
+    background: var(--bg-tertiary);
+    border: 2px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .theme-option:hover {
+    background: var(--bg-primary);
+  }
+
+  .theme-option.active {
+    border-color: var(--accent-primary);
+    background: var(--accent-light);
+  }
+
+  .theme-icon {
+    font-size: 1.5rem;
+  }
+
+  .theme-label {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    font-weight: 500;
   }
 
   .setting-button {
@@ -237,25 +299,25 @@
     align-items: center;
     width: 100%;
     padding: 12px 16px;
-    background: #F0EFEB;
+    background: var(--bg-tertiary);
     border: none;
     border-radius: 8px;
     cursor: pointer;
     text-align: left;
-    color: #283618;
+    color: var(--text-primary);
     transition: background 0.15s ease;
   }
 
   .setting-button:hover {
-    background: #D4D4D4;
+    background: var(--bg-primary);
   }
 
   .setting-button.danger {
-    color: #9B2C2C;
+    color: var(--error-color);
   }
 
   .setting-button.danger:hover {
-    background: #FED7D7;
+    background: rgba(155, 44, 44, 0.1);
   }
 
   .setting-toggle {
@@ -263,10 +325,10 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    background: #F0EFEB;
+    background: var(--bg-tertiary);
     border-radius: 8px;
     cursor: pointer;
-    color: #283618;
+    color: var(--text-primary);
   }
 
   .setting-label {
@@ -276,12 +338,12 @@
   .setting-hint {
     display: block;
     font-size: 0.8rem;
-    color: #606060;
+    color: var(--text-secondary);
     font-weight: normal;
   }
 
   .setting-arrow {
-    color: #B7B7A4;
+    color: var(--text-muted);
   }
 
   .setting-toggle input {
@@ -290,8 +352,8 @@
   }
 
   .warning {
-    color: #744210;
-    background: #FEFCBF;
+    color: var(--warning-text);
+    background: var(--warning-bg);
     padding: 12px;
     border-radius: 8px;
     font-size: 0.9rem;
@@ -308,33 +370,35 @@
     display: block;
     margin-bottom: 6px;
     font-weight: 500;
-    color: #283618;
+    color: var(--text-primary);
   }
 
   .field input {
     width: 100%;
     padding: 10px 12px;
-    border: 2px solid #D4D4D4;
+    border: 2px solid var(--border-color);
     border-radius: 6px;
     font-size: 1rem;
     box-sizing: border-box;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
   }
 
   .field input:focus {
     outline: none;
-    border-color: #283618;
+    border-color: var(--accent-primary);
   }
 
   .error-hint {
-    color: #9B2C2C;
+    color: var(--error-color);
     font-size: 0.85rem;
     margin-top: 4px;
     display: block;
   }
 
   .error-message {
-    color: #9B2C2C;
-    background: #FED7D7;
+    color: var(--error-color);
+    background: rgba(155, 44, 44, 0.1);
     padding: 10px 12px;
     border-radius: 6px;
     margin: 0;
@@ -358,34 +422,34 @@
   }
 
   .btn-primary {
-    background: #283618;
-    color: #F0EFEB;
+    background: var(--accent-primary);
+    color: var(--bg-secondary);
   }
 
   .btn-primary:hover:not(:disabled) {
-    background: #1f2a12;
+    opacity: 0.9;
   }
 
   .btn-primary:disabled {
-    background: #B7B7A4;
+    opacity: 0.5;
     cursor: not-allowed;
   }
 
   .btn-secondary {
-    background: #D4D4D4;
-    color: #283618;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
   }
 
   .btn-secondary:hover {
-    background: #B7B7A4;
+    background: var(--border-color);
   }
 
   .btn-danger {
-    background: #9B2C2C;
+    background: var(--error-color);
     color: white;
   }
 
   .btn-danger:hover {
-    background: #822727;
+    opacity: 0.9;
   }
 </style>

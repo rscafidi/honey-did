@@ -295,11 +295,11 @@
 
 <style>
   .custom-section {
-    background: white;
-    border: 1px solid #D4D4D4;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     margin-bottom: 24px;
-    border-left: 4px solid #606C38;
+    border-left: 4px solid var(--accent-secondary);
   }
 
   .section-header {
@@ -307,8 +307,8 @@
     justify-content: space-between;
     align-items: center;
     padding: 16px;
-    border-bottom: 1px solid #D4D4D4;
-    background: #F0EFEB;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
     border-radius: 4px 8px 0 0;
   }
 
@@ -316,7 +316,7 @@
     margin: 0;
     font-size: 1rem;
     font-weight: 600;
-    color: #283618;
+    color: var(--text-primary);
     cursor: pointer;
   }
 
@@ -328,8 +328,10 @@
     font-size: 1rem;
     font-weight: 600;
     padding: 4px 8px;
-    border: 1px solid #283618;
+    border: 1px solid var(--accent-primary);
     border-radius: 4px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
   }
 
   .section-actions {
@@ -347,26 +349,26 @@
   }
 
   .btn-add {
-    background: #DDE5B6;
-    color: #283618;
+    background: var(--accent-light);
+    color: var(--accent-primary);
   }
 
   .btn-add:hover {
-    background: #ADC178;
+    background: var(--accent-hover);
   }
 
   .btn-delete {
     background: none;
-    color: #9B2C2C;
-    border: 1px solid #9B2C2C;
+    color: var(--error-color);
+    border: 1px solid var(--error-color);
   }
 
   .btn-delete:hover {
-    background: #FED7D7;
+    background: rgba(155, 44, 44, 0.1);
   }
 
   .field-definitions {
-    border-bottom: 1px solid #D4D4D4;
+    border-bottom: 1px solid var(--border-color);
   }
 
   .toggle-fields {
@@ -377,14 +379,14 @@
     text-align: left;
     cursor: pointer;
     font-size: 0.9rem;
-    color: #606060;
+    color: var(--text-secondary);
     display: flex;
     align-items: center;
     gap: 8px;
   }
 
   .toggle-fields:hover {
-    background: #F0EFEB;
+    background: var(--bg-tertiary);
   }
 
   .toggle-icon {
@@ -405,54 +407,57 @@
   .field-name {
     flex: 1;
     padding: 8px 12px;
-    border: 1px solid #D4D4D4;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
     font-size: 0.9rem;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
   }
 
   .field-name:focus {
     outline: none;
-    border-color: #283618;
+    border-color: var(--accent-primary);
   }
 
   .field-type {
     padding: 8px 12px;
-    border: 1px solid #D4D4D4;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
     font-size: 0.9rem;
-    background: white;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
   }
 
   .btn-icon {
     background: none;
-    border: 1px solid #D4D4D4;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
     width: 32px;
     height: 32px;
     cursor: pointer;
     font-size: 1.2rem;
-    color: #606060;
+    color: var(--text-secondary);
   }
 
   .btn-icon.delete:hover {
-    background: #FED7D7;
-    border-color: #9B2C2C;
-    color: #9B2C2C;
+    background: rgba(155, 44, 44, 0.1);
+    border-color: var(--error-color);
+    color: var(--error-color);
   }
 
   .btn-add-field {
     background: none;
-    border: 1px dashed #D4D4D4;
+    border: 1px dashed var(--border-color);
     padding: 8px 16px;
-    color: #606060;
+    color: var(--text-secondary);
     cursor: pointer;
     border-radius: 4px;
     font-size: 0.85rem;
   }
 
   .btn-add-field:hover {
-    border-color: #283618;
-    color: #283618;
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
   }
 
   .items-list {
@@ -460,14 +465,14 @@
   }
 
   .empty-message {
-    color: #606060;
+    color: var(--text-secondary);
     font-style: italic;
     margin: 0;
   }
 
   .item-card {
-    background: #F0EFEB;
-    border: 1px solid #D4D4D4;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     margin-bottom: 12px;
     overflow: hidden;
@@ -478,22 +483,22 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    background: white;
-    border-bottom: 1px solid #D4D4D4;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
   }
 
   .item-title {
     font-weight: 600;
-    color: #283618;
+    color: var(--text-primary);
   }
 
   .btn-edit {
-    background: #D4D4D4;
-    color: #283618;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
   }
 
   .btn-edit:hover {
-    background: #B7B7A4;
+    background: var(--border-color);
   }
 
   .item-content {
@@ -506,21 +511,21 @@
   }
 
   .detail-label {
-    color: #606060;
+    color: var(--text-secondary);
   }
 
   .detail-value {
-    color: #283618;
+    color: var(--text-primary);
     margin-left: 4px;
   }
 
   .item-notes {
     margin-top: 8px;
     padding: 8px 12px;
-    background: white;
+    background: var(--bg-secondary);
     border-radius: 4px;
     font-style: italic;
-    color: #606060;
+    color: var(--text-secondary);
     font-size: 0.9rem;
   }
 
@@ -535,7 +540,7 @@
   .form-field label {
     display: block;
     font-size: 0.85rem;
-    color: #606060;
+    color: var(--text-secondary);
     margin-bottom: 4px;
   }
 
@@ -545,16 +550,18 @@
   .form-field textarea {
     width: 100%;
     padding: 8px 12px;
-    border: 1px solid #D4D4D4;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
     font-size: 0.95rem;
     box-sizing: border-box;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
   }
 
   .form-field input:focus,
   .form-field textarea:focus {
     outline: none;
-    border-color: #283618;
+    border-color: var(--accent-primary);
   }
 
   .checkbox-label {
@@ -562,6 +569,7 @@
     align-items: center;
     gap: 8px;
     cursor: pointer;
+    color: var(--text-primary);
   }
 
   .checkbox-label input {
@@ -577,29 +585,29 @@
   }
 
   .btn-secondary {
-    background: #D4D4D4;
-    color: #283618;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
   }
 
   .btn-secondary:hover {
-    background: #B7B7A4;
+    background: var(--border-color);
   }
 
   .btn-danger {
-    background: #FED7D7;
-    color: #9B2C2C;
+    background: rgba(155, 44, 44, 0.1);
+    color: var(--error-color);
   }
 
   .btn-danger:hover {
-    background: #FEB2B2;
+    opacity: 0.9;
   }
 
   .btn-primary {
-    background: #283618;
-    color: #F0EFEB;
+    background: var(--accent-primary);
+    color: var(--bg-secondary);
   }
 
   .btn-primary:hover {
-    background: #1f2a12;
+    opacity: 0.9;
   }
 </style>

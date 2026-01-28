@@ -117,6 +117,6 @@
 <style>
   .section { max-width: 800px; }
   .subsection { margin-bottom: 32px; }
-  h3 { margin: 0 0 8px 0; color: #333; font-size: 1.1rem; }
-  .hint { color: #666; font-size: 0.9rem; margin-bottom: 16px; }
+  h3 { margin: 0 0 8px 0; color: var(--text-primary); font-size: 1.1rem; }
+  .hint { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 16px; }
 </style>

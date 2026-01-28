@@ -13,10 +13,10 @@
     align-items: center;
     gap: 8px;
     padding: 12px 16px;
-    background: #F0EFEB;
-    border: 2px dashed #283618;
+    background: var(--bg-tertiary);
+    border: 2px dashed var(--accent-primary);
     border-radius: 8px;
-    color: #283618;
+    color: var(--accent-primary);
     font-size: 0.95rem;
     cursor: pointer;
     width: 100%;
@@ -26,7 +26,7 @@
   }
 
   .add-btn:hover {
-    background: #DDE5B6;
+    background: var(--accent-light);
   }
 
   .plus {

@@ -103,8 +103,8 @@
 <style>
   .section { max-width: 800px; }
   .subsection { margin-bottom: 32px; }
-  .subsection.highlight { background: #e3f2fd; padding: 20px; border-radius: 8px; margin-bottom: 32px; }
-  h3 { margin: 0 0 16px 0; color: #333; font-size: 1.1rem; }
-  .hint { color: #1565c0; font-size: 0.9rem; margin-bottom: 16px; }
-  .pw-card { background: white; padding: 16px; border-radius: 8px; }
+  .subsection.highlight { background: var(--accent-light); padding: 20px; border-radius: 8px; margin-bottom: 32px; }
+  h3 { margin: 0 0 16px 0; color: var(--text-primary); font-size: 1.1rem; }
+  .hint { color: var(--accent-primary); font-size: 0.9rem; margin-bottom: 16px; }
+  .pw-card { background: var(--bg-secondary); padding: 16px; border-radius: 8px; }
 </style>

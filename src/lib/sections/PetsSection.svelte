@@ -108,14 +108,14 @@
 
 <style>
   .section { max-width: 800px; }
-  .intro { color: #666; margin-bottom: 24px; }
+  .intro { color: var(--text-secondary); margin-bottom: 24px; }
   .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-  .sub-section { margin: 16px 0; padding: 12px; background: #f8f9fa; border-radius: 6px; }
-  .sub-section h4 { margin: 0 0 12px 0; font-size: 0.95rem; color: #555; }
+  .sub-section { margin: 16px 0; padding: 12px; background: var(--bg-tertiary); border-radius: 6px; }
+  .sub-section h4 { margin: 0 0 12px 0; font-size: 0.95rem; color: var(--text-secondary); }
   .med-row { display: flex; gap: 8px; margin-bottom: 8px; }
-  .med-row input { flex: 1; padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-  .remove-btn { background: none; border: none; color: #999; font-size: 1.2rem; cursor: pointer; padding: 0 8px; }
-  .remove-btn:hover { color: #dc3545; }
-  .add-small { background: none; border: none; color: #1976d2; cursor: pointer; font-size: 0.9rem; padding: 4px 0; }
+  .med-row input { flex: 1; padding: 6px 10px; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box; background: var(--bg-secondary); color: var(--text-primary); }
+  .remove-btn { background: none; border: none; color: var(--text-muted); font-size: 1.2rem; cursor: pointer; padding: 0 8px; }
+  .remove-btn:hover { color: var(--error-color); }
+  .add-small { background: none; border: none; color: var(--accent-primary); cursor: pointer; font-size: 0.9rem; padding: 4px 0; }
   .add-small:hover { text-decoration: underline; }
 </style>

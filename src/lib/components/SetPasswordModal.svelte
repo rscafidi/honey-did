@@ -93,7 +93,7 @@
   .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(40, 54, 24, 0.5);
+    background: rgba(0, 0, 0, 0.5);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -101,22 +101,22 @@
   }
 
   .dialog {
-    background: white;
+    background: var(--bg-secondary);
     border-radius: 12px;
     padding: 24px;
     width: 100%;
     max-width: 400px;
-    box-shadow: 0 20px 60px rgba(40, 54, 24, 0.3);
+    box-shadow: var(--card-shadow);
   }
 
   h2 {
     margin: 0 0 12px 0;
-    color: #283618;
+    color: var(--text-primary);
     font-weight: 600;
   }
 
   .description {
-    color: #606060;
+    color: var(--text-secondary);
     margin: 0 0 20px 0;
     font-size: 0.95rem;
     line-height: 1.5;
@@ -132,21 +132,23 @@
     display: block;
     margin-bottom: 6px;
     font-weight: 500;
-    color: #283618;
+    color: var(--text-primary);
   }
 
   .field input {
     width: 100%;
     padding: 10px 12px;
-    border: 2px solid #D4D4D4;
+    border: 2px solid var(--border-color);
     border-radius: 6px;
     font-size: 1rem;
     box-sizing: border-box;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
   }
 
   .field input:focus {
     outline: none;
-    border-color: #283618;
+    border-color: var(--accent-primary);
   }
 
   .hint {
@@ -156,12 +158,12 @@
   }
 
   .error-hint {
-    color: #9B2C2C;
+    color: var(--error-color);
   }
 
   .error-message {
-    color: #9B2C2C;
-    background: #FED7D7;
+    color: var(--error-color);
+    background: rgba(155, 44, 44, 0.1);
     padding: 10px 12px;
     border-radius: 6px;
     margin: 0;
@@ -185,25 +187,25 @@
   }
 
   .btn-primary {
-    background: #283618;
-    color: #F0EFEB;
+    background: var(--accent-primary);
+    color: var(--bg-secondary);
   }
 
   .btn-primary:hover:not(:disabled) {
-    background: #1f2a12;
+    opacity: 0.9;
   }
 
   .btn-primary:disabled {
-    background: #B7B7A4;
+    opacity: 0.5;
     cursor: not-allowed;
   }
 
   .btn-secondary {
-    background: #D4D4D4;
-    color: #283618;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
   }
 
   .btn-secondary:hover {
-    background: #B7B7A4;
+    background: var(--border-color);
   }
 </style>

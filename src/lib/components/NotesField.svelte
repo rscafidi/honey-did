@@ -19,29 +19,31 @@
   .notes-field {
     margin-top: 20px;
     padding-top: 20px;
-    border-top: 1px solid #D4D4D4;
+    border-top: 1px solid var(--border-color);
   }
 
   .label-text {
     display: block;
     font-weight: 600;
     margin-bottom: 8px;
-    color: #606060;
+    color: var(--text-secondary);
   }
 
   textarea {
     width: 100%;
     padding: 12px;
-    border: 1px solid #D4D4D4;
+    border: 1px solid var(--border-color);
     border-radius: 6px;
     font-family: inherit;
     font-size: 0.95rem;
     resize: vertical;
     box-sizing: border-box;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
   }
 
   textarea:focus {
     outline: none;
-    border-color: #283618;
+    border-color: var(--accent-primary);
   }
 </style>

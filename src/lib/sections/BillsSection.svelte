@@ -65,5 +65,5 @@
 
 <style>
   .section { max-width: 800px; }
-  .intro { color: #666; margin-bottom: 20px; }
+  .intro { color: var(--text-secondary); margin-bottom: 20px; }
 </style>

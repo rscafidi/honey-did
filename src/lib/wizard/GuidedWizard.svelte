@@ -140,7 +140,7 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
-    background: #F0EFEB;
+    background: var(--bg-primary);
   }
 
   .wizard-header {
@@ -148,14 +148,14 @@
     justify-content: center;
     align-items: center;
     padding: 16px 24px;
-    background: #283618;
+    background: var(--sidebar-bg);
     border-bottom: none;
   }
 
   .wizard-header h1 {
     margin: 0;
     font-size: 1.25rem;
-    color: #F0EFEB;
+    color: var(--sidebar-text);
     font-weight: 600;
   }
 
@@ -170,8 +170,8 @@
     justify-content: center;
     align-items: center;
     padding: 16px 24px;
-    background: white;
-    border-top: 1px solid #D4D4D4;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
   }
 
   .footer-center {
@@ -183,34 +183,34 @@
   .footer-divider {
     width: 1px;
     height: 24px;
-    background: #D4D4D4;
+    background: var(--border-color);
     margin: 0 8px;
   }
 
   .skip-link {
     background: none;
     border: none;
-    color: #606060;
+    color: var(--text-secondary);
     cursor: pointer;
     font-size: 0.9rem;
     padding: 10px 16px;
   }
 
   .skip-link:hover {
-    color: #283618;
+    color: var(--text-primary);
   }
 
   .exit-btn {
     background: none;
     border: none;
-    color: #606060;
+    color: var(--text-secondary);
     cursor: pointer;
     font-size: 0.9rem;
     padding: 10px 16px;
   }
 
   .exit-btn:hover {
-    color: #283618;
+    color: var(--text-primary);
     text-decoration: underline;
   }
 
@@ -225,21 +225,21 @@
   }
 
   .btn-primary {
-    background: #283618;
-    color: #F0EFEB;
+    background: var(--accent-primary);
+    color: var(--bg-secondary);
   }
 
   .btn-primary:hover {
-    background: #1f2a12;
+    opacity: 0.9;
   }
 
   .btn-secondary {
-    background: #D4D4D4;
-    color: #283618;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
   }
 
   .btn-secondary:hover {
-    background: #B7B7A4;
+    background: var(--border-color);
   }
 
   .continue-prompt, .complete-prompt {
@@ -247,9 +247,9 @@
     max-width: 500px;
     margin: 60px auto;
     padding: 40px;
-    background: white;
+    background: var(--bg-secondary);
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(40, 54, 24, 0.1);
+    box-shadow: var(--card-shadow);
   }
 
   .prompt-icon {
@@ -259,13 +259,13 @@
 
   .continue-prompt h2, .complete-prompt h2 {
     margin: 0 0 16px 0;
-    color: #283618;
+    color: var(--text-primary);
     font-weight: 600;
   }
 
   .continue-prompt p, .complete-prompt p {
     margin: 0 0 24px 0;
-    color: #606060;
+    color: var(--text-secondary);
     line-height: 1.5;
   }
 

@@ -3,6 +3,7 @@
   import { invoke } from '@tauri-apps/api/core';
   import { getCurrentWindow } from '@tauri-apps/api/window';
   import { document, isDocumentEmpty, setPasswordRequired, type CustomSection } from './lib/stores/document';
+  import { theme } from './lib/stores/theme';
   import FinancialSection from './lib/sections/FinancialSection.svelte';
   import InsuranceSection from './lib/sections/InsuranceSection.svelte';
   import BillsSection from './lib/sections/BillsSection.svelte';
@@ -390,10 +391,59 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
+  :global(:root) {
+    /* Light theme (default) */
+    --bg-primary: #F0EFEB;
+    --bg-secondary: #FFFFFF;
+    --bg-tertiary: #F5F5F5;
+    --text-primary: #283618;
+    --text-secondary: #606060;
+    --text-muted: #888888;
+    --border-color: #D4D4D4;
+    --accent-primary: #283618;
+    --accent-secondary: #606C38;
+    --accent-light: #DDE5B6;
+    --accent-hover: #ADC178;
+    --sidebar-bg: #283618;
+    --sidebar-text: #F0EFEB;
+    --sidebar-text-muted: #B7B7A4;
+    --sidebar-active-bg: #F0EFEB;
+    --sidebar-active-text: #283618;
+    --error-color: #9B2C2C;
+    --warning-bg: #FEFCBF;
+    --warning-text: #744210;
+    --card-shadow: 0 2px 8px rgba(40, 54, 24, 0.1);
+  }
+
+  :global([data-theme="dark"]) {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2d2d2d;
+    --bg-tertiary: #383838;
+    --text-primary: #F0EFEB;
+    --text-secondary: #B7B7A4;
+    --text-muted: #888888;
+    --border-color: #444444;
+    --accent-primary: #DDE5B6;
+    --accent-secondary: #ADC178;
+    --accent-light: #3d4a2a;
+    --accent-hover: #4a5a32;
+    --sidebar-bg: #0f0f0f;
+    --sidebar-text: #F0EFEB;
+    --sidebar-text-muted: #888888;
+    --sidebar-active-bg: #3d4a2a;
+    --sidebar-active-text: #F0EFEB;
+    --error-color: #FC8181;
+    --warning-bg: #744210;
+    --warning-text: #FEFCBF;
+    --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
   :global(html), :global(body) {
     margin: 0;
     padding: 0;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
   }
 
   .loading {
@@ -401,20 +451,20 @@
     align-items: center;
     justify-content: center;
     height: 100vh;
-    background: #F0EFEB;
+    background: var(--bg-primary);
     font-size: 1.2rem;
-    color: #283618;
+    color: var(--text-primary);
   }
 
   .app {
     display: flex;
     height: 100vh;
-    background: #F0EFEB;
+    background: var(--bg-primary);
   }
 
   .sidebar {
     width: 240px;
-    background: #283618;
+    background: var(--sidebar-bg);
     display: flex;
     flex-direction: column;
   }
@@ -435,7 +485,7 @@
 
   .logo-text {
     font-size: 1.25rem;
-    color: #F0EFEB;
+    color: var(--sidebar-text);
     font-weight: 600;
   }
 
@@ -456,18 +506,18 @@
     cursor: pointer;
     text-align: left;
     gap: 12px;
-    color: #B7B7A4;
+    color: var(--sidebar-text-muted);
     transition: all 0.15s ease;
   }
 
   .nav-item:hover {
     background: rgba(255, 255, 255, 0.1);
-    color: #F0EFEB;
+    color: var(--sidebar-text);
   }
 
   .nav-item.active {
-    background: #F0EFEB;
-    color: #283618;
+    background: var(--sidebar-active-bg);
+    color: var(--sidebar-active-text);
   }
 
   .nav-icon {
@@ -494,7 +544,7 @@
     right: 8px;
     background: none;
     border: none;
-    color: #B7B7A4;
+    color: var(--sidebar-text-muted);
     font-size: 1.2rem;
     cursor: pointer;
     opacity: 0;
@@ -507,7 +557,7 @@
   }
 
   .nav-delete:hover {
-    color: #9B2C2C;
+    color: var(--error-color);
   }
 
   .add-section-btn {
@@ -518,7 +568,7 @@
     background: none;
     border: 1px dashed rgba(255, 255, 255, 0.3);
     border-radius: 8px;
-    color: #B7B7A4;
+    color: var(--sidebar-text-muted);
     cursor: pointer;
     text-align: left;
     font-size: 0.9rem;
@@ -527,7 +577,7 @@
 
   .add-section-btn:hover {
     border-color: rgba(255, 255, 255, 0.5);
-    color: #F0EFEB;
+    color: var(--sidebar-text);
     background: rgba(255, 255, 255, 0.05);
   }
 
@@ -541,13 +591,13 @@
     border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 6px;
     background: rgba(255, 255, 255, 0.1);
-    color: #F0EFEB;
+    color: var(--sidebar-text);
     font-size: 0.9rem;
     box-sizing: border-box;
   }
 
   .add-section-input::placeholder {
-    color: #B7B7A4;
+    color: var(--sidebar-text-muted);
   }
 
   .add-section-input:focus {
@@ -572,7 +622,7 @@
 
   .btn-cancel {
     background: rgba(255, 255, 255, 0.1);
-    color: #B7B7A4;
+    color: var(--sidebar-text-muted);
   }
 
   .btn-cancel:hover {
@@ -580,12 +630,12 @@
   }
 
   .btn-create {
-    background: #DDE5B6;
-    color: #283618;
+    background: var(--accent-light);
+    color: var(--accent-primary);
   }
 
   .btn-create:hover {
-    background: #ADC178;
+    background: var(--accent-hover);
   }
 
   .sidebar-footer {
@@ -634,34 +684,34 @@
   }
 
   .btn-primary {
-    background: #F0EFEB;
-    color: #283618;
+    background: var(--sidebar-text);
+    color: var(--sidebar-bg);
   }
 
   .btn-primary:hover {
-    background: #D4D4D4;
+    background: var(--border-color);
   }
 
   .btn-secondary {
     background: rgba(255, 255, 255, 0.1);
-    color: #B7B7A4;
+    color: var(--sidebar-text-muted);
   }
 
   .btn-secondary:hover {
     background: rgba(255, 255, 255, 0.2);
-    color: #F0EFEB;
+    color: var(--sidebar-text);
   }
 
   .btn-outline {
     background: transparent;
-    color: #B7B7A4;
-    border: 2px solid #B7B7A4;
+    color: var(--sidebar-text-muted);
+    border: 2px solid var(--sidebar-text-muted);
   }
 
   .btn-outline:hover {
     background: rgba(255, 255, 255, 0.1);
-    color: #F0EFEB;
-    border-color: #F0EFEB;
+    color: var(--sidebar-text);
+    border-color: var(--sidebar-text);
   }
 
   .content {
@@ -673,13 +723,13 @@
 
   .content-header {
     padding: 20px;
-    background: white;
-    border-bottom: 1px solid #D4D4D4;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
   }
 
   .content-header h2 {
     margin: 0;
-    color: #283618;
+    color: var(--text-primary);
     font-weight: 600;
   }
 
@@ -687,5 +737,6 @@
     flex: 1;
     padding: 20px;
     overflow-y: auto;
+    background: var(--bg-primary);
   }
 </style>
