@@ -46,15 +46,8 @@
     }, 300);
   }
 
-  function flushNow(updatedLocal: typeof local) {
-    local = updatedLocal;
-    if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
-    hasPendingChanges = false;
-    document.updateSection('medical', local);
-  }
-
   function addFamilyMember() {
-    flushNow({
+    local = {
       ...local,
       family_members: [...local.family_members, {
         name: '',
@@ -65,11 +58,13 @@
         pharmacy: { ...emptyContact },
         notes: ''
       }]
-    });
+    };
+    scheduleFlush();
   }
 
   function removeFamilyMember(index: number) {
-    flushNow({ ...local, family_members: local.family_members.filter((_: any, i: number) => i !== index) });
+    local = { ...local, family_members: local.family_members.filter((_: any, i: number) => i !== index) };
+    scheduleFlush();
   }
 
   function updateFamilyMember(index: number, field: string, value: any) {
@@ -77,12 +72,6 @@
     members[index] = { ...members[index], [field]: value };
     local = { ...local, family_members: members };
     scheduleFlush();
-  }
-
-  function updateFamilyMemberFlush(index: number, field: string, value: any) {
-    const members = [...local.family_members];
-    members[index] = { ...members[index], [field]: value };
-    flushNow({ ...local, family_members: members });
   }
 
   function updateNotes(e: Event) {
@@ -138,7 +127,7 @@
                 <span class="doctor-specialty">{doctor.specialty}</span>
               {/if}
               <button class="remove-btn" on:click={() => {
-                updateFamilyMemberFlush(i, 'doctors', removeAtIndex(member.doctors || [], j));
+                updateFamilyMember(i, 'doctors', removeAtIndex(member.doctors || [], j));
               }}>×</button>
             </div>
             <div class="doctor-fields">
@@ -172,7 +161,7 @@
         {/each}
         <button class="add-small" on:click={() => {
           const docs = [...(member.doctors || []), { ...emptyDoctor }];
-          updateFamilyMemberFlush(i, 'doctors', docs);
+          updateFamilyMember(i, 'doctors', docs);
         }}>+ Add Doctor</button>
       </div>
 
@@ -196,13 +185,13 @@
               updateFamilyMember(i, 'medications', meds);
             }} />
             <button class="remove-btn" on:click={() => {
-              updateFamilyMemberFlush(i, 'medications', removeAtIndex(member.medications || [], j));
+              updateFamilyMember(i, 'medications', removeAtIndex(member.medications || [], j));
             }}>×</button>
           </div>
         {/each}
         <button class="add-small" on:click={() => {
           const meds = [...(member.medications || []), { ...emptyMedication }];
-          updateFamilyMemberFlush(i, 'medications', meds);
+          updateFamilyMember(i, 'medications', meds);
         }}>+ Add Medication</button>
       </div>
 

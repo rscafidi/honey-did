@@ -46,19 +46,14 @@
     }, 300);
   }
 
-  function flushNow(updatedLocal: typeof local) {
-    local = updatedLocal;
-    if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
-    hasPendingChanges = false;
-    document.updateSection('contacts', local);
-  }
-
   function addContact(list: 'emergency_contacts' | 'family' | 'professionals') {
-    flushNow({ ...local, [list]: [...local[list], { ...emptyContact }] });
+    local = { ...local, [list]: [...local[list], { ...emptyContact }] };
+    scheduleFlush();
   }
 
   function removeContact(list: 'emergency_contacts' | 'family' | 'professionals', index: number) {
-    flushNow({ ...local, [list]: local[list].filter((_: any, i: number) => i !== index) });
+    local = { ...local, [list]: local[list].filter((_: any, i: number) => i !== index) };
+    scheduleFlush();
   }
 
   function updateContact(list: 'emergency_contacts' | 'family' | 'professionals', index: number, field: string, value: string) {

@@ -44,26 +44,21 @@
     }, 300);
   }
 
-  function flushNow(updatedLocal: typeof local) {
-    local = updatedLocal;
-    if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
-    hasPendingChanges = false;
-    document.updateSection('household', local);
-  }
-
   // --- Maintenance Items ---
   function addMaintenance() {
-    flushNow({
+    local = {
       ...local,
       maintenance_items: [...local.maintenance_items, { name: '', frequency: '', last_done: '', notes: '' }]
-    });
+    };
+    scheduleFlush();
   }
 
   function removeMaintenance(index: number) {
-    flushNow({
+    local = {
       ...local,
       maintenance_items: local.maintenance_items.filter((_: any, i: number) => i !== index)
-    });
+    };
+    scheduleFlush();
   }
 
   function updateMaintenance(index: number, field: string, value: string) {
@@ -75,17 +70,19 @@
 
   // --- Contractors ---
   function addContractor() {
-    flushNow({
+    local = {
       ...local,
       contractors: [...local.contractors, { name: '', relationship: '', phone: '', email: '', notes: '' }]
-    });
+    };
+    scheduleFlush();
   }
 
   function removeContractor(index: number) {
-    flushNow({
+    local = {
       ...local,
       contractors: local.contractors.filter((_: any, i: number) => i !== index)
-    });
+    };
+    scheduleFlush();
   }
 
   function updateContractor(index: number, field: string, value: string) {
@@ -97,17 +94,19 @@
 
   // --- How Things Work ---
   function addHowTo() {
-    flushNow({
+    local = {
       ...local,
       how_things_work: [...local.how_things_work, { name: '', instructions: '' }]
-    });
+    };
+    scheduleFlush();
   }
 
   function removeHowTo(index: number) {
-    flushNow({
+    local = {
       ...local,
       how_things_work: local.how_things_work.filter((_: any, i: number) => i !== index)
-    });
+    };
+    scheduleFlush();
   }
 
   function updateHowTo(index: number, field: string, value: string) {

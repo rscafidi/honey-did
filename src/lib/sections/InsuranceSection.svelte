@@ -42,31 +42,14 @@
     }, 300);
   }
 
-  function flushNow(updatedLocal: typeof local) {
-    local = updatedLocal;
-    if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
-    hasPendingChanges = false;
-    document.updateSection('insurance', local);
-  }
-
   function addPolicy() {
-    flushNow({
-      ...local,
-      policies: [...local.policies, {
-        policy_type: '',
-        provider: '',
-        policy_number: '',
-        contact: '',
-        notes: ''
-      }]
-    });
+    local = { ...local, policies: [...local.policies, { policy_type: '', provider: '', policy_number: '', contact: '', notes: '' }] };
+    scheduleFlush();
   }
 
   function removePolicy(index: number) {
-    flushNow({
-      ...local,
-      policies: local.policies.filter((_: any, i: number) => i !== index)
-    });
+    local = { ...local, policies: local.policies.filter((_: any, i: number) => i !== index) };
+    scheduleFlush();
   }
 
   function updatePolicy(index: number, field: string, value: string) {

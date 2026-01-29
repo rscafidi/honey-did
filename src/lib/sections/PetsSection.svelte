@@ -45,15 +45,8 @@
     }, 300);
   }
 
-  function flushNow(updatedLocal: typeof local) {
-    local = updatedLocal;
-    if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
-    hasPendingChanges = false;
-    document.updateSection('pets', local);
-  }
-
   function addPet() {
-    flushNow({
+    local = {
       ...local,
       pets: [...local.pets, {
         name: '',
@@ -64,11 +57,13 @@
         feeding: '',
         care_notes: ''
       }]
-    });
+    };
+    scheduleFlush();
   }
 
   function removePet(index: number) {
-    flushNow({ ...local, pets: local.pets.filter((_: any, i: number) => i !== index) });
+    local = { ...local, pets: local.pets.filter((_: any, i: number) => i !== index) };
+    scheduleFlush();
   }
 
   function updatePet(index: number, field: string, value: any) {
@@ -76,12 +71,6 @@
     petList[index] = { ...petList[index], [field]: value };
     local = { ...local, pets: petList };
     scheduleFlush();
-  }
-
-  function updatePetFlush(index: number, field: string, value: any) {
-    const petList = [...local.pets];
-    petList[index] = { ...petList[index], [field]: value };
-    flushNow({ ...local, pets: petList });
   }
 
   function updateNotes(e: Event) {
@@ -136,13 +125,13 @@
               updatePet(i, 'medications', meds);
             }} />
             <button class="remove-btn" on:click={() => {
-              updatePetFlush(i, 'medications', removeAtIndex(pet.medications || [], j));
+              updatePet(i, 'medications', removeAtIndex(pet.medications || [], j));
             }}>×</button>
           </div>
         {/each}
         <button class="add-small" on:click={() => {
           const meds = [...(pet.medications || []), { ...emptyMedication }];
-          updatePetFlush(i, 'medications', meds);
+          updatePet(i, 'medications', meds);
         }}>+ Add Medication</button>
       </div>
 

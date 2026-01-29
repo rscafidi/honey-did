@@ -44,24 +44,19 @@
     }, 300);
   }
 
-  function flushNow(updatedLocal: typeof local) {
-    local = updatedLocal;
-    if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
-    hasPendingChanges = false;
-    document.updateSection('personal', local);
-  }
-
   function updateField(field: string, value: string) {
     local = { ...local, [field]: value };
     scheduleFlush();
   }
 
   function addMessage() {
-    flushNow({ ...local, messages: [...local.messages, { recipient: '', message: '' }] });
+    local = { ...local, messages: [...local.messages, { recipient: '', message: '' }] };
+    scheduleFlush();
   }
 
   function removeMessage(index: number) {
-    flushNow({ ...local, messages: local.messages.filter((_: any, i: number) => i !== index) });
+    local = { ...local, messages: local.messages.filter((_: any, i: number) => i !== index) };
+    scheduleFlush();
   }
 
   function updateMessage(index: number, field: string, value: string) {

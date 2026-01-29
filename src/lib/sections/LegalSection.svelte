@@ -45,13 +45,6 @@
     }, 300);
   }
 
-  function flushNow(updatedLocal: typeof local) {
-    local = updatedLocal;
-    if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
-    hasPendingChanges = false;
-    document.updateSection('legal', local);
-  }
-
   function updateField(field: string, value: string) {
     local = { ...local, [field]: value };
     scheduleFlush();
@@ -63,17 +56,19 @@
   }
 
   function addTrust() {
-    flushNow({
+    local = {
       ...local,
       trusts: [...local.trusts, { name: '', trustee: '', notes: '' }]
-    });
+    };
+    scheduleFlush();
   }
 
   function removeTrust(index: number) {
-    flushNow({
+    local = {
       ...local,
       trusts: local.trusts.filter((_: any, i: number) => i !== index)
-    });
+    };
+    scheduleFlush();
   }
 
   function updateTrust(index: number, field: string, value: string) {

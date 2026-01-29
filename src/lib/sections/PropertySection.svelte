@@ -44,26 +44,15 @@
     }, 300);
   }
 
-  function flushNow(updatedLocal: typeof local) {
-    local = updatedLocal;
-    if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
-    hasPendingChanges = false;
-    document.updateSection('property', local);
-  }
-
   // --- Properties ---
   function addProperty() {
-    flushNow({
-      ...local,
-      properties: [...local.properties, { name: '', address: '', notes: '' }]
-    });
+    local = { ...local, properties: [...local.properties, { name: '', address: '', notes: '' }] };
+    scheduleFlush();
   }
 
   function removeProperty(index: number) {
-    flushNow({
-      ...local,
-      properties: local.properties.filter((_: any, i: number) => i !== index)
-    });
+    local = { ...local, properties: local.properties.filter((_: any, i: number) => i !== index) };
+    scheduleFlush();
   }
 
   function updateProperty(index: number, field: string, value: string) {
@@ -75,17 +64,13 @@
 
   // --- Vehicles ---
   function addVehicle() {
-    flushNow({
-      ...local,
-      vehicles: [...local.vehicles, { name: '', details: '', notes: '' }]
-    });
+    local = { ...local, vehicles: [...local.vehicles, { name: '', details: '', notes: '' }] };
+    scheduleFlush();
   }
 
   function removeVehicle(index: number) {
-    flushNow({
-      ...local,
-      vehicles: local.vehicles.filter((_: any, i: number) => i !== index)
-    });
+    local = { ...local, vehicles: local.vehicles.filter((_: any, i: number) => i !== index) };
+    scheduleFlush();
   }
 
   function updateVehicle(index: number, field: string, value: string) {
@@ -97,17 +82,13 @@
 
   // --- Valuables ---
   function addValuable() {
-    flushNow({
-      ...local,
-      valuables: [...local.valuables, { name: '', location: '', notes: '' }]
-    });
+    local = { ...local, valuables: [...local.valuables, { name: '', location: '', notes: '' }] };
+    scheduleFlush();
   }
 
   function removeValuable(index: number) {
-    flushNow({
-      ...local,
-      valuables: local.valuables.filter((_: any, i: number) => i !== index)
-    });
+    local = { ...local, valuables: local.valuables.filter((_: any, i: number) => i !== index) };
+    scheduleFlush();
   }
 
   function updateValuable(index: number, field: string, value: string) {

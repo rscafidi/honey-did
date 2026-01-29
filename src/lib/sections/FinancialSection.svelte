@@ -45,28 +45,15 @@
     }, 300);
   }
 
-  function flushNow(updatedLocal: typeof local) {
-    local = updatedLocal;
-    if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
-    hasPendingChanges = false;
-    document.updateSection('financial', local);
-  }
-
   // --- Bank Accounts ---
   function addBankAccount() {
-    flushNow({
-      ...local,
-      bank_accounts: [...local.bank_accounts, {
-        name: '', institution: '', account_type: 'Checking', last_four: '', notes: ''
-      }]
-    });
+    local = { ...local, bank_accounts: [...local.bank_accounts, { name: '', institution: '', account_type: 'Checking', last_four: '', notes: '' }] };
+    scheduleFlush();
   }
 
   function removeBankAccount(index: number) {
-    flushNow({
-      ...local,
-      bank_accounts: local.bank_accounts.filter((_: any, i: number) => i !== index)
-    });
+    local = { ...local, bank_accounts: local.bank_accounts.filter((_: any, i: number) => i !== index) };
+    scheduleFlush();
   }
 
   function updateBankAccount(index: number, field: string, value: string) {
@@ -78,19 +65,13 @@
 
   // --- Credit Cards ---
   function addCreditCard() {
-    flushNow({
-      ...local,
-      credit_cards: [...local.credit_cards, {
-        name: '', issuer: '', last_four: '', notes: ''
-      }]
-    });
+    local = { ...local, credit_cards: [...local.credit_cards, { name: '', issuer: '', last_four: '', notes: '' }] };
+    scheduleFlush();
   }
 
   function removeCreditCard(index: number) {
-    flushNow({
-      ...local,
-      credit_cards: local.credit_cards.filter((_: any, i: number) => i !== index)
-    });
+    local = { ...local, credit_cards: local.credit_cards.filter((_: any, i: number) => i !== index) };
+    scheduleFlush();
   }
 
   function updateCreditCard(index: number, field: string, value: string) {
@@ -102,19 +83,13 @@
 
   // --- Investments ---
   function addInvestment() {
-    flushNow({
-      ...local,
-      investments: [...local.investments, {
-        name: '', institution: '', account_type: '', notes: ''
-      }]
-    });
+    local = { ...local, investments: [...local.investments, { name: '', institution: '', account_type: '', notes: '' }] };
+    scheduleFlush();
   }
 
   function removeInvestment(index: number) {
-    flushNow({
-      ...local,
-      investments: local.investments.filter((_: any, i: number) => i !== index)
-    });
+    local = { ...local, investments: local.investments.filter((_: any, i: number) => i !== index) };
+    scheduleFlush();
   }
 
   function updateInvestment(index: number, field: string, value: string) {
@@ -126,19 +101,13 @@
 
   // --- Debts ---
   function addDebt() {
-    flushNow({
-      ...local,
-      debts: [...local.debts, {
-        name: '', lender: '', notes: ''
-      }]
-    });
+    local = { ...local, debts: [...local.debts, { name: '', lender: '', notes: '' }] };
+    scheduleFlush();
   }
 
   function removeDebt(index: number) {
-    flushNow({
-      ...local,
-      debts: local.debts.filter((_: any, i: number) => i !== index)
-    });
+    local = { ...local, debts: local.debts.filter((_: any, i: number) => i !== index) };
+    scheduleFlush();
   }
 
   function updateDebt(index: number, field: string, value: string) {

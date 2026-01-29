@@ -46,25 +46,20 @@
     }, 300);
   }
 
-  function flushNow(updatedLocal: typeof local) {
-    local = updatedLocal;
-    if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
-    hasPendingChanges = false;
-    document.updateSection('digital', local);
-  }
-
   function addEmail() {
-    flushNow({
+    local = {
       ...local,
       email_accounts: [...local.email_accounts, { ...emptyAccount }]
-    });
+    };
+    scheduleFlush();
   }
 
   function removeEmail(index: number) {
-    flushNow({
+    local = {
       ...local,
       email_accounts: local.email_accounts.filter((_: any, i: number) => i !== index)
-    });
+    };
+    scheduleFlush();
   }
 
   function updateEmail(index: number, field: string, value: string) {
@@ -75,17 +70,19 @@
   }
 
   function addSocial() {
-    flushNow({
+    local = {
       ...local,
       social_media: [...local.social_media, { ...emptyAccount }]
-    });
+    };
+    scheduleFlush();
   }
 
   function removeSocial(index: number) {
-    flushNow({
+    local = {
       ...local,
       social_media: local.social_media.filter((_: any, i: number) => i !== index)
-    });
+    };
+    scheduleFlush();
   }
 
   function updateSocial(index: number, field: string, value: string) {

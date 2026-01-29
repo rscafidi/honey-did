@@ -42,32 +42,14 @@
     }, 300);
   }
 
-  function flushNow(updatedLocal: typeof local) {
-    local = updatedLocal;
-    if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
-    hasPendingChanges = false;
-    document.updateSection('bills', local);
-  }
-
   function addBill() {
-    flushNow({
-      ...local,
-      bills: [...local.bills, {
-        name: '',
-        provider: '',
-        amount: '',
-        due_day: '',
-        autopay: false,
-        notes: ''
-      }]
-    });
+    local = { ...local, bills: [...local.bills, { name: '', provider: '', amount: '', due_day: '', autopay: false, notes: '' }] };
+    scheduleFlush();
   }
 
   function removeBill(index: number) {
-    flushNow({
-      ...local,
-      bills: local.bills.filter((_: any, i: number) => i !== index)
-    });
+    local = { ...local, bills: local.bills.filter((_: any, i: number) => i !== index) };
+    scheduleFlush();
   }
 
   function updateBill(index: number, field: string, value: string | boolean) {

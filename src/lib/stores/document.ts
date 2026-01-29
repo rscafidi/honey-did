@@ -206,8 +206,17 @@ function createDocumentStore() {
     if (saveTimeout) clearTimeout(saveTimeout);
     saveTimeout = setTimeout(() => {
       if (pendingDocument) {
-        invoke('update_document', { document: pendingDocument }).catch(console.error);
+        // Use requestIdleCallback so the invoke (which serializes the full
+        // document synchronously) runs when the browser is idle rather than
+        // potentially interrupting active user input.
+        const docToSave = pendingDocument;
         pendingDocument = null;
+        const doSave = () => invoke('update_document', { document: docToSave }).catch(console.error);
+        if (typeof requestIdleCallback === 'function') {
+          requestIdleCallback(doSave);
+        } else {
+          doSave();
+        }
       }
       saveTimeout = null;
     }, 1000); // Save 1s after last change
