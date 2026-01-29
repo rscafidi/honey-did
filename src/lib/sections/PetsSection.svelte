@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { document } from '../stores/document';
+  import { onDestroy } from 'svelte';
+  import { document, petsStore } from '../stores/document';
   import ItemCard from '../components/ItemCard.svelte';
   import AddButton from '../components/AddButton.svelte';
   import FormField from '../components/FormField.svelte';
@@ -9,12 +10,52 @@
   const emptyContact = { name: '', relationship: '', phone: '', email: '', notes: '' };
   const emptyMedication = { name: '', dosage: '', frequency: '', prescriber: '', notes: '' };
 
-  $: pets = $document?.pets ?? { pets: [], notes: '' };
+  const defaultPets = {
+    pets: [] as any[],
+    notes: ''
+  };
+
+  // Local-first state: edits stay here, only flushed to store on discrete actions or debounced
+  let local = { ...defaultPets };
+  let hasPendingChanges = false;
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Sync from store ONLY when we don't have pending local changes
+  const unsub = petsStore.subscribe((value) => {
+    if (!hasPendingChanges) {
+      local = value ?? defaultPets;
+    }
+  });
+  onDestroy(() => {
+    // Flush any pending changes before unmount
+    if (hasPendingChanges) {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      document.updateSection('pets', local);
+    }
+    unsub();
+  });
+
+  function scheduleFlush() {
+    hasPendingChanges = true;
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      document.updateSection('pets', local);
+      setTimeout(() => { hasPendingChanges = false; }, 0);
+      debounceTimer = null;
+    }, 300);
+  }
+
+  function flushNow(updatedLocal: typeof local) {
+    local = updatedLocal;
+    if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
+    hasPendingChanges = false;
+    document.updateSection('pets', local);
+  }
 
   function addPet() {
-    const updated = {
-      ...pets,
-      pets: [...pets.pets, {
+    flushNow({
+      ...local,
+      pets: [...local.pets, {
         name: '',
         species: '',
         breed: '',
@@ -23,23 +64,29 @@
         feeding: '',
         care_notes: ''
       }]
-    };
-    document.updateSection('pets', updated);
+    });
   }
 
   function removePet(index: number) {
-    const updated = { ...pets, pets: pets.pets.filter((_: any, i: number) => i !== index) };
-    document.updateSection('pets', updated);
+    flushNow({ ...local, pets: local.pets.filter((_: any, i: number) => i !== index) });
   }
 
   function updatePet(index: number, field: string, value: any) {
-    const petList = [...pets.pets];
+    const petList = [...local.pets];
     petList[index] = { ...petList[index], [field]: value };
-    document.updateSection('pets', { ...pets, pets: petList });
+    local = { ...local, pets: petList };
+    scheduleFlush();
+  }
+
+  function updatePetFlush(index: number, field: string, value: any) {
+    const petList = [...local.pets];
+    petList[index] = { ...petList[index], [field]: value };
+    flushNow({ ...local, pets: petList });
   }
 
   function updateNotes(e: Event) {
-    document.updateSection('pets', { ...pets, notes: (e.target as HTMLTextAreaElement).value });
+    local = { ...local, notes: (e.target as HTMLTextAreaElement).value };
+    scheduleFlush();
   }
 
   function inputValue(e: Event): string {
@@ -54,7 +101,7 @@
 <div class="section">
   <p class="intro">Make sure your pets are cared for by documenting their needs and care providers.</p>
 
-  {#each pets.pets as pet, i}
+  {#each local.pets as pet, i}
     <ItemCard title={pet.name || 'New Pet'} on:delete={() => removePet(i)}>
       <div class="row">
         <FormField label="Name" value={pet.name} on:change={(e) => updatePet(i, 'name', e.detail.value)} />
@@ -89,13 +136,13 @@
               updatePet(i, 'medications', meds);
             }} />
             <button class="remove-btn" on:click={() => {
-              updatePet(i, 'medications', removeAtIndex(pet.medications || [], j));
+              updatePetFlush(i, 'medications', removeAtIndex(pet.medications || [], j));
             }}>×</button>
           </div>
         {/each}
         <button class="add-small" on:click={() => {
           const meds = [...(pet.medications || []), { ...emptyMedication }];
-          updatePet(i, 'medications', meds);
+          updatePetFlush(i, 'medications', meds);
         }}>+ Add Medication</button>
       </div>
 
@@ -105,7 +152,7 @@
   {/each}
 
   <AddButton label="Add Pet" on:click={addPet} />
-  <NotesField value={pets.notes} on:change={updateNotes} />
+  <NotesField value={local.notes} on:change={updateNotes} />
 
   <CustomSubsections parentId="pets" />
 </div>

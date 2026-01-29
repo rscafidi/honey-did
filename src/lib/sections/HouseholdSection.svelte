@@ -1,70 +1,126 @@
 <script lang="ts">
-  import { document } from '../stores/document';
+  import { onDestroy } from 'svelte';
+  import { document, householdStore } from '../stores/document';
   import ItemCard from '../components/ItemCard.svelte';
   import AddButton from '../components/AddButton.svelte';
   import FormField from '../components/FormField.svelte';
   import NotesField from '../components/NotesField.svelte';
   import CustomSubsections from '../components/CustomSubsections.svelte';
 
-  const emptyContact = { name: '', relationship: '', phone: '', email: '', notes: '' };
-
-  $: household = $document?.household ?? {
-    maintenance_items: [],
-    contractors: [],
-    how_things_work: [],
+  const defaultHousehold = {
+    maintenance_items: [] as any[],
+    contractors: [] as any[],
+    how_things_work: [] as any[],
     notes: ''
   };
 
+  // Local-first state: edits stay here, only flushed to store on discrete actions or debounced
+  let local = { ...defaultHousehold };
+  let hasPendingChanges = false;
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Sync from store ONLY when we don't have pending local changes
+  const unsub = householdStore.subscribe((value) => {
+    if (!hasPendingChanges) {
+      local = value ?? defaultHousehold;
+    }
+  });
+  onDestroy(() => {
+    // Flush any pending changes before unmount
+    if (hasPendingChanges) {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      document.updateSection('household', local);
+    }
+    unsub();
+  });
+
+  function scheduleFlush() {
+    hasPendingChanges = true;
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      document.updateSection('household', local);
+      setTimeout(() => { hasPendingChanges = false; }, 0);
+      debounceTimer = null;
+    }, 300);
+  }
+
+  function flushNow(updatedLocal: typeof local) {
+    local = updatedLocal;
+    if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
+    hasPendingChanges = false;
+    document.updateSection('household', local);
+  }
+
+  // --- Maintenance Items ---
   function addMaintenance() {
-    const updated = { ...household, maintenance_items: [...household.maintenance_items, { name: '', frequency: '', last_done: '', notes: '' }] };
-    document.updateSection('household', updated);
+    flushNow({
+      ...local,
+      maintenance_items: [...local.maintenance_items, { name: '', frequency: '', last_done: '', notes: '' }]
+    });
   }
 
   function removeMaintenance(index: number) {
-    const updated = { ...household, maintenance_items: household.maintenance_items.filter((_: any, i: number) => i !== index) };
-    document.updateSection('household', updated);
+    flushNow({
+      ...local,
+      maintenance_items: local.maintenance_items.filter((_: any, i: number) => i !== index)
+    });
   }
 
   function updateMaintenance(index: number, field: string, value: string) {
-    const items = [...household.maintenance_items];
+    const items = [...local.maintenance_items];
     items[index] = { ...items[index], [field]: value };
-    document.updateSection('household', { ...household, maintenance_items: items });
+    local = { ...local, maintenance_items: items };
+    scheduleFlush();
   }
 
+  // --- Contractors ---
   function addContractor() {
-    const updated = { ...household, contractors: [...household.contractors, { ...emptyContact }] };
-    document.updateSection('household', updated);
+    flushNow({
+      ...local,
+      contractors: [...local.contractors, { name: '', relationship: '', phone: '', email: '', notes: '' }]
+    });
   }
 
   function removeContractor(index: number) {
-    const updated = { ...household, contractors: household.contractors.filter((_: any, i: number) => i !== index) };
-    document.updateSection('household', updated);
+    flushNow({
+      ...local,
+      contractors: local.contractors.filter((_: any, i: number) => i !== index)
+    });
   }
 
   function updateContractor(index: number, field: string, value: string) {
-    const items = [...household.contractors];
+    const items = [...local.contractors];
     items[index] = { ...items[index], [field]: value };
-    document.updateSection('household', { ...household, contractors: items });
+    local = { ...local, contractors: items };
+    scheduleFlush();
   }
 
+  // --- How Things Work ---
   function addHowTo() {
-    const updated = { ...household, how_things_work: [...household.how_things_work, { name: '', instructions: '' }] };
-    document.updateSection('household', updated);
+    flushNow({
+      ...local,
+      how_things_work: [...local.how_things_work, { name: '', instructions: '' }]
+    });
   }
 
   function removeHowTo(index: number) {
-    const updated = { ...household, how_things_work: household.how_things_work.filter((_: any, i: number) => i !== index) };
-    document.updateSection('household', updated);
+    flushNow({
+      ...local,
+      how_things_work: local.how_things_work.filter((_: any, i: number) => i !== index)
+    });
   }
 
   function updateHowTo(index: number, field: string, value: string) {
-    const items = [...household.how_things_work];
+    const items = [...local.how_things_work];
     items[index] = { ...items[index], [field]: value };
-    document.updateSection('household', { ...household, how_things_work: items });
+    local = { ...local, how_things_work: items };
+    scheduleFlush();
   }
 
   function updateNotes(e: Event) {
-    document.updateSection('household', { ...household, notes: (e.target as HTMLTextAreaElement).value });
+    const target = e.target as HTMLTextAreaElement;
+    local = { ...local, notes: target.value };
+    scheduleFlush();
   }
 </script>
 
@@ -72,7 +128,7 @@
   <div class="subsection">
     <h3>Maintenance Tasks</h3>
     <p class="hint">Regular maintenance that needs to happen to keep the house running.</p>
-    {#each household.maintenance_items as item, i}
+    {#each local.maintenance_items as item, i}
       <ItemCard title={item.name || 'New Task'} on:delete={() => removeMaintenance(i)}>
         <FormField label="Task" value={item.name} placeholder="Change HVAC filter, service furnace, etc." on:change={(e) => updateMaintenance(i, 'name', e.detail.value)} />
         <FormField label="Frequency" value={item.frequency} placeholder="Monthly, Annually, etc." on:change={(e) => updateMaintenance(i, 'frequency', e.detail.value)} />
@@ -85,7 +141,7 @@
 
   <div class="subsection">
     <h3>Contractors & Service Providers</h3>
-    {#each household.contractors as contractor, i}
+    {#each local.contractors as contractor, i}
       <ItemCard title={contractor.name || 'New Contractor'} on:delete={() => removeContractor(i)}>
         <FormField label="Name/Company" value={contractor.name} on:change={(e) => updateContractor(i, 'name', e.detail.value)} />
         <FormField label="Service" value={contractor.relationship} placeholder="Plumber, Electrician, Lawn care, etc." on:change={(e) => updateContractor(i, 'relationship', e.detail.value)} />
@@ -100,7 +156,7 @@
   <div class="subsection">
     <h3>How Things Work</h3>
     <p class="hint">Explain things only you know how to do around the house.</p>
-    {#each household.how_things_work as howto, i}
+    {#each local.how_things_work as howto, i}
       <ItemCard title={howto.name || 'New How-To'} on:delete={() => removeHowTo(i)}>
         <FormField label="What" value={howto.name} placeholder="Turn off water main, reset breaker, etc." on:change={(e) => updateHowTo(i, 'name', e.detail.value)} />
         <FormField label="Instructions" type="textarea" value={howto.instructions} placeholder="Step-by-step instructions..." on:change={(e) => updateHowTo(i, 'instructions', e.detail.value)} />
@@ -109,7 +165,7 @@
     <AddButton label="Add How-To" on:click={addHowTo} />
   </div>
 
-  <NotesField value={household.notes} on:change={updateNotes} />
+  <NotesField value={local.notes} on:change={updateNotes} />
 
   <CustomSubsections parentId="household" />
 </div>

@@ -1,70 +1,133 @@
 <script lang="ts">
-  import { document } from '../stores/document';
+  import { onDestroy } from 'svelte';
+  import { document, propertyStore } from '../stores/document';
   import ItemCard from '../components/ItemCard.svelte';
   import AddButton from '../components/AddButton.svelte';
   import FormField from '../components/FormField.svelte';
   import NotesField from '../components/NotesField.svelte';
   import CustomSubsections from '../components/CustomSubsections.svelte';
 
-  $: property = $document?.property ?? { properties: [], vehicles: [], valuables: [], notes: '' };
+  const defaultProperty = {
+    properties: [] as any[],
+    vehicles: [] as any[],
+    valuables: [] as any[],
+    notes: ''
+  };
 
+  // Local-first state: edits stay here, only flushed to store on discrete actions or debounced
+  let local = { ...defaultProperty };
+  let hasPendingChanges = false;
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Sync from store ONLY when we don't have pending local changes
+  const unsub = propertyStore.subscribe((value) => {
+    if (!hasPendingChanges) {
+      local = value ?? defaultProperty;
+    }
+  });
+  onDestroy(() => {
+    // Flush any pending changes before unmount
+    if (hasPendingChanges) {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      document.updateSection('property', local);
+    }
+    unsub();
+  });
+
+  function scheduleFlush() {
+    hasPendingChanges = true;
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      document.updateSection('property', local);
+      setTimeout(() => { hasPendingChanges = false; }, 0);
+      debounceTimer = null;
+    }, 300);
+  }
+
+  function flushNow(updatedLocal: typeof local) {
+    local = updatedLocal;
+    if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
+    hasPendingChanges = false;
+    document.updateSection('property', local);
+  }
+
+  // --- Properties ---
   function addProperty() {
-    const updated = { ...property, properties: [...property.properties, { name: '', address: '', notes: '' }] };
-    document.updateSection('property', updated);
+    flushNow({
+      ...local,
+      properties: [...local.properties, { name: '', address: '', notes: '' }]
+    });
   }
 
   function removeProperty(index: number) {
-    const updated = { ...property, properties: property.properties.filter((_: any, i: number) => i !== index) };
-    document.updateSection('property', updated);
+    flushNow({
+      ...local,
+      properties: local.properties.filter((_: any, i: number) => i !== index)
+    });
   }
 
   function updateProperty(index: number, field: string, value: string) {
-    const items = [...property.properties];
+    const items = [...local.properties];
     items[index] = { ...items[index], [field]: value };
-    document.updateSection('property', { ...property, properties: items });
+    local = { ...local, properties: items };
+    scheduleFlush();
   }
 
+  // --- Vehicles ---
   function addVehicle() {
-    const updated = { ...property, vehicles: [...property.vehicles, { name: '', details: '', notes: '' }] };
-    document.updateSection('property', updated);
+    flushNow({
+      ...local,
+      vehicles: [...local.vehicles, { name: '', details: '', notes: '' }]
+    });
   }
 
   function removeVehicle(index: number) {
-    const updated = { ...property, vehicles: property.vehicles.filter((_: any, i: number) => i !== index) };
-    document.updateSection('property', updated);
+    flushNow({
+      ...local,
+      vehicles: local.vehicles.filter((_: any, i: number) => i !== index)
+    });
   }
 
   function updateVehicle(index: number, field: string, value: string) {
-    const items = [...property.vehicles];
+    const items = [...local.vehicles];
     items[index] = { ...items[index], [field]: value };
-    document.updateSection('property', { ...property, vehicles: items });
+    local = { ...local, vehicles: items };
+    scheduleFlush();
   }
 
+  // --- Valuables ---
   function addValuable() {
-    const updated = { ...property, valuables: [...property.valuables, { name: '', location: '', notes: '' }] };
-    document.updateSection('property', updated);
+    flushNow({
+      ...local,
+      valuables: [...local.valuables, { name: '', location: '', notes: '' }]
+    });
   }
 
   function removeValuable(index: number) {
-    const updated = { ...property, valuables: property.valuables.filter((_: any, i: number) => i !== index) };
-    document.updateSection('property', updated);
+    flushNow({
+      ...local,
+      valuables: local.valuables.filter((_: any, i: number) => i !== index)
+    });
   }
 
   function updateValuable(index: number, field: string, value: string) {
-    const items = [...property.valuables];
+    const items = [...local.valuables];
     items[index] = { ...items[index], [field]: value };
-    document.updateSection('property', { ...property, valuables: items });
+    local = { ...local, valuables: items };
+    scheduleFlush();
   }
 
   function updateNotes(e: Event) {
-    document.updateSection('property', { ...property, notes: (e.target as HTMLTextAreaElement).value });
+    const target = e.target as HTMLTextAreaElement;
+    local = { ...local, notes: target.value };
+    scheduleFlush();
   }
 </script>
 
 <div class="section">
   <div class="subsection">
     <h3>Real Estate</h3>
-    {#each property.properties as prop, i}
+    {#each local.properties as prop, i}
       <ItemCard title={prop.name || 'New Property'} on:delete={() => removeProperty(i)}>
         <FormField label="Property Name" value={prop.name} placeholder="Primary home, Rental, etc." on:change={(e) => updateProperty(i, 'name', e.detail.value)} />
         <FormField label="Address" value={prop.address} on:change={(e) => updateProperty(i, 'address', e.detail.value)} />
@@ -76,7 +139,7 @@
 
   <div class="subsection">
     <h3>Vehicles</h3>
-    {#each property.vehicles as vehicle, i}
+    {#each local.vehicles as vehicle, i}
       <ItemCard title={vehicle.name || 'New Vehicle'} on:delete={() => removeVehicle(i)}>
         <FormField label="Vehicle" value={vehicle.name} placeholder="2020 Honda Accord" on:change={(e) => updateVehicle(i, 'name', e.detail.value)} />
         <FormField label="Details" value={vehicle.details} placeholder="VIN, license plate, loan info" on:change={(e) => updateVehicle(i, 'details', e.detail.value)} />
@@ -88,7 +151,7 @@
 
   <div class="subsection">
     <h3>Valuables & Storage</h3>
-    {#each property.valuables as valuable, i}
+    {#each local.valuables as valuable, i}
       <ItemCard title={valuable.name || 'New Item'} on:delete={() => removeValuable(i)}>
         <FormField label="Item" value={valuable.name} placeholder="Jewelry, safe deposit box, etc." on:change={(e) => updateValuable(i, 'name', e.detail.value)} />
         <FormField label="Location" value={valuable.location} on:change={(e) => updateValuable(i, 'location', e.detail.value)} />
@@ -98,7 +161,7 @@
     <AddButton label="Add Valuable/Storage" on:click={addValuable} />
   </div>
 
-  <NotesField value={property.notes} on:change={updateNotes} />
+  <NotesField value={local.notes} on:change={updateNotes} />
 
   <CustomSubsections parentId="property" />
 </div>

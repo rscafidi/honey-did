@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { document } from '../stores/document';
+  import { onDestroy } from 'svelte';
+  import { document, contactsStore } from '../stores/document';
   import ItemCard from '../components/ItemCard.svelte';
   import AddButton from '../components/AddButton.svelte';
   import FormField from '../components/FormField.svelte';
@@ -8,31 +9,68 @@
 
   const emptyContact = { name: '', relationship: '', phone: '', email: '', notes: '' };
 
-  $: contacts = $document?.contacts ?? {
-    emergency_contacts: [],
-    family: [],
-    professionals: [],
+  const defaultContacts = {
+    emergency_contacts: [] as any[],
+    family: [] as any[],
+    professionals: [] as any[],
     notes: ''
   };
 
+  // Local-first state: edits stay here, only flushed to store on discrete actions or debounced
+  let local = { ...defaultContacts };
+  let hasPendingChanges = false;
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Sync from store ONLY when we don't have pending local changes
+  const unsub = contactsStore.subscribe((value) => {
+    if (!hasPendingChanges) {
+      local = value ?? defaultContacts;
+    }
+  });
+  onDestroy(() => {
+    // Flush any pending changes before unmount
+    if (hasPendingChanges) {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      document.updateSection('contacts', local);
+    }
+    unsub();
+  });
+
+  function scheduleFlush() {
+    hasPendingChanges = true;
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      document.updateSection('contacts', local);
+      setTimeout(() => { hasPendingChanges = false; }, 0);
+      debounceTimer = null;
+    }, 300);
+  }
+
+  function flushNow(updatedLocal: typeof local) {
+    local = updatedLocal;
+    if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
+    hasPendingChanges = false;
+    document.updateSection('contacts', local);
+  }
+
   function addContact(list: 'emergency_contacts' | 'family' | 'professionals') {
-    const updated = { ...contacts, [list]: [...contacts[list], { ...emptyContact }] };
-    document.updateSection('contacts', updated);
+    flushNow({ ...local, [list]: [...local[list], { ...emptyContact }] });
   }
 
   function removeContact(list: 'emergency_contacts' | 'family' | 'professionals', index: number) {
-    const updated = { ...contacts, [list]: contacts[list].filter((_: any, i: number) => i !== index) };
-    document.updateSection('contacts', updated);
+    flushNow({ ...local, [list]: local[list].filter((_: any, i: number) => i !== index) });
   }
 
   function updateContact(list: 'emergency_contacts' | 'family' | 'professionals', index: number, field: string, value: string) {
-    const items = [...contacts[list]];
+    const items = [...local[list]];
     items[index] = { ...items[index], [field]: value };
-    document.updateSection('contacts', { ...contacts, [list]: items });
+    local = { ...local, [list]: items };
+    scheduleFlush();
   }
 
   function updateNotes(e: Event) {
-    document.updateSection('contacts', { ...contacts, notes: (e.target as HTMLTextAreaElement).value });
+    local = { ...local, notes: (e.target as HTMLTextAreaElement).value };
+    scheduleFlush();
   }
 </script>
 
@@ -40,7 +78,7 @@
   <div class="subsection emergency">
     <h3>Emergency Contacts</h3>
     <p class="hint">Who should be called first in an emergency?</p>
-    {#each contacts.emergency_contacts as contact, i}
+    {#each local.emergency_contacts as contact, i}
       <ItemCard title={contact.name || 'New Contact'} on:delete={() => removeContact('emergency_contacts', i)}>
         <FormField label="Name" value={contact.name} on:change={(e) => updateContact('emergency_contacts', i, 'name', e.detail.value)} />
         <FormField label="Relationship" value={contact.relationship} on:change={(e) => updateContact('emergency_contacts', i, 'relationship', e.detail.value)} />
@@ -54,7 +92,7 @@
 
   <div class="subsection">
     <h3>Family Members</h3>
-    {#each contacts.family as contact, i}
+    {#each local.family as contact, i}
       <ItemCard title={contact.name || 'New Family Member'} on:delete={() => removeContact('family', i)}>
         <FormField label="Name" value={contact.name} on:change={(e) => updateContact('family', i, 'name', e.detail.value)} />
         <FormField label="Relationship" value={contact.relationship} on:change={(e) => updateContact('family', i, 'relationship', e.detail.value)} />
@@ -69,7 +107,7 @@
   <div class="subsection">
     <h3>Professionals</h3>
     <p class="hint">Accountant, financial advisor, doctor, etc.</p>
-    {#each contacts.professionals as contact, i}
+    {#each local.professionals as contact, i}
       <ItemCard title={contact.name || 'New Professional'} on:delete={() => removeContact('professionals', i)}>
         <FormField label="Name" value={contact.name} on:change={(e) => updateContact('professionals', i, 'name', e.detail.value)} />
         <FormField label="Role/Specialty" value={contact.relationship} on:change={(e) => updateContact('professionals', i, 'relationship', e.detail.value)} />
@@ -81,7 +119,7 @@
     <AddButton label="Add Professional Contact" on:click={() => addContact('professionals')} />
   </div>
 
-  <NotesField value={contacts.notes} on:change={updateNotes} />
+  <NotesField value={local.notes} on:change={updateNotes} />
 
   <CustomSubsections parentId="contacts" />
 </div>

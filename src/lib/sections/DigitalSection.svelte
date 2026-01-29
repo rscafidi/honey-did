@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { document } from '../stores/document';
+  import { onDestroy } from 'svelte';
+  import { document, digitalStore } from '../stores/document';
   import ItemCard from '../components/ItemCard.svelte';
   import AddButton from '../components/AddButton.svelte';
   import FormField from '../components/FormField.svelte';
@@ -7,53 +8,102 @@
   import CustomSubsections from '../components/CustomSubsections.svelte';
 
   const emptyAccount = { name: '', username: '', recovery_hint: '', notes: '' };
-  const emptyPwManager = { name: '', master_password_hint: '', recovery_method: '', notes: '' };
 
-  $: digital = $document?.digital ?? {
-    email_accounts: [],
-    social_media: [],
-    password_manager: { ...emptyPwManager },
+  const defaultDigital = {
+    email_accounts: [] as any[],
+    social_media: [] as any[],
+    password_manager: { name: '', master_password_hint: '', recovery_method: '', notes: '' },
     notes: ''
   };
 
+  // Local-first state: edits stay here, only flushed to store on discrete actions or debounced
+  let local = { ...defaultDigital };
+  let hasPendingChanges = false;
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Sync from store ONLY when we don't have pending local changes
+  const unsub = digitalStore.subscribe((value) => {
+    if (!hasPendingChanges) {
+      local = value ?? defaultDigital;
+    }
+  });
+  onDestroy(() => {
+    // Flush any pending changes before unmount
+    if (hasPendingChanges) {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      document.updateSection('digital', local);
+    }
+    unsub();
+  });
+
+  function scheduleFlush() {
+    hasPendingChanges = true;
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      document.updateSection('digital', local);
+      setTimeout(() => { hasPendingChanges = false; }, 0);
+      debounceTimer = null;
+    }, 300);
+  }
+
+  function flushNow(updatedLocal: typeof local) {
+    local = updatedLocal;
+    if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
+    hasPendingChanges = false;
+    document.updateSection('digital', local);
+  }
+
   function addEmail() {
-    const updated = { ...digital, email_accounts: [...digital.email_accounts, { ...emptyAccount }] };
-    document.updateSection('digital', updated);
+    flushNow({
+      ...local,
+      email_accounts: [...local.email_accounts, { ...emptyAccount }]
+    });
   }
 
   function removeEmail(index: number) {
-    const updated = { ...digital, email_accounts: digital.email_accounts.filter((_: any, i: number) => i !== index) };
-    document.updateSection('digital', updated);
+    flushNow({
+      ...local,
+      email_accounts: local.email_accounts.filter((_: any, i: number) => i !== index)
+    });
   }
 
   function updateEmail(index: number, field: string, value: string) {
-    const accounts = [...digital.email_accounts];
+    const accounts = [...local.email_accounts];
     accounts[index] = { ...accounts[index], [field]: value };
-    document.updateSection('digital', { ...digital, email_accounts: accounts });
+    local = { ...local, email_accounts: accounts };
+    scheduleFlush();
   }
 
   function addSocial() {
-    const updated = { ...digital, social_media: [...digital.social_media, { ...emptyAccount }] };
-    document.updateSection('digital', updated);
+    flushNow({
+      ...local,
+      social_media: [...local.social_media, { ...emptyAccount }]
+    });
   }
 
   function removeSocial(index: number) {
-    const updated = { ...digital, social_media: digital.social_media.filter((_: any, i: number) => i !== index) };
-    document.updateSection('digital', updated);
+    flushNow({
+      ...local,
+      social_media: local.social_media.filter((_: any, i: number) => i !== index)
+    });
   }
 
   function updateSocial(index: number, field: string, value: string) {
-    const accounts = [...digital.social_media];
+    const accounts = [...local.social_media];
     accounts[index] = { ...accounts[index], [field]: value };
-    document.updateSection('digital', { ...digital, social_media: accounts });
+    local = { ...local, social_media: accounts };
+    scheduleFlush();
   }
 
   function updatePasswordManager(field: string, value: string) {
-    document.updateSection('digital', { ...digital, password_manager: { ...digital.password_manager, [field]: value } });
+    local = { ...local, password_manager: { ...local.password_manager, [field]: value } };
+    scheduleFlush();
   }
 
   function updateNotes(e: Event) {
-    document.updateSection('digital', { ...digital, notes: (e.target as HTMLTextAreaElement).value });
+    const target = e.target as HTMLTextAreaElement;
+    local = { ...local, notes: target.value };
+    scheduleFlush();
   }
 </script>
 
@@ -62,16 +112,16 @@
     <h3>Password Manager (Important!)</h3>
     <p class="hint">If you use a password manager, this is the most important section. Access to this unlocks everything else.</p>
     <div class="pw-card">
-      <FormField label="Password Manager" value={digital.password_manager?.name || ''} placeholder="1Password, LastPass, Bitwarden, etc." on:change={(e) => updatePasswordManager('name', e.detail.value)} />
-      <FormField label="Master Password Hint" value={digital.password_manager?.master_password_hint || ''} placeholder="A hint only your family would understand" on:change={(e) => updatePasswordManager('master_password_hint', e.detail.value)} />
-      <FormField label="Recovery Method" value={digital.password_manager?.recovery_method || ''} placeholder="Emergency kit location, recovery key, etc." on:change={(e) => updatePasswordManager('recovery_method', e.detail.value)} />
-      <FormField label="Notes" type="textarea" value={digital.password_manager?.notes || ''} on:change={(e) => updatePasswordManager('notes', e.detail.value)} />
+      <FormField label="Password Manager" value={local.password_manager?.name || ''} placeholder="1Password, LastPass, Bitwarden, etc." on:change={(e) => updatePasswordManager('name', e.detail.value)} />
+      <FormField label="Master Password Hint" value={local.password_manager?.master_password_hint || ''} placeholder="A hint only your family would understand" on:change={(e) => updatePasswordManager('master_password_hint', e.detail.value)} />
+      <FormField label="Recovery Method" value={local.password_manager?.recovery_method || ''} placeholder="Emergency kit location, recovery key, etc." on:change={(e) => updatePasswordManager('recovery_method', e.detail.value)} />
+      <FormField label="Notes" type="textarea" value={local.password_manager?.notes || ''} on:change={(e) => updatePasswordManager('notes', e.detail.value)} />
     </div>
   </div>
 
   <div class="subsection">
     <h3>Email Accounts</h3>
-    {#each digital.email_accounts as account, i}
+    {#each local.email_accounts as account, i}
       <ItemCard title={account.name || 'New Email'} on:delete={() => removeEmail(i)}>
         <FormField label="Service" value={account.name} placeholder="Gmail, Outlook, etc." on:change={(e) => updateEmail(i, 'name', e.detail.value)} />
         <FormField label="Email/Username" value={account.username} on:change={(e) => updateEmail(i, 'username', e.detail.value)} />
@@ -84,7 +134,7 @@
 
   <div class="subsection">
     <h3>Social Media</h3>
-    {#each digital.social_media as account, i}
+    {#each local.social_media as account, i}
       <ItemCard title={account.name || 'New Account'} on:delete={() => removeSocial(i)}>
         <FormField label="Service" value={account.name} placeholder="Facebook, Twitter, LinkedIn, etc." on:change={(e) => updateSocial(i, 'name', e.detail.value)} />
         <FormField label="Username" value={account.username} on:change={(e) => updateSocial(i, 'username', e.detail.value)} />
@@ -95,7 +145,7 @@
     <AddButton label="Add Social Media Account" on:click={addSocial} />
   </div>
 
-  <NotesField value={digital.notes} on:change={updateNotes} />
+  <NotesField value={local.notes} on:change={updateNotes} />
 
   <CustomSubsections parentId="digital" />
 </div>

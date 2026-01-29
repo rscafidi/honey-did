@@ -1,40 +1,79 @@
 <script lang="ts">
-  import { document } from '../stores/document';
+  import { onDestroy } from 'svelte';
+  import { document, personalStore } from '../stores/document';
   import ItemCard from '../components/ItemCard.svelte';
   import AddButton from '../components/AddButton.svelte';
   import FormField from '../components/FormField.svelte';
   import NotesField from '../components/NotesField.svelte';
   import CustomSubsections from '../components/CustomSubsections.svelte';
 
-  $: personal = $document?.personal ?? {
+  const defaultPersonal = {
     funeral_preferences: '',
     obituary_notes: '',
-    messages: [],
+    messages: [] as any[],
     notes: ''
   };
 
+  // Local-first state: edits stay here, only flushed to store on discrete actions or debounced
+  let local = { ...defaultPersonal };
+  let hasPendingChanges = false;
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Sync from store ONLY when we don't have pending local changes
+  const unsub = personalStore.subscribe((value) => {
+    if (!hasPendingChanges) {
+      local = value ?? defaultPersonal;
+    }
+  });
+  onDestroy(() => {
+    // Flush any pending changes before unmount
+    if (hasPendingChanges) {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      document.updateSection('personal', local);
+    }
+    unsub();
+  });
+
+  function scheduleFlush() {
+    hasPendingChanges = true;
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      document.updateSection('personal', local);
+      setTimeout(() => { hasPendingChanges = false; }, 0);
+      debounceTimer = null;
+    }, 300);
+  }
+
+  function flushNow(updatedLocal: typeof local) {
+    local = updatedLocal;
+    if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
+    hasPendingChanges = false;
+    document.updateSection('personal', local);
+  }
+
   function updateField(field: string, value: string) {
-    document.updateSection('personal', { ...personal, [field]: value });
+    local = { ...local, [field]: value };
+    scheduleFlush();
   }
 
   function addMessage() {
-    const updated = { ...personal, messages: [...personal.messages, { recipient: '', message: '' }] };
-    document.updateSection('personal', updated);
+    flushNow({ ...local, messages: [...local.messages, { recipient: '', message: '' }] });
   }
 
   function removeMessage(index: number) {
-    const updated = { ...personal, messages: personal.messages.filter((_: any, i: number) => i !== index) };
-    document.updateSection('personal', updated);
+    flushNow({ ...local, messages: local.messages.filter((_: any, i: number) => i !== index) });
   }
 
   function updateMessage(index: number, field: string, value: string) {
-    const messages = [...personal.messages];
+    const messages = [...local.messages];
     messages[index] = { ...messages[index], [field]: value };
-    document.updateSection('personal', { ...personal, messages });
+    local = { ...local, messages };
+    scheduleFlush();
   }
 
   function updateNotes(e: Event) {
-    document.updateSection('personal', { ...personal, notes: (e.target as HTMLTextAreaElement).value });
+    local = { ...local, notes: (e.target as HTMLTextAreaElement).value };
+    scheduleFlush();
   }
 </script>
 
@@ -46,7 +85,7 @@
     <FormField
       label=""
       type="textarea"
-      value={personal.funeral_preferences}
+      value={local.funeral_preferences}
       placeholder="Burial vs cremation, service preferences, music, readings, any specific wishes..."
       on:change={(e) => updateField('funeral_preferences', e.detail.value)}
     />
@@ -57,7 +96,7 @@
     <FormField
       label=""
       type="textarea"
-      value={personal.obituary_notes}
+      value={local.obituary_notes}
       placeholder="Key life events, achievements, family members to mention, tone you'd prefer..."
       on:change={(e) => updateField('obituary_notes', e.detail.value)}
     />
@@ -66,7 +105,7 @@
   <div class="subsection">
     <h3>Personal Messages</h3>
     <p class="hint">Leave messages for specific people. These will be included in the document they receive.</p>
-    {#each personal.messages as msg, i}
+    {#each local.messages as msg, i}
       <ItemCard title={msg.recipient || 'New Message'} on:delete={() => removeMessage(i)}>
         <FormField label="To" value={msg.recipient} placeholder="Name of recipient" on:change={(e) => updateMessage(i, 'recipient', e.detail.value)} />
         <FormField label="Message" type="textarea" value={msg.message} placeholder="Your message to them..." on:change={(e) => updateMessage(i, 'message', e.detail.value)} />
@@ -75,7 +114,7 @@
     <AddButton label="Add Personal Message" on:click={addMessage} />
   </div>
 
-  <NotesField value={personal.notes} on:change={updateNotes} />
+  <NotesField value={local.notes} on:change={updateNotes} />
 
   <CustomSubsections parentId="personal" />
 </div>

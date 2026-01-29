@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { document } from '../stores/document';
+  import { onDestroy } from 'svelte';
+  import { document, medicalStore } from '../stores/document';
   import ItemCard from '../components/ItemCard.svelte';
   import AddButton from '../components/AddButton.svelte';
   import FormField from '../components/FormField.svelte';
@@ -10,12 +11,52 @@
   const emptyMedication = { name: '', dosage: '', frequency: '', prescriber: '', notes: '' };
   const emptyDoctor = { name: '', specialty: '', phone: '', email: '', notes: '' };
 
-  $: medical = $document?.medical ?? { family_members: [], notes: '' };
+  const defaultMedical = {
+    family_members: [] as any[],
+    notes: ''
+  };
+
+  // Local-first state: edits stay here, only flushed to store on discrete actions or debounced
+  let local = { ...defaultMedical };
+  let hasPendingChanges = false;
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Sync from store ONLY when we don't have pending local changes
+  const unsub = medicalStore.subscribe((value) => {
+    if (!hasPendingChanges) {
+      local = value ?? defaultMedical;
+    }
+  });
+  onDestroy(() => {
+    // Flush any pending changes before unmount
+    if (hasPendingChanges) {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      document.updateSection('medical', local);
+    }
+    unsub();
+  });
+
+  function scheduleFlush() {
+    hasPendingChanges = true;
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      document.updateSection('medical', local);
+      setTimeout(() => { hasPendingChanges = false; }, 0);
+      debounceTimer = null;
+    }, 300);
+  }
+
+  function flushNow(updatedLocal: typeof local) {
+    local = updatedLocal;
+    if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
+    hasPendingChanges = false;
+    document.updateSection('medical', local);
+  }
 
   function addFamilyMember() {
-    const updated = {
-      ...medical,
-      family_members: [...medical.family_members, {
+    flushNow({
+      ...local,
+      family_members: [...local.family_members, {
         name: '',
         doctors: [],
         medications: [],
@@ -24,23 +65,29 @@
         pharmacy: { ...emptyContact },
         notes: ''
       }]
-    };
-    document.updateSection('medical', updated);
+    });
   }
 
   function removeFamilyMember(index: number) {
-    const updated = { ...medical, family_members: medical.family_members.filter((_: any, i: number) => i !== index) };
-    document.updateSection('medical', updated);
+    flushNow({ ...local, family_members: local.family_members.filter((_: any, i: number) => i !== index) });
   }
 
   function updateFamilyMember(index: number, field: string, value: any) {
-    const members = [...medical.family_members];
+    const members = [...local.family_members];
     members[index] = { ...members[index], [field]: value };
-    document.updateSection('medical', { ...medical, family_members: members });
+    local = { ...local, family_members: members };
+    scheduleFlush();
+  }
+
+  function updateFamilyMemberFlush(index: number, field: string, value: any) {
+    const members = [...local.family_members];
+    members[index] = { ...members[index], [field]: value };
+    flushNow({ ...local, family_members: members });
   }
 
   function updateNotes(e: Event) {
-    document.updateSection('medical', { ...medical, notes: (e.target as HTMLTextAreaElement).value });
+    local = { ...local, notes: (e.target as HTMLTextAreaElement).value };
+    scheduleFlush();
   }
 
   function inputValue(e: Event): string {
@@ -63,7 +110,7 @@
 <div class="section">
   <p class="intro">Document medical information for each family member. This can be critical in emergencies.</p>
 
-  {#each medical.family_members as member, i}
+  {#each local.family_members as member, i}
     <ItemCard title={member.name || 'New Family Member'} on:delete={() => removeFamilyMember(i)}>
       <FormField label="Name" value={member.name} on:change={(e) => updateFamilyMember(i, 'name', e.detail.value)} />
 
@@ -91,7 +138,7 @@
                 <span class="doctor-specialty">{doctor.specialty}</span>
               {/if}
               <button class="remove-btn" on:click={() => {
-                updateFamilyMember(i, 'doctors', removeAtIndex(member.doctors || [], j));
+                updateFamilyMemberFlush(i, 'doctors', removeAtIndex(member.doctors || [], j));
               }}>×</button>
             </div>
             <div class="doctor-fields">
@@ -125,7 +172,7 @@
         {/each}
         <button class="add-small" on:click={() => {
           const docs = [...(member.doctors || []), { ...emptyDoctor }];
-          updateFamilyMember(i, 'doctors', docs);
+          updateFamilyMemberFlush(i, 'doctors', docs);
         }}>+ Add Doctor</button>
       </div>
 
@@ -149,13 +196,13 @@
               updateFamilyMember(i, 'medications', meds);
             }} />
             <button class="remove-btn" on:click={() => {
-              updateFamilyMember(i, 'medications', removeAtIndex(member.medications || [], j));
+              updateFamilyMemberFlush(i, 'medications', removeAtIndex(member.medications || [], j));
             }}>×</button>
           </div>
         {/each}
         <button class="add-small" on:click={() => {
           const meds = [...(member.medications || []), { ...emptyMedication }];
-          updateFamilyMember(i, 'medications', meds);
+          updateFamilyMemberFlush(i, 'medications', meds);
         }}>+ Add Medication</button>
       </div>
 
@@ -170,7 +217,7 @@
   {/each}
 
   <AddButton label="Add Family Member" on:click={addFamilyMember} />
-  <NotesField value={medical.notes} on:change={updateNotes} />
+  <NotesField value={local.notes} on:change={updateNotes} />
 
   <CustomSubsections parentId="medical" />
 </div>
