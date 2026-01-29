@@ -1,4 +1,4 @@
-import { writable } from 'svelte/store';
+import { writable, type Readable } from 'svelte/store';
 import { invoke } from '@tauri-apps/api/core';
 
 export interface LegacyDocument {
@@ -183,25 +183,34 @@ export function migrateSubsection(sub: CustomSubsection): CustomSubsection {
   return { ...sub, form_elements };
 }
 
+/** Create a debounced version of a function */
+export function debounce<T extends (...args: any[]) => void>(fn: T, ms: number): T {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  return ((...args: any[]) => {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => fn(...args), ms);
+  }) as T;
+}
+
 function createDocumentStore() {
   const { subscribe, set, update } = writable<LegacyDocument | null>(null);
 
-  // Debounce save operations to prevent lag when typing
+  // Debounce save operations to prevent excessive disk writes
   let saveTimeout: ReturnType<typeof setTimeout> | null = null;
   let pendingDocument: LegacyDocument | null = null;
+  // Cache whether document has data to avoid expensive isDocumentEmpty on every keystroke
+  let hasDataCached = false;
 
   const debouncedSave = (doc: LegacyDocument) => {
     pendingDocument = doc;
-    if (saveTimeout) {
-      clearTimeout(saveTimeout);
-    }
+    if (saveTimeout) clearTimeout(saveTimeout);
     saveTimeout = setTimeout(() => {
       if (pendingDocument) {
         invoke('update_document', { document: pendingDocument }).catch(console.error);
         pendingDocument = null;
       }
       saveTimeout = null;
-    }, 300); // Save 300ms after last change
+    }, 1000); // Save 1s after last change
   };
 
   return {
@@ -216,6 +225,7 @@ function createDocumentStore() {
             subsections: section.subsections.map(migrateSubsection),
           }));
         }
+        hasDataCached = !isDocumentEmpty(doc);
         set(doc);
       } catch (e) {
         console.error('Failed to load document:', e);
@@ -223,11 +233,7 @@ function createDocumentStore() {
     },
     save: async (doc: LegacyDocument) => {
       // Immediate save - cancel any pending debounced save
-      if (saveTimeout) {
-        clearTimeout(saveTimeout);
-        saveTimeout = null;
-        pendingDocument = null;
-      }
+      if (saveTimeout) { clearTimeout(saveTimeout); saveTimeout = null; pendingDocument = null; }
       try {
         await invoke('update_document', { document: doc });
         set(doc);
@@ -235,22 +241,25 @@ function createDocumentStore() {
         console.error('Failed to save document:', e);
       }
     },
-    updateSection: async <K extends keyof LegacyDocument>(
+    updateSection: <K extends keyof LegacyDocument>(
       section: K,
       data: LegacyDocument[K]
     ) => {
       update((doc) => {
         if (doc) {
-          const wasEmpty = isDocumentEmpty(doc);
           const updated = { ...doc, [section]: data };
-          const nowHasData = !isDocumentEmpty(updated);
 
-          // Trigger password prompt if transitioning from empty to having data
-          if (wasEmpty && nowHasData && passwordRequiredCallback) {
-            passwordRequiredCallback();
+          // Only check isDocumentEmpty when we haven't cached that data exists yet
+          if (!hasDataCached) {
+            const nowHasData = !isDocumentEmpty(updated);
+            if (nowHasData) {
+              hasDataCached = true;
+              if (passwordRequiredCallback) {
+                passwordRequiredCallback();
+              }
+            }
           }
 
-          // Debounce the save to prevent lag when typing
           debouncedSave(updated);
           return updated;
         }
@@ -313,3 +322,36 @@ export function isDocumentEmpty(doc: LegacyDocument | null): boolean {
     !hasLegal && !hasDigital && !hasHousehold && !hasPersonal &&
     !hasContacts && !hasMedical && !hasPets && !hasCustomSections;
 }
+
+/** Creates a store that only emits when a specific section's reference changes */
+function createSectionStore<K extends keyof LegacyDocument>(
+  key: K,
+  defaultValue: LegacyDocument[K]
+): Readable<LegacyDocument[K]> {
+  let currentValue: LegacyDocument[K] = defaultValue;
+  const { subscribe, set } = writable<LegacyDocument[K]>(defaultValue);
+
+  document.subscribe(($doc) => {
+    const newValue = $doc?.[key] ?? defaultValue;
+    if (newValue !== currentValue) {
+      currentValue = newValue;
+      set(newValue);
+    }
+  });
+
+  return { subscribe };
+}
+
+// Pre-built section stores — components import these instead of subscribing to $document directly
+export const financialStore = createSectionStore('financial', { bank_accounts: [], credit_cards: [], investments: [], debts: [], notes: '' });
+export const insuranceStore = createSectionStore('insurance', { policies: [], notes: '' });
+export const billsStore = createSectionStore('bills', { bills: [], notes: '' });
+export const propertyStore = createSectionStore('property', { properties: [], vehicles: [], valuables: [], notes: '' });
+export const legalStore = createSectionStore('legal', { will_location: '', attorney: { name: '', relationship: '', phone: '', email: '', notes: '' }, power_of_attorney: '', trusts: [], notes: '' });
+export const digitalStore = createSectionStore('digital', { email_accounts: [], social_media: [], password_manager: { name: '', master_password_hint: '', recovery_method: '', notes: '' }, notes: '' });
+export const householdStore = createSectionStore('household', { maintenance_items: [], contractors: [], how_things_work: [], notes: '' });
+export const personalStore = createSectionStore('personal', { funeral_preferences: '', obituary_notes: '', messages: [], notes: '' });
+export const contactsStore = createSectionStore('contacts', { emergency_contacts: [], family: [], professionals: [], notes: '' });
+export const medicalStore = createSectionStore('medical', { family_members: [], notes: '' });
+export const petsStore = createSectionStore('pets', { pets: [], notes: '' });
+export const customSectionsStore = createSectionStore('custom_sections', []);
