@@ -23,7 +23,7 @@
     const newSubsection: CustomSubsection = {
       id: generateId(),
       name: newSubsectionName.trim(),
-      field_definitions: [],
+      form_elements: [],
       items: [],
     };
 

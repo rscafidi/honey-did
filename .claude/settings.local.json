@@ -58,7 +58,9 @@
       "Bash(npx svelte-check:*)",
       "Bash(git log:*)",
       "Bash(node:*)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(cargo generate-lockfile:*)",
+      "Skill(superpowers:brainstorming)"
     ]
   }
 }

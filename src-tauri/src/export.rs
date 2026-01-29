@@ -402,20 +402,29 @@ const SHARED_JS_UTILS: &str = r##"
 
         function renderCustomSubsection(subsection) {
             if (!subsection.items || !subsection.items.length) return '';
+            var elements = subsection.form_elements && subsection.form_elements.length
+                ? subsection.form_elements
+                : (subsection.field_definitions || []).map(function(fd) { return { type: 'field', id: fd.id, name: fd.name, field_type: fd.field_type }; });
             let html = '<h3>' + escapeHtml(subsection.name) + '</h3>';
             subsection.items.forEach(item => {
                 html += '<div class="item">';
-                const textField = (subsection.field_definitions || []).find(fd => fd.field_type === 'text');
-                const title = textField && item.values && item.values[textField.id] ? item.values[textField.id] : 'Item';
-                html += '<div class="item-title">' + escapeHtml(title) + '</div>';
-                (subsection.field_definitions || []).forEach(fd => {
-                    const value = item.values && item.values[fd.id];
-                    if (value) {
-                        let displayValue = value;
-                        if (fd.field_type === 'boolean') displayValue = value === 'true' ? 'Yes' : 'No';
-                        html += '<div class="item-detail"><strong>' + escapeHtml(fd.name) + ':</strong> ' + escapeHtml(displayValue) + '</div>';
+                elements.forEach(el => {
+                    if (el.type === 'field') {
+                        const value = item.values && item.values[el.id];
+                        if (value) {
+                            let displayValue = value;
+                            if (el.field_type === 'boolean') displayValue = value === 'true' ? 'Yes' : 'No';
+                            html += '<div class="item-detail"><strong>' + escapeHtml(el.name) + ':</strong> ' + escapeHtml(displayValue) + '</div>';
+                        }
+                    } else if (el.type === 'divider') {
+                        html += '<hr style="border:none;border-top:1px solid #D4D4D4;margin:8px 0;">';
+                    } else if (el.type === 'header') {
+                        html += '<div style="font-weight:bold;margin:8px 0 4px;">' + escapeHtml(el.text || '') + '</div>';
                     }
                 });
+                if (item.values && item.values['_notes']) {
+                    html += '<div class="notes">' + escapeHtml(item.values['_notes']) + '</div>';
+                }
                 html += '</div>';
             });
             return html;
@@ -2086,15 +2095,44 @@ pub fn generate_print_html(document: &LegacyDocument) -> String {
         html.push_str(&format!("<h2>📋 {}</h2>\n", section.name));
         for subsection in &section.subsections {
             html.push_str(&format!("<h3>{}</h3>\n", subsection.name));
+            // Use form_elements if available, otherwise fall back to field_definitions
+            let use_form_elements = !subsection.form_elements.is_empty();
             for item in &subsection.items {
                 html.push_str("<div class=\"item\">");
-                for field_def in &subsection.field_definitions {
-                    if let Some(value) = item.values.get(&field_def.id) {
-                        let display_value: String = match field_def.field_type {
-                            FieldType::Boolean => if value == "true" { "Yes".to_string() } else { "No".to_string() },
-                            _ => value.clone(),
-                        };
-                        html.push_str(&format!("<div class=\"item-detail\"><strong>{}:</strong> {}</div>", field_def.name, display_value));
+                if use_form_elements {
+                    for el in &subsection.form_elements {
+                        match el {
+                            crate::models::FormElement::Field { id, name, field_type } => {
+                                if let Some(value) = item.values.get(id) {
+                                    let display_value: String = match field_type {
+                                        FieldType::Boolean => if value == "true" { "Yes".to_string() } else { "No".to_string() },
+                                        _ => value.clone(),
+                                    };
+                                    html.push_str(&format!("<div class=\"item-detail\"><strong>{}:</strong> {}</div>", name, display_value));
+                                }
+                            }
+                            crate::models::FormElement::Divider { .. } => {
+                                html.push_str("<hr style=\"border:none;border-top:1px solid #D4D4D4;margin:8px 0;\">");
+                            }
+                            crate::models::FormElement::Header { text, .. } => {
+                                html.push_str(&format!("<div style=\"font-weight:bold;margin:8px 0 4px;\">{}</div>", text));
+                            }
+                        }
+                    }
+                } else {
+                    for field_def in &subsection.field_definitions {
+                        if let Some(value) = item.values.get(&field_def.id) {
+                            let display_value: String = match field_def.field_type {
+                                FieldType::Boolean => if value == "true" { "Yes".to_string() } else { "No".to_string() },
+                                _ => value.clone(),
+                            };
+                            html.push_str(&format!("<div class=\"item-detail\"><strong>{}:</strong> {}</div>", field_def.name, display_value));
+                        }
+                    }
+                }
+                if let Some(notes) = item.values.get("_notes") {
+                    if !notes.is_empty() {
+                        html.push_str(&format!("<div class=\"notes\">{}</div>", notes));
                     }
                 }
                 html.push_str("</div>\n");

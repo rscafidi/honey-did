@@ -123,8 +123,30 @@ export interface CustomSection {
 export interface CustomSubsection {
   id: string;
   name: string;
-  field_definitions: FieldDefinition[];
+  form_elements: FormElement[];
+  field_definitions?: FieldDefinition[];  // legacy, kept for migration
   items: CustomItem[];
+}
+
+// Discriminated union for form elements
+export type FormElement = FormElementField | FormElementDivider | FormElementHeader;
+
+export interface FormElementField {
+  type: 'field';
+  id: string;
+  name: string;
+  field_type: FieldType;
+}
+
+export interface FormElementDivider {
+  type: 'divider';
+  id: string;
+}
+
+export interface FormElementHeader {
+  type: 'header';
+  id: string;
+  text: string;
 }
 
 export interface FieldDefinition {
@@ -138,6 +160,27 @@ export type FieldType = 'text' | 'number' | 'date' | 'boolean';
 export interface CustomItem {
   id: string;
   values: Record<string, string>;  // field_id -> value
+}
+
+/** Extract only field elements from form_elements */
+export function getFieldElements(elements: FormElement[]): FormElementField[] {
+  return elements.filter((el): el is FormElementField => el.type === 'field');
+}
+
+/** Migrate a subsection from old field_definitions to form_elements */
+export function migrateSubsection(sub: CustomSubsection): CustomSubsection {
+  if (sub.form_elements && sub.form_elements.length > 0) return sub;
+  if (!sub.field_definitions || sub.field_definitions.length === 0) {
+    return { ...sub, form_elements: sub.form_elements || [] };
+  }
+  // Convert legacy field_definitions into FormElementField entries
+  const form_elements: FormElement[] = sub.field_definitions.map((fd) => ({
+    type: 'field' as const,
+    id: fd.id,
+    name: fd.name,
+    field_type: fd.field_type,
+  }));
+  return { ...sub, form_elements };
 }
 
 function createDocumentStore() {
@@ -166,6 +209,13 @@ function createDocumentStore() {
     load: async () => {
       try {
         const doc = await invoke<LegacyDocument>('get_document');
+        // Migrate any legacy custom subsections to form_elements
+        if (doc.custom_sections) {
+          doc.custom_sections = doc.custom_sections.map((section) => ({
+            ...section,
+            subsections: section.subsections.map(migrateSubsection),
+          }));
+        }
         set(doc);
       } catch (e) {
         console.error('Failed to load document:', e);

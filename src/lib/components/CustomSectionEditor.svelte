@@ -1,6 +1,9 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
-  import type { CustomSubsection, FieldDefinition, CustomItem, FieldType } from '../stores/document';
+  import type { CustomSubsection, FormElement, CustomItem } from '../stores/document';
+  import { getFieldElements } from '../stores/document';
+  import FormBuilder from './FormBuilder.svelte';
+  import FormPreview from './FormPreview.svelte';
 
   export let subsection: CustomSubsection;
   export let sectionName: string = '';
@@ -11,68 +14,37 @@
     rename: string;
   }>();
 
-  // Local copy updated eagerly to avoid stale prop reads during rapid updates
   let local: CustomSubsection = subsection;
   $: local = subsection;
 
-  $: hasFields = local.field_definitions.length > 0;
+  $: fieldElements = getFieldElements(local.form_elements);
+  $: hasFields = fieldElements.length > 0;
 
-  let showFieldEditor = subsection.items.length === 0;
-  let editingItemId: string | null = null;
-  let editingItemValues: Record<string, string> = {};
   let isRenamingSection = false;
   let newSectionName = sectionName;
-
-  function generateId(): string {
-    return Math.random().toString(36).substring(2, 9);
-  }
+  let showFieldEditor = false;
 
   function dispatchUpdate(updated: CustomSubsection) {
     local = updated;
     dispatch('update', updated);
   }
 
-  function addField() {
-    const newField: FieldDefinition = {
-      id: generateId(),
-      name: '',
-      field_type: 'text',
-    };
+  function handleFormElementsUpdate(e: CustomEvent<FormElement[]>) {
     dispatchUpdate({
       ...local,
-      field_definitions: [...local.field_definitions, newField],
+      form_elements: e.detail,
     });
   }
 
-  function updateField(fieldId: string, updates: Partial<FieldDefinition>) {
+  function handleItemsUpdate(e: CustomEvent<CustomItem[]>) {
     dispatchUpdate({
       ...local,
-      field_definitions: local.field_definitions.map((f) =>
-        f.id === fieldId ? { ...f, ...updates } : f
-      ),
+      items: e.detail,
     });
   }
 
-  function handleFieldTypeChange(fieldId: string, event: Event) {
-    const target = event.target as HTMLSelectElement;
-    updateField(fieldId, { field_type: target.value as FieldType });
-  }
-
-  function deleteField(fieldId: string) {
-    if (local.items.length > 0) {
-      if (!confirm('This field has data in existing items. Delete anyway?')) {
-        return;
-      }
-    }
-    dispatchUpdate({
-      ...local,
-      field_definitions: local.field_definitions.filter((f) => f.id !== fieldId),
-      items: local.items.map((item) => {
-        const newValues = { ...item.values };
-        delete newValues[fieldId];
-        return { ...item, values: newValues };
-      }),
-    });
+  function generateId(): string {
+    return Math.random().toString(36).substring(2, 9);
   }
 
   function addItem() {
@@ -81,56 +53,13 @@
       id: generateId(),
       values: {},
     };
-    // Initialize with empty values for all fields
-    local.field_definitions.forEach((f) => {
+    fieldElements.forEach((f) => {
       newItem.values[f.id] = f.field_type === 'boolean' ? 'false' : '';
     });
-    editingItemId = newItem.id;
-    editingItemValues = { ...newItem.values };
     dispatchUpdate({
       ...local,
       items: [...local.items, newItem],
     });
-  }
-
-  function startEditItem(item: CustomItem) {
-    editingItemId = item.id;
-    editingItemValues = { ...item.values };
-  }
-
-  function saveItem() {
-    if (!editingItemId) return;
-    dispatchUpdate({
-      ...local,
-      items: local.items.map((item) =>
-        item.id === editingItemId ? { ...item, values: editingItemValues } : item
-      ),
-    });
-    editingItemId = null;
-    editingItemValues = {};
-  }
-
-  function cancelEditItem() {
-    editingItemId = null;
-    editingItemValues = {};
-  }
-
-  function deleteItem(itemId: string) {
-    if (!confirm('Delete this item?')) return;
-    dispatchUpdate({
-      ...local,
-      items: local.items.filter((item) => item.id !== itemId),
-    });
-    if (editingItemId === itemId) {
-      editingItemId = null;
-      editingItemValues = {};
-    }
-  }
-
-  function getItemTitle(item: CustomItem): string {
-    if (local.field_definitions.length === 0) return 'Untitled';
-    const firstField = local.field_definitions[0];
-    return item.values[firstField.id] || 'Untitled';
   }
 
   function handleRename() {
@@ -149,13 +78,6 @@
       dispatch('delete');
     }
   }
-
-  const fieldTypes: { value: FieldType; label: string }[] = [
-    { value: 'text', label: 'Text' },
-    { value: 'number', label: 'Number' },
-    { value: 'date', label: 'Date' },
-    { value: 'boolean', label: 'Yes/No' },
-  ];
 </script>
 
 <div class="custom-section">
@@ -176,134 +98,34 @@
       </h3>
     {/if}
     <div class="section-actions">
-      <button class="btn btn-add" on:click={addItem} disabled={!hasFields} title={hasFields ? 'Add a new item' : 'Define fields first'}>+ Add Item</button>
+      <button class="btn btn-add" on:click={addItem} disabled={!hasFields} title={hasFields ? 'Add a new item' : 'Add fields first'}>+ Add Item</button>
+      <button class="btn btn-gear" class:active={showFieldEditor} on:click={() => (showFieldEditor = !showFieldEditor)} title="Configure fields">&#9881;</button>
       <button class="btn btn-delete" on:click={handleDeleteSection}>Delete</button>
     </div>
   </div>
 
-  <!-- Field Definitions -->
-  <div class="field-definitions">
-    <button class="toggle-fields" on:click={() => (showFieldEditor = !showFieldEditor)}>
-      <span class="toggle-icon">{showFieldEditor ? '▼' : '▶'}</span>
-      Define Fields ({local.field_definitions.length} field{local.field_definitions.length === 1 ? '' : 's'})
-    </button>
-
-    {#if showFieldEditor}
-      <div class="fields-panel">
-        {#if local.field_definitions.length === 0}
-          <p class="fields-hint">Define the fields each item will have, then add items.</p>
-        {/if}
-        {#each local.field_definitions as field (field.id)}
-          <div class="field-row">
-            <input
-              type="text"
-              class="field-name"
-              value={field.name}
-              placeholder="Field name"
-              on:input={(e) => updateField(field.id, { name: e.currentTarget.value })}
-            />
-            <select
-              class="field-type"
-              value={field.field_type}
-              on:change={(e) => handleFieldTypeChange(field.id, e)}
-            >
-              {#each fieldTypes as ft}
-                <option value={ft.value}>{ft.label}</option>
-              {/each}
-            </select>
-            <button class="btn-icon delete" on:click={() => deleteField(field.id)} title="Delete field">×</button>
-          </div>
-        {/each}
-        <button class="btn btn-add-field" on:click={addField}>+ Add Field</button>
+  {#if showFieldEditor}
+    <div class="field-editor-panel">
+      <div class="panel-header">
+        <span class="panel-label">Configure Fields</span>
+        <button class="btn btn-done" on:click={() => (showFieldEditor = false)}>Done</button>
       </div>
-    {/if}
-  </div>
+      <FormBuilder elements={local.form_elements} on:update={handleFormElementsUpdate} />
+    </div>
+  {/if}
 
-  <!-- Items List -->
-  <div class="items-list">
-    {#if local.items.length === 0}
-      <p class="empty-message">{hasFields ? 'No items yet. Click "+ Add Item" to add your first.' : 'Define fields above, then add items.'}</p>
+  <div class="items-area">
+    {#if !hasFields && !showFieldEditor}
+      <div class="setup-prompt">
+        <p>Define the fields you want to track for each item.</p>
+        <button class="btn btn-setup" on:click={() => (showFieldEditor = true)}>Set Up Fields</button>
+      </div>
     {:else}
-      {#each local.items as item (item.id)}
-        <div class="item-card">
-          {#if editingItemId === item.id}
-            <!-- Editing Form -->
-            <div class="item-form">
-              {#each local.field_definitions as field (field.id)}
-                <div class="form-field">
-                  <label for="field-{field.id}">{field.name || 'Unnamed Field'}</label>
-                  {#if field.field_type === 'boolean'}
-                    <label class="checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={editingItemValues[field.id] === 'true'}
-                        on:change={(e) => (editingItemValues[field.id] = e.currentTarget.checked ? 'true' : 'false')}
-                      />
-                      <span>Yes</span>
-                    </label>
-                  {:else if field.field_type === 'date'}
-                    <input
-                      type="date"
-                      id="field-{field.id}"
-                      bind:value={editingItemValues[field.id]}
-                    />
-                  {:else if field.field_type === 'number'}
-                    <input
-                      type="number"
-                      id="field-{field.id}"
-                      bind:value={editingItemValues[field.id]}
-                    />
-                  {:else}
-                    <input
-                      type="text"
-                      id="field-{field.id}"
-                      bind:value={editingItemValues[field.id]}
-                    />
-                  {/if}
-                </div>
-              {/each}
-              <div class="form-field">
-                <label for="notes-{item.id}">Notes</label>
-                <textarea
-                  id="notes-{item.id}"
-                  bind:value={editingItemValues['_notes']}
-                  rows="2"
-                ></textarea>
-              </div>
-              <div class="form-actions">
-                <button class="btn btn-secondary" on:click={cancelEditItem}>Cancel</button>
-                <button class="btn btn-danger" on:click={() => deleteItem(item.id)}>Delete</button>
-                <button class="btn btn-primary" on:click={saveItem}>Save</button>
-              </div>
-            </div>
-          {:else}
-            <!-- Display Card -->
-            <div class="item-header">
-              <span class="item-title">{getItemTitle(item)}</span>
-              <button class="btn btn-edit" on:click={() => startEditItem(item)}>Edit</button>
-            </div>
-            <div class="item-content">
-              {#each local.field_definitions as field (field.id)}
-                {#if item.values[field.id]}
-                  <div class="item-detail">
-                    <span class="detail-label">{field.name}:</span>
-                    <span class="detail-value">
-                      {#if field.field_type === 'boolean'}
-                        {item.values[field.id] === 'true' ? 'Yes' : 'No'}
-                      {:else}
-                        {item.values[field.id]}
-                      {/if}
-                    </span>
-                  </div>
-                {/if}
-              {/each}
-              {#if item.values['_notes']}
-                <div class="item-notes">{item.values['_notes']}</div>
-              {/if}
-            </div>
-          {/if}
-        </div>
-      {/each}
+      <FormPreview
+        formElements={local.form_elements}
+        items={local.items}
+        on:updateItems={handleItemsUpdate}
+      />
     {/if}
   </div>
 </div>
@@ -377,6 +199,26 @@
     cursor: not-allowed;
   }
 
+  .btn-gear {
+    background: none;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    font-size: 1rem;
+    padding: 4px 8px;
+    line-height: 1;
+  }
+
+  .btn-gear:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+  }
+
+  .btn-gear.active {
+    background: var(--accent-light);
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
+  }
+
   .btn-delete {
     background: none;
     color: var(--error-color);
@@ -387,254 +229,64 @@
     background: rgba(155, 44, 44, 0.1);
   }
 
-  .field-definitions {
+  /* Field editor panel */
+  .field-editor-panel {
+    padding: 16px;
+    background: var(--bg-tertiary);
     border-bottom: 1px solid var(--border-color);
   }
 
-  .toggle-fields {
-    width: 100%;
-    padding: 12px 16px;
-    background: none;
-    border: none;
-    text-align: left;
-    cursor: pointer;
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .toggle-fields:hover {
-    background: var(--bg-tertiary);
-  }
-
-  .toggle-icon {
-    font-size: 0.7rem;
-  }
-
-  .fields-panel {
-    padding: 0 16px 16px;
-  }
-
-  .fields-hint {
-    color: var(--text-secondary);
-    font-size: 0.85rem;
-    margin: 0 0 12px 0;
-    font-style: italic;
-  }
-
-  .field-row {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 8px;
-    align-items: center;
-  }
-
-  .field-name {
-    flex: 1;
-    padding: 8px 12px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    font-size: 0.9rem;
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-  }
-
-  .field-name:focus {
-    outline: none;
-    border-color: var(--accent-primary);
-  }
-
-  .field-type {
-    padding: 8px 12px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    font-size: 0.9rem;
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-  }
-
-  .btn-icon {
-    background: none;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    width: 32px;
-    height: 32px;
-    cursor: pointer;
-    font-size: 1.2rem;
-    color: var(--text-secondary);
-  }
-
-  .btn-icon.delete:hover {
-    background: rgba(155, 44, 44, 0.1);
-    border-color: var(--error-color);
-    color: var(--error-color);
-  }
-
-  .btn-add-field {
-    background: none;
-    border: 1px dashed var(--border-color);
-    padding: 8px 16px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    border-radius: 4px;
-    font-size: 0.85rem;
-  }
-
-  .btn-add-field:hover {
-    border-color: var(--accent-primary);
-    color: var(--accent-primary);
-  }
-
-  .items-list {
-    padding: 16px;
-  }
-
-  .empty-message {
-    color: var(--text-secondary);
-    font-style: italic;
-    margin: 0;
-  }
-
-  .item-card {
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    margin-bottom: 12px;
-    overflow: hidden;
-  }
-
-  .item-header {
+  .panel-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 16px;
-    background: var(--bg-secondary);
-    border-bottom: 1px solid var(--border-color);
-  }
-
-  .item-title {
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-
-  .btn-edit {
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
-  }
-
-  .btn-edit:hover {
-    background: var(--border-color);
-  }
-
-  .item-content {
-    padding: 12px 16px;
-  }
-
-  .item-detail {
-    margin-bottom: 4px;
-    font-size: 0.9rem;
-  }
-
-  .detail-label {
-    color: var(--text-secondary);
-  }
-
-  .detail-value {
-    color: var(--text-primary);
-    margin-left: 4px;
-  }
-
-  .item-notes {
-    margin-top: 8px;
-    padding: 8px 12px;
-    background: var(--bg-secondary);
-    border-radius: 4px;
-    font-style: italic;
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-  }
-
-  .item-form {
-    padding: 16px;
-  }
-
-  .form-field {
     margin-bottom: 12px;
   }
 
-  .form-field label {
-    display: block;
-    font-size: 0.85rem;
+  .panel-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     color: var(--text-secondary);
-    margin-bottom: 4px;
   }
 
-  .form-field input[type="text"],
-  .form-field input[type="number"],
-  .form-field input[type="date"],
-  .form-field textarea {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    font-size: 0.95rem;
-    box-sizing: border-box;
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-  }
-
-  .form-field input:focus,
-  .form-field textarea:focus {
-    outline: none;
-    border-color: var(--accent-primary);
-  }
-
-  .checkbox-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    color: var(--text-primary);
-  }
-
-  .checkbox-label input {
-    width: 18px;
-    height: 18px;
-  }
-
-  .form-actions {
-    display: flex;
-    gap: 8px;
-    justify-content: flex-end;
-    margin-top: 16px;
-  }
-
-  .btn-secondary {
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
-  }
-
-  .btn-secondary:hover {
-    background: var(--border-color);
-  }
-
-  .btn-danger {
-    background: rgba(155, 44, 44, 0.1);
-    color: var(--error-color);
-  }
-
-  .btn-danger:hover {
-    opacity: 0.9;
-  }
-
-  .btn-primary {
+  .btn-done {
     background: var(--accent-primary);
     color: var(--bg-secondary);
+    padding: 4px 12px;
+    font-size: 0.8rem;
   }
 
-  .btn-primary:hover {
+  .btn-done:hover {
     opacity: 0.9;
+  }
+
+  /* Items area */
+  .items-area {
+    padding: 16px;
+  }
+
+  .setup-prompt {
+    text-align: center;
+    padding: 24px 16px;
+  }
+
+  .setup-prompt p {
+    color: var(--text-secondary);
+    font-style: italic;
+    margin: 0 0 12px;
+    font-size: 0.9rem;
+  }
+
+  .btn-setup {
+    background: var(--accent-light);
+    color: var(--accent-primary);
+    padding: 8px 16px;
+    font-size: 0.9rem;
+  }
+
+  .btn-setup:hover {
+    background: var(--accent-hover);
   }
 </style>

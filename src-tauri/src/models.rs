@@ -345,8 +345,31 @@ pub struct CustomSection {
 pub struct CustomSubsection {
     pub id: String,
     pub name: String,
+    #[serde(default)]
+    pub form_elements: Vec<FormElement>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub field_definitions: Vec<FieldDefinition>,
     pub items: Vec<CustomItem>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum FormElement {
+    #[serde(rename = "field")]
+    Field {
+        id: String,
+        name: String,
+        field_type: FieldType,
+    },
+    #[serde(rename = "divider")]
+    Divider {
+        id: String,
+    },
+    #[serde(rename = "header")]
+    Header {
+        id: String,
+        text: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

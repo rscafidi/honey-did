@@ -106,14 +106,9 @@
     );
   }
 
-  function getCurrentSectionLabel(): string {
-    if (currentSection.startsWith('custom-')) {
-      const customId = currentSection.replace('custom-', '');
-      const custom = customTopLevelSections.find(s => s.id === customId);
-      return custom?.name || 'Custom Section';
-    }
-    return sections.find((s) => s.id === currentSection)?.label || '';
-  }
+  $: currentSectionLabel = currentSection.startsWith('custom-')
+    ? customTopLevelSections.find(s => s.id === currentSection.replace('custom-', ''))?.name || 'Custom Section'
+    : sections.find((s) => s.id === currentSection)?.label || '';
 
   onMount(async () => {
     // Check if app has a password set
@@ -316,7 +311,7 @@
     </aside>
     <section class="content">
       <header class="content-header">
-        <h2>{getCurrentSectionLabel()}</h2>
+        <h2>{currentSectionLabel}</h2>
       </header>
       <div class="content-body">
         {#if currentSection === 'financial'}
