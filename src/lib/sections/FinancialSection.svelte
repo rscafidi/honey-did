@@ -1,137 +1,164 @@
 <script lang="ts">
-  import { document } from '../stores/document';
+  import { onDestroy } from 'svelte';
+  import { document, financialStore } from '../stores/document';
   import ItemCard from '../components/ItemCard.svelte';
   import AddButton from '../components/AddButton.svelte';
   import FormField from '../components/FormField.svelte';
   import NotesField from '../components/NotesField.svelte';
   import CustomSubsections from '../components/CustomSubsections.svelte';
 
-  $: financial = $document?.financial ?? {
-    bank_accounts: [],
-    credit_cards: [],
-    investments: [],
-    debts: [],
+  const defaultFinancial = {
+    bank_accounts: [] as any[],
+    credit_cards: [] as any[],
+    investments: [] as any[],
+    debts: [] as any[],
     notes: ''
   };
 
+  // Local-first state: edits stay here, only flushed to store on discrete actions or debounced
+  let local = { ...defaultFinancial };
+  let hasPendingChanges = false;
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Sync from store ONLY when we don't have pending local changes
+  const unsub = financialStore.subscribe((value) => {
+    if (!hasPendingChanges) {
+      local = value ?? defaultFinancial;
+    }
+  });
+  onDestroy(() => {
+    // Flush any pending changes before unmount
+    if (hasPendingChanges) {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      document.updateSection('financial', local);
+    }
+    unsub();
+  });
+
+  function scheduleFlush() {
+    hasPendingChanges = true;
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      document.updateSection('financial', local);
+      setTimeout(() => { hasPendingChanges = false; }, 0);
+      debounceTimer = null;
+    }, 300);
+  }
+
+  function flushNow(updatedLocal: typeof local) {
+    local = updatedLocal;
+    if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
+    hasPendingChanges = false;
+    document.updateSection('financial', local);
+  }
+
+  // --- Bank Accounts ---
   function addBankAccount() {
-    const updated = {
-      ...financial,
-      bank_accounts: [...financial.bank_accounts, {
-        name: '',
-        institution: '',
-        account_type: 'Checking',
-        last_four: '',
-        notes: ''
+    flushNow({
+      ...local,
+      bank_accounts: [...local.bank_accounts, {
+        name: '', institution: '', account_type: 'Checking', last_four: '', notes: ''
       }]
-    };
-    document.updateSection('financial', updated);
+    });
   }
 
   function removeBankAccount(index: number) {
-    const updated = {
-      ...financial,
-      bank_accounts: financial.bank_accounts.filter((_: any, i: number) => i !== index)
-    };
-    document.updateSection('financial', updated);
+    flushNow({
+      ...local,
+      bank_accounts: local.bank_accounts.filter((_: any, i: number) => i !== index)
+    });
   }
 
   function updateBankAccount(index: number, field: string, value: string) {
-    const accounts = [...financial.bank_accounts];
+    const accounts = [...local.bank_accounts];
     accounts[index] = { ...accounts[index], [field]: value };
-    document.updateSection('financial', { ...financial, bank_accounts: accounts });
+    local = { ...local, bank_accounts: accounts };
+    scheduleFlush();
   }
 
+  // --- Credit Cards ---
   function addCreditCard() {
-    const updated = {
-      ...financial,
-      credit_cards: [...financial.credit_cards, {
-        name: '',
-        issuer: '',
-        last_four: '',
-        notes: ''
+    flushNow({
+      ...local,
+      credit_cards: [...local.credit_cards, {
+        name: '', issuer: '', last_four: '', notes: ''
       }]
-    };
-    document.updateSection('financial', updated);
+    });
   }
 
   function removeCreditCard(index: number) {
-    const updated = {
-      ...financial,
-      credit_cards: financial.credit_cards.filter((_: any, i: number) => i !== index)
-    };
-    document.updateSection('financial', updated);
+    flushNow({
+      ...local,
+      credit_cards: local.credit_cards.filter((_: any, i: number) => i !== index)
+    });
   }
 
   function updateCreditCard(index: number, field: string, value: string) {
-    const cards = [...financial.credit_cards];
+    const cards = [...local.credit_cards];
     cards[index] = { ...cards[index], [field]: value };
-    document.updateSection('financial', { ...financial, credit_cards: cards });
+    local = { ...local, credit_cards: cards };
+    scheduleFlush();
   }
 
+  // --- Investments ---
   function addInvestment() {
-    const updated = {
-      ...financial,
-      investments: [...financial.investments, {
-        name: '',
-        institution: '',
-        account_type: '',
-        notes: ''
+    flushNow({
+      ...local,
+      investments: [...local.investments, {
+        name: '', institution: '', account_type: '', notes: ''
       }]
-    };
-    document.updateSection('financial', updated);
+    });
   }
 
   function removeInvestment(index: number) {
-    const updated = {
-      ...financial,
-      investments: financial.investments.filter((_: any, i: number) => i !== index)
-    };
-    document.updateSection('financial', updated);
+    flushNow({
+      ...local,
+      investments: local.investments.filter((_: any, i: number) => i !== index)
+    });
   }
 
   function updateInvestment(index: number, field: string, value: string) {
-    const investments = [...financial.investments];
+    const investments = [...local.investments];
     investments[index] = { ...investments[index], [field]: value };
-    document.updateSection('financial', { ...financial, investments });
+    local = { ...local, investments };
+    scheduleFlush();
   }
 
+  // --- Debts ---
   function addDebt() {
-    const updated = {
-      ...financial,
-      debts: [...financial.debts, {
-        name: '',
-        lender: '',
-        notes: ''
+    flushNow({
+      ...local,
+      debts: [...local.debts, {
+        name: '', lender: '', notes: ''
       }]
-    };
-    document.updateSection('financial', updated);
+    });
   }
 
   function removeDebt(index: number) {
-    const updated = {
-      ...financial,
-      debts: financial.debts.filter((_: any, i: number) => i !== index)
-    };
-    document.updateSection('financial', updated);
+    flushNow({
+      ...local,
+      debts: local.debts.filter((_: any, i: number) => i !== index)
+    });
   }
 
   function updateDebt(index: number, field: string, value: string) {
-    const debts = [...financial.debts];
+    const debts = [...local.debts];
     debts[index] = { ...debts[index], [field]: value };
-    document.updateSection('financial', { ...financial, debts });
+    local = { ...local, debts };
+    scheduleFlush();
   }
 
   function updateNotes(e: Event) {
     const target = e.target as HTMLTextAreaElement;
-    document.updateSection('financial', { ...financial, notes: target.value });
+    local = { ...local, notes: target.value };
+    scheduleFlush();
   }
 </script>
 
 <div class="section">
   <div class="subsection">
     <h3>Bank Accounts</h3>
-    {#each financial.bank_accounts as account, i}
+    {#each local.bank_accounts as account, i}
       <ItemCard title={account.name || 'New Account'} on:delete={() => removeBankAccount(i)}>
         <FormField label="Account Name" value={account.name} on:change={(e) => updateBankAccount(i, 'name', e.detail.value)} />
         <FormField label="Institution" value={account.institution} on:change={(e) => updateBankAccount(i, 'institution', e.detail.value)} />
@@ -145,7 +172,7 @@
 
   <div class="subsection">
     <h3>Credit Cards</h3>
-    {#each financial.credit_cards as card, i}
+    {#each local.credit_cards as card, i}
       <ItemCard title={card.name || 'New Card'} on:delete={() => removeCreditCard(i)}>
         <FormField label="Card Name" value={card.name} on:change={(e) => updateCreditCard(i, 'name', e.detail.value)} />
         <FormField label="Issuer" value={card.issuer} on:change={(e) => updateCreditCard(i, 'issuer', e.detail.value)} />
@@ -158,7 +185,7 @@
 
   <div class="subsection">
     <h3>Investments</h3>
-    {#each financial.investments as investment, i}
+    {#each local.investments as investment, i}
       <ItemCard title={investment.name || 'New Investment'} on:delete={() => removeInvestment(i)}>
         <FormField label="Account Name" value={investment.name} on:change={(e) => updateInvestment(i, 'name', e.detail.value)} />
         <FormField label="Institution" value={investment.institution} on:change={(e) => updateInvestment(i, 'institution', e.detail.value)} />
@@ -171,7 +198,7 @@
 
   <div class="subsection">
     <h3>Debts & Loans</h3>
-    {#each financial.debts as debt, i}
+    {#each local.debts as debt, i}
       <ItemCard title={debt.name || 'New Debt'} on:delete={() => removeDebt(i)}>
         <FormField label="Description" value={debt.name} on:change={(e) => updateDebt(i, 'name', e.detail.value)} />
         <FormField label="Lender" value={debt.lender} on:change={(e) => updateDebt(i, 'lender', e.detail.value)} />
@@ -181,7 +208,7 @@
     <AddButton label="Add Debt/Loan" on:click={addDebt} />
   </div>
 
-  <NotesField value={financial.notes} on:change={updateNotes} />
+  <NotesField value={local.notes} on:change={updateNotes} />
 
   <CustomSubsections parentId="financial" />
 </div>

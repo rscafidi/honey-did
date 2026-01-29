@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { document, type CustomSection, type CustomSubsection } from '../stores/document';
+  import { document, customSectionsStore, type CustomSection, type CustomSubsection } from '../stores/document';
   import CustomSectionEditor from './CustomSectionEditor.svelte';
 
   export let parentId: string;
 
   // Get custom subsections for this parent section
-  $: customSection = ($document?.custom_sections || []).find(s => s.parent === parentId);
+  $: customSection = ($customSectionsStore || []).find((s: CustomSection) => s.parent === parentId);
   $: customSubsections = customSection?.subsections || [];
 
   let showAddCustomForm = false;

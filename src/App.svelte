@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
   import { getCurrentWindow } from '@tauri-apps/api/window';
-  import { document, isDocumentEmpty, setPasswordRequired, type CustomSection } from './lib/stores/document';
+  import { document, isDocumentEmpty, setPasswordRequired, type CustomSection, customSectionsStore } from './lib/stores/document';
   import { theme } from './lib/stores/theme';
   import FinancialSection from './lib/sections/FinancialSection.svelte';
   import InsuranceSection from './lib/sections/InsuranceSection.svelte';
@@ -24,6 +24,7 @@
   import SetPasswordModal from './lib/components/SetPasswordModal.svelte';
   import SettingsModal from './lib/components/SettingsModal.svelte';
   import LicenseModal from './lib/components/LicenseModal.svelte';
+  import HelpModal from './lib/components/HelpModal.svelte';
 
   type Section =
     | 'financial' | 'insurance' | 'bills' | 'property' | 'legal'
@@ -41,6 +42,7 @@
   let showSetPasswordModal = false;
   let showSettings = false;
   let showLicense = false;
+  let showHelp = false;
   let isLoading = true;
 
   // Custom section state
@@ -63,7 +65,7 @@
   ];
 
   // Custom top-level sections (no parent)
-  $: customTopLevelSections = ($document?.custom_sections || []).filter(s => !s.parent);
+  $: customTopLevelSections = ($customSectionsStore || []).filter((s: CustomSection) => !s.parent);
 
   function generateId(): string {
     return Math.random().toString(36).substring(2, 9);
@@ -290,6 +292,9 @@
           <button class="btn btn-outline flex-1" on:click={enterGuidedMode}>
             Guided Setup
           </button>
+          <button class="btn-icon" on:click={() => (showHelp = true)} title="Help">
+            ❓
+          </button>
           <button class="btn-icon" on:click={() => (showSettings = true)} title="Settings">
             ⚙️
           </button>
@@ -395,6 +400,11 @@
 <LicenseModal
   bind:isOpen={showLicense}
   on:close={() => (showLicense = false)}
+/>
+
+<HelpModal
+  bind:isOpen={showHelp}
+  on:close={() => (showHelp = false)}
 />
 
 <style>
