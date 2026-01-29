@@ -18,10 +18,6 @@
     <p>{step.whyItMatters}</p>
   </div>
 
-  <div class="form-area">
-    <slot />
-  </div>
-
   <div class="prompts">
     <h3>Things to consider</h3>
     <ul>
@@ -34,6 +30,10 @@
   <div class="example">
     <h3>Example entry</h3>
     <p class="example-text">"{step.example}"</p>
+  </div>
+
+  <div class="form-area">
+    <slot />
   </div>
 </div>
 
@@ -121,6 +121,7 @@
     background: var(--bg-tertiary);
     padding: 16px 20px;
     border-radius: 8px;
+    margin-bottom: 24px;
   }
 
   .example h3 {

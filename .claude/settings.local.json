@@ -54,7 +54,8 @@
       "Bash(identify:*)",
       "Bash(npx --yes png2icons:*)",
       "Bash(ls:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(npx svelte-check:*)"
     ]
   }
 }

@@ -160,6 +160,14 @@
           </button>
         </div>
 
+        <div class="settings-section about-section">
+          <h3>About</h3>
+          <div class="about-info">
+            <span class="about-label">Honey Did</span>
+            <span class="about-version">v{__APP_VERSION__}</span>
+          </div>
+        </div>
+
         <div class="actions">
           <button class="btn btn-secondary" on:click={close}>Close</button>
         </div>
@@ -451,5 +459,28 @@
 
   .btn-danger:hover {
     opacity: 0.9;
+  }
+
+  .about-section {
+    margin-bottom: 0;
+  }
+
+  .about-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+  }
+
+  .about-label {
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .about-version {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
   }
 </style>

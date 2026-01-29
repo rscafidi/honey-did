@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
-  import { document } from '../stores/document';
+  import { document, isDocumentEmpty } from '../stores/document';
 
   export let isOpen = false;
 
@@ -26,6 +26,7 @@
                               ($document?.welcome_screen?.slides?.length || 0) > 0 &&
                               !hasValidQuestionConfig;
   $: slideCount = $document?.welcome_screen?.slides?.length || 0;
+  $: isEmpty = isDocumentEmpty($document);
 
   $: passphraseStrength = calculateStrength(passphrase);
   $: passphrasesMatch = passphrase === confirmPassphrase;
@@ -103,7 +104,7 @@
     try {
       const filePath = await invoke<string | null>('save_export_with_dialog', {
         passphrase,
-        includeWelcomeScreen: legacyWelcomeAvailable && includeWelcomeScreen
+        includeWelcomeScreen: !!(legacyWelcomeAvailable && includeWelcomeScreen)
       });
 
       if (filePath === null) {
@@ -146,6 +147,10 @@
     <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
     <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="export-dialog-title" on:click|stopPropagation on:keydown|stopPropagation>
       <h2 id="export-dialog-title">Create Your Secure File</h2>
+
+      {#if isEmpty}
+        <p class="warning empty-warning">Your document is empty. The exported file won't contain any information.</p>
+      {/if}
 
       {#if hasValidQuestionConfig}
         <!-- Question-based export mode -->
@@ -473,6 +478,10 @@
     font-size: 0.9rem;
     color: var(--warning-text);
     margin: 0;
+  }
+
+  .empty-warning {
+    margin-bottom: 16px;
   }
 
   .error-message {

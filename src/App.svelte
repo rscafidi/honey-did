@@ -23,6 +23,7 @@
   import LockScreen from './lib/components/LockScreen.svelte';
   import SetPasswordModal from './lib/components/SetPasswordModal.svelte';
   import SettingsModal from './lib/components/SettingsModal.svelte';
+  import LicenseModal from './lib/components/LicenseModal.svelte';
 
   type Section =
     | 'financial' | 'insurance' | 'bills' | 'property' | 'legal'
@@ -39,6 +40,7 @@
   let hasPassword = false;
   let showSetPasswordModal = false;
   let showSettings = false;
+  let showLicense = false;
   let isLoading = true;
 
   // Custom section state
@@ -303,6 +305,13 @@
         <button class="btn btn-primary" on:click={() => (showExportDialog = true)}>
           Export
         </button>
+        <div class="sidebar-legal">
+          <span>&copy; scafidi.dev</span>
+          <span class="legal-sep">&middot;</span>
+          <!-- svelte-ignore a11y-no-static-element-interactions -->
+          <!-- svelte-ignore a11y-click-events-have-key-events -->
+          <span class="license-link" on:click={() => (showLicense = true)}>MIT License</span>
+        </div>
       </div>
     </aside>
     <section class="content">
@@ -386,6 +395,11 @@
   bind:isOpen={showSettings}
   on:close={() => (showSettings = false)}
   on:cleared={handleDataCleared}
+/>
+
+<LicenseModal
+  bind:isOpen={showLicense}
+  on:close={() => (showLicense = false)}
 />
 
 <style>
@@ -738,5 +752,27 @@
     padding: 20px;
     overflow-y: auto;
     background: var(--bg-primary);
+  }
+
+  .sidebar-legal {
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--sidebar-text-muted);
+    padding: 8px 15px 0;
+    opacity: 0.7;
+  }
+
+  .legal-sep {
+    margin: 0 4px;
+  }
+
+  .license-link {
+    cursor: pointer;
+    text-decoration: underline;
+    transition: color 0.15s ease;
+  }
+
+  .license-link:hover {
+    color: var(--sidebar-text);
   }
 </style>

@@ -197,6 +197,7 @@ pub fn generate_encrypted_html_with_questions(
 
 /// Structure for question-based encrypted data (used for import detection)
 #[derive(Deserialize)]
+#[allow(dead_code)] // question_key is part of the format but only used for browser-side unlock
 struct QuestionBasedEncryptedData {
     question_key: EncryptedPayload,
     passphrase_key: Option<EncryptedPayload>,
@@ -340,6 +341,9 @@ const SHARED_CSS: &str = r##"
         .sidebar-footer { padding: 16px; border-top: 1px solid #D4D4D4; }
         .print-btn { width: 100%; padding: 12px 16px; background: #B7B7A4; color: #283618; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: background 0.2s; }
         .print-btn:hover { background: #a3a392; }
+        .legal-line { text-align: center; font-size: 0.75rem; color: #B7B7A4; margin-top: 12px; opacity: 0.7; }
+        .legal-line a { color: #B7B7A4; text-decoration: underline; }
+        .legal-line a:hover { color: #F0EFEB; }
         .main-content { flex: 1; margin-left: 280px; padding: 24px 40px; }
         .section { background: white; padding: 24px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(40,54,24,0.08), 0 1px 2px rgba(40,54,24,0.04); border: 1px solid #D4D4D4; }
         .section-title { font-size: 1.15rem; font-weight: 600; color: #283618; border-bottom: 2px solid #283618; padding-bottom: 0.75rem; margin-bottom: 1.25rem; }
@@ -971,7 +975,7 @@ const SHARED_JS_RENDER_DOCUMENT: &str = r##"
                 });
             }
             html += '</ul></div>';
-            html += '<div class="sidebar-footer"><button class="print-btn" onclick="window.print()">Print Document</button></div>';
+            html += '<div class="sidebar-footer"><button class="print-btn" onclick="window.print()">Print Document</button><div class="legal-line">&copy; scafidi.dev &middot; <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener">MIT License</a></div></div>';
             html += '</div>';
             html += '<div class="main-content" id="mainContent">';
 
@@ -2089,6 +2093,7 @@ pub fn generate_print_html(document: &LegacyDocument) -> String {
         }
     }
 
+    html.push_str("<div style=\"text-align:center;font-size:0.75rem;color:#B7B7A4;margin-top:2rem;padding-top:1rem;border-top:1px solid #D4D4D4;\">&copy; scafidi.dev &middot; MIT License</div>\n");
     html.push_str("</body>\n</html>");
     html
 }
