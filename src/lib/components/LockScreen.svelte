@@ -78,6 +78,7 @@
 
     {#if !showClearConfirm}
       <div class="form">
+        <!-- svelte-ignore a11y-autofocus -->
         <input
           type="password"
           bind:value={password}
@@ -103,6 +104,7 @@
     {:else}
       <div class="form">
         <p class="warning">This will permanently delete all your data. Type DELETE ALL DATA to confirm.</p>
+        <!-- svelte-ignore a11y-autofocus -->
         <input
           type="text"
           bind:value={clearConfirmation}

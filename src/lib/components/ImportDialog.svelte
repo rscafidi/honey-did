@@ -164,7 +164,6 @@
     color: var(--text-primary);
   }
 
-  .field input[type="text"],
   .field input[type="password"] {
     width: 100%;
     padding: 10px 12px;

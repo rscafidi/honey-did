@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onDestroy } from 'svelte';
   import type { CustomSubsection, FormElement, CustomItem } from '../stores/document';
   import { getFieldElements } from '../stores/document';
   import FormBuilder from './FormBuilder.svelte';
@@ -15,7 +15,12 @@
   }>();
 
   let local: CustomSubsection = subsection;
-  $: local = subsection;
+  // Only sync from parent prop when we don't have pending local changes.
+  // This prevents the store round-trip from overwriting edits mid-typing.
+  let hasPendingDispatch = false;
+  $: if (!hasPendingDispatch) {
+    local = subsection;
+  }
 
   $: fieldElements = getFieldElements(local.form_elements);
   $: hasFields = fieldElements.length > 0;
@@ -24,10 +29,37 @@
   let newSectionName = sectionName;
   let showFieldEditor = false;
 
+  // Debounce dispatching to parent/store so per-keystroke edits in FormBuilder
+  // don't trigger a full Svelte reactive cascade on every character.
+  let dispatchTimer: ReturnType<typeof setTimeout> | null = null;
+
   function dispatchUpdate(updated: CustomSubsection) {
     local = updated;
+    hasPendingDispatch = true;
+    if (dispatchTimer) clearTimeout(dispatchTimer);
+    dispatchTimer = setTimeout(() => {
+      dispatch('update', local);
+      // Re-enable prop sync after the store round-trip completes (synchronous in Svelte)
+      setTimeout(() => { hasPendingDispatch = false; }, 0);
+      dispatchTimer = null;
+    }, 300);
+  }
+
+  // Flush pending dispatch immediately (used for discrete actions like add/delete)
+  function flushDispatch(updated: CustomSubsection) {
+    local = updated;
+    if (dispatchTimer) { clearTimeout(dispatchTimer); dispatchTimer = null; }
+    hasPendingDispatch = false;
     dispatch('update', updated);
   }
+
+  onDestroy(() => {
+    // Flush any pending changes when component unmounts
+    if (dispatchTimer) {
+      clearTimeout(dispatchTimer);
+      dispatch('update', local);
+    }
+  });
 
   function handleFormElementsUpdate(e: CustomEvent<FormElement[]>) {
     dispatchUpdate({
@@ -37,7 +69,7 @@
   }
 
   function handleItemsUpdate(e: CustomEvent<CustomItem[]>) {
-    dispatchUpdate({
+    flushDispatch({
       ...local,
       items: e.detail,
     });
@@ -56,7 +88,7 @@
     fieldElements.forEach((f) => {
       newItem.values[f.id] = f.field_type === 'boolean' ? 'false' : '';
     });
-    dispatchUpdate({
+    flushDispatch({
       ...local,
       items: [...local.items, newItem],
     });
@@ -92,7 +124,7 @@
       />
     {:else}
       <!-- svelte-ignore a11y-click-events-have-key-events -->
-      <!-- svelte-ignore a11y-no-static-element-interactions -->
+      <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
       <h3 class="section-title" on:click={() => { isRenamingSection = true; newSectionName = sectionName; }}>
         {sectionName}
       </h3>

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { document, type MessageSlide, type WelcomeScreen, type SlideType } from '../stores/document';
+  import { document, debounce, type MessageSlide, type WelcomeScreen, type SlideType } from '../stores/document';
   import { invoke } from '@tauri-apps/api/core';
 
   $: welcomeScreen = ($document?.welcome_screen || { enabled: false, slides: [], fallback_passphrase: undefined }) as WelcomeScreen;
@@ -47,6 +47,10 @@
     });
   }
 
+  const debouncedUpdateSlide = debounce((id: string, updates: Partial<MessageSlide>) => {
+    updateSlide(id, updates);
+  }, 300);
+
   function deleteSlide(id: string) {
     saveWelcomeScreen({
       ...welcomeScreen,
@@ -83,6 +87,10 @@
       fallback_passphrase: value || undefined,
     });
   }
+
+  const debouncedUpdatePassphrase = debounce((value: string) => {
+    updateFallbackPassphrase(value);
+  }, 300);
 
   async function generatePassphrase() {
     try {
@@ -151,7 +159,7 @@
                 <textarea
                   id="slide-text-{slide.id}"
                   value={slide.text}
-                  on:input={(e) => updateSlide(slide.id, { text: e.currentTarget.value })}
+                  on:input={(e) => debouncedUpdateSlide(slide.id, { text: e.currentTarget.value })}
                   placeholder={slide.type === 'question' ? 'Enter your question...' : 'Enter your message...'}
                   rows="3"
                 ></textarea>
@@ -164,7 +172,7 @@
                     type="text"
                     id="slide-answer-{slide.id}"
                     value={slide.answer || ''}
-                    on:input={(e) => updateSlide(slide.id, { answer: e.currentTarget.value.toLowerCase().trim() })}
+                    on:input={(e) => debouncedUpdateSlide(slide.id, { answer: e.currentTarget.value.toLowerCase().trim() })}
                     placeholder="Enter the expected answer..."
                   />
                   <span class="field-hint">Answers are case-insensitive</span>
@@ -172,7 +180,7 @@
               {/if}
 
               <div class="field">
-                <label>Transition</label>
+                <span class="field-label">Transition</span>
                 <div class="radio-group">
                   <label class="radio-label">
                     <input
@@ -201,7 +209,7 @@
                         max="10"
                         value={slide.transition.seconds}
                         on:input={(e) =>
-                          updateSlide(slide.id, {
+                          debouncedUpdateSlide(slide.id, {
                             transition: { type: 'auto', seconds: parseInt(e.currentTarget.value) || 3 },
                           })}
                         class="seconds-input"
@@ -234,7 +242,7 @@
         <input
           type="text"
           value={welcomeScreen.fallback_passphrase || ''}
-          on:input={(e) => updateFallbackPassphrase(e.currentTarget.value)}
+          on:input={(e) => debouncedUpdatePassphrase(e.currentTarget.value)}
           placeholder="Enter a fallback passphrase..."
         />
         <button class="btn btn-secondary" on:click={generatePassphrase}>Generate</button>
@@ -390,7 +398,8 @@
     gap: 16px;
   }
 
-  .field label {
+  .field label,
+  .field .field-label {
     display: block;
     margin-bottom: 6px;
     font-weight: 500;

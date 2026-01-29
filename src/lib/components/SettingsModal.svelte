@@ -3,6 +3,9 @@
   import { invoke } from '@tauri-apps/api/core';
   import { themePreference, type ThemePreference } from '../stores/theme';
 
+  // @ts-ignore - injected by Vite define config
+  const appVersion: string = __APP_VERSION__;
+
   export let isOpen = false;
 
   const dispatch = createEventDispatcher();
@@ -165,7 +168,7 @@
           <div class="about-info">
             <div>
               <span class="about-label">Honey Did</span>
-              <span class="about-version">v{__APP_VERSION__}</span>
+              <span class="about-version">v{appVersion}</span>
             </div>
             <!-- svelte-ignore a11y-no-static-element-interactions -->
             <!-- svelte-ignore a11y-click-events-have-key-events -->
