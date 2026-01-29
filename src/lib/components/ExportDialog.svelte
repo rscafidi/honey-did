@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
-  import { document, isDocumentEmpty } from '../stores/document';
+  import { document as documentStore, isDocumentEmpty } from '../stores/document';
 
   export let isOpen = false;
 
@@ -15,18 +15,18 @@
   let error = '';
 
   // Question-based unlock detection
-  $: questionSlides = $document?.welcome_screen?.slides?.filter(s => s.type === 'question') || [];
-  $: messageSlides = $document?.welcome_screen?.slides?.filter(s => s.type === 'message') || [];
+  $: questionSlides = $documentStore?.welcome_screen?.slides?.filter(s => s.type === 'question') || [];
+  $: messageSlides = $documentStore?.welcome_screen?.slides?.filter(s => s.type === 'message') || [];
   $: questionCount = questionSlides.length;
-  $: hasValidQuestionConfig = $document?.welcome_screen?.enabled && questionCount >= 2 && questionCount <= 5;
-  $: hasFallbackPassphrase = !!$document?.welcome_screen?.fallback_passphrase;
+  $: hasValidQuestionConfig = $documentStore?.welcome_screen?.enabled && questionCount >= 2 && questionCount <= 5;
+  $: hasFallbackPassphrase = !!$documentStore?.welcome_screen?.fallback_passphrase;
 
   // Legacy welcome screen (message-only slides)
-  $: legacyWelcomeAvailable = $document?.welcome_screen?.enabled &&
-                              ($document?.welcome_screen?.slides?.length || 0) > 0 &&
+  $: legacyWelcomeAvailable = $documentStore?.welcome_screen?.enabled &&
+                              ($documentStore?.welcome_screen?.slides?.length || 0) > 0 &&
                               !hasValidQuestionConfig;
-  $: slideCount = $document?.welcome_screen?.slides?.length || 0;
-  $: isEmpty = isDocumentEmpty($document);
+  $: slideCount = $documentStore?.welcome_screen?.slides?.length || 0;
+  $: isEmpty = isDocumentEmpty($documentStore);
 
   $: passphraseStrength = calculateStrength(passphrase);
   $: passphrasesMatch = passphrase === confirmPassphrase;

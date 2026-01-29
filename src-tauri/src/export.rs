@@ -300,6 +300,9 @@ pub fn import_from_html(html: &str, passphrase: &str) -> Result<LegacyDocument, 
 // SHARED TEMPLATE COMPONENTS
 // ============================================================================
 
+/// The HD scroll logo SVG, matching the desktop app's LockScreen branding
+const LOGO_SVG: &str = r##"<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:72px;height:72px;margin-bottom:1rem;"><rect x="8" y="6" width="32" height="36" rx="2" fill="#F0EFEB" stroke="#DDE5B6" stroke-width="1.5"/><ellipse cx="24" cy="6" rx="16" ry="3" fill="#DDE5B6"/><ellipse cx="24" cy="6" rx="14" ry="2" fill="#F0EFEB"/><ellipse cx="24" cy="42" rx="16" ry="3" fill="#DDE5B6"/><ellipse cx="24" cy="42" rx="14" ry="2" fill="#F0EFEB"/><text x="24" y="28" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="16" font-weight="600" fill="#283618">HD</text><line x1="14" y1="34" x2="34" y2="34" stroke="#B7B7A4" stroke-width="1" stroke-linecap="round"/><line x1="16" y1="37" x2="32" y2="37" stroke="#B7B7A4" stroke-width="0.75" stroke-linecap="round"/></svg>"##;
+
 /// Shared CSS styles used by both templates
 const SHARED_CSS: &str = r##"
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1349,7 +1352,7 @@ const SHARED_JS_RENDER_DOCUMENT: &str = r##"
 /// CSS specific to passphrase-based unlock
 const PASSPHRASE_CSS: &str = r##"
         .lock-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; background: linear-gradient(145deg, #F0EFEB 0%, #D4D4D4 100%); }
-        .lock-icon { font-size: 4rem; margin-bottom: 1rem; }
+        .lock-version { color: #B7B7A4; font-size: 0.8rem; margin-top: 2rem; }
         .lock-title { font-size: 1.75rem; font-weight: 600; color: #283618; margin-bottom: 0.5rem; }
         .lock-subtitle { color: #606C38; margin-bottom: 2rem; font-size: 0.95rem; }
         .password-form { display: flex; flex-direction: column; gap: 1rem; width: 100%; max-width: 320px; }
@@ -1563,7 +1566,7 @@ const QUESTION_CSS: &str = r##"
         .passphrase-screen { position: fixed; inset: 0; background: linear-gradient(145deg, #F0EFEB 0%, #D4D4D4 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; }
         .passphrase-screen.hidden { display: none; }
         .passphrase-container { max-width: 320px; text-align: center; }
-        .passphrase-icon { font-size: 4rem; margin-bottom: 1rem; }
+        .lock-version { color: #B7B7A4; font-size: 0.8rem; margin-top: 2rem; }
         .passphrase-title { font-size: 1.5rem; font-weight: 600; color: #283618; margin-bottom: 2rem; }
         .passphrase-input { width: 100%; padding: 14px 16px; font-size: 1rem; border: 2px solid #D4D4D4; border-radius: 10px; text-align: center; background: white; margin-bottom: 16px; }
         .passphrase-input:focus { outline: none; border-color: #283618; }
@@ -1573,7 +1576,7 @@ const QUESTION_CSS: &str = r##"
         /* Unlocking screen */
         .unlocking-screen { position: fixed; inset: 0; background: linear-gradient(145deg, #F0EFEB 0%, #D4D4D4 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; }
         .unlocking-screen.hidden { display: none; }
-        .unlocking-icon { font-size: 4rem; margin-bottom: 1rem; animation: pulse 1.5s infinite; }
+        .unlocking-screen svg { animation: pulse 1.5s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         .unlocking-text { color: #283618; font-size: 1.1rem; }
 "##;
@@ -1852,7 +1855,7 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str, welcome_slid
         <div id="welcomeTimer" class="welcome-timer"><div id="welcomeTimerBar" class="welcome-timer-bar"></div></div>
     </div>
     <div id="lockScreen" class="lock-screen" style="display: none;">
-        <div class="lock-icon">🔐</div>
+        {logo_svg}
         <h1 class="lock-title">Honey Did</h1>
         <p class="lock-subtitle">This document was prepared by {creator_name}<br>to help you in their absence.</p>
         <form class="password-form" onsubmit="return unlock(event)">
@@ -1860,6 +1863,7 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str, welcome_slid
             <button type="submit" class="unlock-btn">Unlock</button>
         </form>
         <p id="error" class="error" style="display: none;"></p>
+        <p class="lock-version">v{app_version}</p>
     </div>
     <div id="content" class="content">
         <div class="container" id="documentContent"></div>
@@ -1877,6 +1881,8 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str, welcome_slid
 </html>"##,
         SHARED_CSS = SHARED_CSS,
         PASSPHRASE_CSS = PASSPHRASE_CSS,
+        logo_svg = LOGO_SVG,
+        app_version = env!("CARGO_PKG_VERSION"),
         creator_name = creator_name,
         encrypted_data = encrypted_data,
         welcome_slides_json = welcome_slides_json,
@@ -1921,7 +1927,7 @@ fn generate_question_html_template(encrypted_data: &str, slides_json: &str, has_
     </div>
 
     <div id="unlockingScreen" class="unlocking-screen hidden">
-        <div class="unlocking-icon">&#128275;</div>
+        {logo_svg}
         <div class="unlocking-text">Unlocking...</div>
     </div>
 
@@ -1938,12 +1944,13 @@ fn generate_question_html_template(encrypted_data: &str, slides_json: &str, has_
 
     <div id="passphraseScreen" class="passphrase-screen hidden">
         <div class="passphrase-container">
-            <div class="passphrase-icon">&#128274;</div>
+            {logo_svg}
             <h2 class="passphrase-title">Enter passphrase</h2>
             <input type="password" id="passphraseInput" class="passphrase-input" placeholder="Enter passphrase">
             <button class="retry-btn" onclick="unlockWithPassphrase()">Unlock</button>
             <p id="passphraseError" class="error-msg" style="display: none;"></p>
             <button class="back-link" onclick="showRetryScreen()">&#8592; Back to questions</button>
+            <p class="lock-version">v{app_version}</p>
         </div>
     </div>
 
@@ -1965,6 +1972,8 @@ fn generate_question_html_template(encrypted_data: &str, slides_json: &str, has_
 </html>"##,
         SHARED_CSS = SHARED_CSS,
         QUESTION_CSS = QUESTION_CSS,
+        logo_svg = LOGO_SVG,
+        app_version = env!("CARGO_PKG_VERSION"),
         fallback_link = fallback_link,
         encrypted_data = encrypted_data,
         slides_json = slides_json,

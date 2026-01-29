@@ -41,6 +41,14 @@
   function updateNotes(e: Event) {
     document.updateSection('pets', { ...pets, notes: (e.target as HTMLTextAreaElement).value });
   }
+
+  function inputValue(e: Event): string {
+    return (e.target as HTMLInputElement).value;
+  }
+
+  function removeAtIndex<T>(arr: T[], index: number): T[] {
+    return arr.filter((_, k) => k !== index);
+  }
 </script>
 
 <div class="section">
@@ -66,26 +74,22 @@
         {#each pet.medications || [] as med, j}
           <div class="med-row">
             <input placeholder="Medication" value={med.name} on:change={(e) => {
-              const target = e.target; if (!target) return;
               const meds = [...(pet.medications || [])];
-              meds[j] = { ...meds[j], name: target.value };
+              meds[j] = { ...meds[j], name: inputValue(e) };
               updatePet(i, 'medications', meds);
             }} />
             <input placeholder="Dosage" value={med.dosage} on:change={(e) => {
-              const target = e.target; if (!target) return;
               const meds = [...(pet.medications || [])];
-              meds[j] = { ...meds[j], dosage: target.value };
+              meds[j] = { ...meds[j], dosage: inputValue(e) };
               updatePet(i, 'medications', meds);
             }} />
             <input placeholder="Frequency" value={med.frequency} on:change={(e) => {
-              const target = e.target; if (!target) return;
               const meds = [...(pet.medications || [])];
-              meds[j] = { ...meds[j], frequency: target.value };
+              meds[j] = { ...meds[j], frequency: inputValue(e) };
               updatePet(i, 'medications', meds);
             }} />
             <button class="remove-btn" on:click={() => {
-              const meds = (pet.medications || []).filter((_, k) => k !== j);
-              updatePet(i, 'medications', meds);
+              updatePet(i, 'medications', removeAtIndex(pet.medications || [], j));
             }}>×</button>
           </div>
         {/each}

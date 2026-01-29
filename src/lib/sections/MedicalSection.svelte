@@ -43,6 +43,14 @@
     document.updateSection('medical', { ...medical, notes: (e.target as HTMLTextAreaElement).value });
   }
 
+  function inputValue(e: Event): string {
+    return (e.target as HTMLInputElement).value;
+  }
+
+  function removeAtIndex<T>(arr: T[], index: number): T[] {
+    return arr.filter((_, k) => k !== index);
+  }
+
   function parseList(value: string): string[] {
     return value.split(',').map(s => s.trim()).filter(s => s);
   }
@@ -83,39 +91,33 @@
                 <span class="doctor-specialty">{doctor.specialty}</span>
               {/if}
               <button class="remove-btn" on:click={() => {
-                const docs = (member.doctors || []).filter((_, k) => k !== j);
-                updateFamilyMember(i, 'doctors', docs);
+                updateFamilyMember(i, 'doctors', removeAtIndex(member.doctors || [], j));
               }}>×</button>
             </div>
             <div class="doctor-fields">
               <input placeholder="Doctor Name" value={doctor.name} on:change={(e) => {
-                const target = e.target; if (!target) return;
                 const docs = [...(member.doctors || [])];
-                docs[j] = { ...docs[j], name: target.value };
+                docs[j] = { ...docs[j], name: inputValue(e) };
                 updateFamilyMember(i, 'doctors', docs);
               }} />
               <input placeholder="Specialty (e.g., Cardiologist, Primary Care)" value={doctor.specialty} on:change={(e) => {
-                const target = e.target; if (!target) return;
                 const docs = [...(member.doctors || [])];
-                docs[j] = { ...docs[j], specialty: target.value };
+                docs[j] = { ...docs[j], specialty: inputValue(e) };
                 updateFamilyMember(i, 'doctors', docs);
               }} />
               <input placeholder="Phone" value={doctor.phone} on:change={(e) => {
-                const target = e.target; if (!target) return;
                 const docs = [...(member.doctors || [])];
-                docs[j] = { ...docs[j], phone: target.value };
+                docs[j] = { ...docs[j], phone: inputValue(e) };
                 updateFamilyMember(i, 'doctors', docs);
               }} />
               <input placeholder="Email" value={doctor.email} on:change={(e) => {
-                const target = e.target; if (!target) return;
                 const docs = [...(member.doctors || [])];
-                docs[j] = { ...docs[j], email: target.value };
+                docs[j] = { ...docs[j], email: inputValue(e) };
                 updateFamilyMember(i, 'doctors', docs);
               }} />
               <textarea placeholder="Notes (office hours, special instructions, etc.)" value={doctor.notes} on:change={(e) => {
-                const target = e.target; if (!target) return;
                 const docs = [...(member.doctors || [])];
-                docs[j] = { ...docs[j], notes: target.value };
+                docs[j] = { ...docs[j], notes: inputValue(e) };
                 updateFamilyMember(i, 'doctors', docs);
               }}></textarea>
             </div>
@@ -132,26 +134,22 @@
         {#each member.medications || [] as med, j}
           <div class="med-row">
             <input placeholder="Medication" value={med.name} on:change={(e) => {
-              const target = e.target; if (!target) return;
               const meds = [...(member.medications || [])];
-              meds[j] = { ...meds[j], name: target.value };
+              meds[j] = { ...meds[j], name: inputValue(e) };
               updateFamilyMember(i, 'medications', meds);
             }} />
             <input placeholder="Dosage" value={med.dosage} on:change={(e) => {
-              const target = e.target; if (!target) return;
               const meds = [...(member.medications || [])];
-              meds[j] = { ...meds[j], dosage: target.value };
+              meds[j] = { ...meds[j], dosage: inputValue(e) };
               updateFamilyMember(i, 'medications', meds);
             }} />
             <input placeholder="Frequency" value={med.frequency} on:change={(e) => {
-              const target = e.target; if (!target) return;
               const meds = [...(member.medications || [])];
-              meds[j] = { ...meds[j], frequency: target.value };
+              meds[j] = { ...meds[j], frequency: inputValue(e) };
               updateFamilyMember(i, 'medications', meds);
             }} />
             <button class="remove-btn" on:click={() => {
-              const meds = (member.medications || []).filter((_, k) => k !== j);
-              updateFamilyMember(i, 'medications', meds);
+              updateFamilyMember(i, 'medications', removeAtIndex(member.medications || [], j));
             }}>×</button>
           </div>
         {/each}

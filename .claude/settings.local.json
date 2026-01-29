@@ -55,7 +55,10 @@
       "Bash(npx --yes png2icons:*)",
       "Bash(ls:*)",
       "Bash(grep:*)",
-      "Bash(npx svelte-check:*)"
+      "Bash(npx svelte-check:*)",
+      "Bash(git log:*)",
+      "Bash(node:*)",
+      "Bash(npm uninstall:*)"
     ]
   }
 }

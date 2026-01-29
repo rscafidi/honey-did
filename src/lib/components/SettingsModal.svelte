@@ -163,8 +163,13 @@
         <div class="settings-section about-section">
           <h3>About</h3>
           <div class="about-info">
-            <span class="about-label">Honey Did</span>
-            <span class="about-version">v{__APP_VERSION__}</span>
+            <div>
+              <span class="about-label">Honey Did</span>
+              <span class="about-version">v{__APP_VERSION__}</span>
+            </div>
+            <!-- svelte-ignore a11y-no-static-element-interactions -->
+            <!-- svelte-ignore a11y-click-events-have-key-events -->
+            <span class="about-link" on:click={() => invoke('open_external_url', { url: 'https://github.com/rscafidi/honey-did' })}>github.com/rscafidi/honey-did</span>
           </div>
         </div>
 
@@ -467,8 +472,8 @@
 
   .about-info {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    gap: 8px;
     padding: 12px 16px;
     background: var(--bg-tertiary);
     border-radius: 8px;
@@ -482,5 +487,16 @@
   .about-version {
     color: var(--text-secondary);
     font-size: 0.9rem;
+    margin-left: 6px;
+  }
+
+  .about-link {
+    color: var(--accent-secondary);
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+
+  .about-link:hover {
+    text-decoration: underline;
   }
 </style>

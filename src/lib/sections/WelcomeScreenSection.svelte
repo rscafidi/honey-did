@@ -95,6 +95,8 @@
 </script>
 
 <div class="welcome-screen-section">
+  <p class="intro">When your recipient opens the exported file, the welcome screen greets them with messages you write and optional security questions that unlock the document instead of a passphrase.</p>
+
   <div class="enable-toggle">
     <label class="toggle-label">
       <input type="checkbox" checked={welcomeScreen.enabled} on:change={toggleEnabled} />
@@ -252,6 +254,8 @@
     flex-direction: column;
     gap: 24px;
   }
+
+  .intro { color: var(--text-secondary); margin-bottom: 0; }
 
   .enable-toggle {
     background: var(--bg-secondary);

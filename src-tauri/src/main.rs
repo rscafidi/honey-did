@@ -70,14 +70,14 @@ fn update_document(state: State<AppState>, document: LegacyDocument) -> Result<(
 fn export_html(state: State<AppState>, passphrase: String, include_welcome_screen: Option<bool>) -> Result<String, String> {
     validate_passphrase(&passphrase)?;
     let doc = state.document.lock().map_err(|e| e.to_string())?;
-    export::generate_encrypted_html(&doc, &passphrase, include_welcome_screen.unwrap_or(false)).map_err(|e| e.to_string())
+    export::generate_encrypted_html(&doc, &passphrase, include_welcome_screen.unwrap_or(false)).map_err(|e: export::ExportError| e.to_string())
 }
 
 #[tauri::command]
 fn save_export(state: State<AppState>, passphrase: String, file_path: String, include_welcome_screen: Option<bool>) -> Result<(), String> {
     validate_passphrase(&passphrase)?;
     let doc = state.document.lock().map_err(|e| e.to_string())?;
-    let html = export::generate_encrypted_html(&doc, &passphrase, include_welcome_screen.unwrap_or(false)).map_err(|e| e.to_string())?;
+    let html = export::generate_encrypted_html(&doc, &passphrase, include_welcome_screen.unwrap_or(false)).map_err(|e: export::ExportError| e.to_string())?;
     std::fs::write(&file_path, html).map_err(|_| "Failed to save file".to_string())
 }
 
@@ -92,7 +92,7 @@ async fn save_export_with_dialog(
 
     validate_passphrase(&passphrase)?;
     let doc = state.document.lock().map_err(|e| e.to_string())?;
-    let html = export::generate_encrypted_html(&doc, &passphrase, include_welcome_screen).map_err(|e| e.to_string())?;
+    let html = export::generate_encrypted_html(&doc, &passphrase, include_welcome_screen).map_err(|e: export::ExportError| e.to_string())?;
     drop(doc); // Release lock before dialog
 
     // Generate filename with current date
@@ -125,7 +125,7 @@ async fn save_export_with_questions(
     use tauri_plugin_dialog::DialogExt;
 
     let doc = state.document.lock().map_err(|e| e.to_string())?;
-    let html = export::generate_encrypted_html_with_questions(&doc, include_welcome_screen).map_err(|e| e.to_string())?;
+    let html = export::generate_encrypted_html_with_questions(&doc, include_welcome_screen).map_err(|e: export::ExportError| e.to_string())?;
     drop(doc);
 
     let date = chrono::Local::now().format("%Y-%m-%d").to_string();
@@ -158,7 +158,7 @@ fn get_print_html(state: State<AppState>) -> Result<String, String> {
 fn import_file(encrypted_html: String, passphrase: String) -> Result<LegacyDocument, String> {
     validate_html_content(&encrypted_html)?;
     validate_passphrase(&passphrase)?;
-    export::import_from_html(&encrypted_html, &passphrase).map_err(|e| e.to_string())
+    export::import_from_html(&encrypted_html, &passphrase).map_err(|e: export::ExportError| e.to_string())
 }
 
 #[tauri::command]
@@ -322,6 +322,14 @@ fn clear_data_on_exit(state: State<AppState>) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+fn open_external_url(app: tauri::AppHandle, url: String) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    app.opener()
+        .open_url(&url, None::<&str>)
+        .map_err(|e| format!("Failed to open URL: {}", e))
+}
+
 fn main() {
     // Try to load existing document, or create new one
     let document = storage::load_document()
@@ -331,6 +339,7 @@ fn main() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         .manage(AppState {
             document: Mutex::new(document),
         })
@@ -354,6 +363,7 @@ fn main() {
             get_clear_on_exit,
             set_clear_on_exit,
             clear_data_on_exit,
+            open_external_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -7,7 +7,64 @@ on:
   workflow_dispatch:
 
 jobs:
+  version-bump:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Extract version and year from tag
+        id: meta
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          YEAR="$(date +%Y)"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "year=$YEAR" >> "$GITHUB_OUTPUT"
+          echo "Releasing version=$VERSION year=$YEAR"
+
+      - name: Update version in package.json
+        run: |
+          jq --arg v "${{ steps.meta.outputs.version }}" '.version = $v' package.json > package.json.tmp
+          mv package.json.tmp package.json
+
+      - name: Update version in tauri.conf.json
+        run: |
+          jq --arg v "${{ steps.meta.outputs.version }}" '.version = $v' src-tauri/tauri.conf.json > src-tauri/tauri.conf.json.tmp
+          mv src-tauri/tauri.conf.json.tmp src-tauri/tauri.conf.json
+
+      - name: Update version in Cargo.toml
+        run: |
+          sed -i "0,/^version = \".*\"/s//version = \"${{ steps.meta.outputs.version }}\"/" src-tauri/Cargo.toml
+
+      - name: Update copyright year in LICENSE
+        run: |
+          sed -i "s/Copyright (c) [0-9]\{4\}/Copyright (c) ${{ steps.meta.outputs.year }}/" LICENSE
+
+      - name: Update copyright year in LicenseModal.svelte
+        run: |
+          sed -i "s/Copyright (c) [0-9]\{4\}/Copyright (c) ${{ steps.meta.outputs.year }}/" src/lib/components/LicenseModal.svelte
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml LICENSE src/lib/components/LicenseModal.svelte
+          git diff --cached --quiet && echo "No changes to commit" || \
+            git commit -m "chore: bump version to ${{ steps.meta.outputs.version }}"
+
+      - name: Update tag to include version bump
+        run: |
+          git tag -f "${{ github.ref_name }}"
+          git push origin "${{ github.ref_name }}" --force
+          git push origin HEAD:main
+
   build:
+    needs: version-bump
     permissions:
       contents: write
     strategy:
@@ -26,6 +83,8 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
 
       - name: Setup Node
         uses: actions/setup-node@v4

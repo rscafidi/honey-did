@@ -11,6 +11,12 @@
     rename: string;
   }>();
 
+  // Local copy updated eagerly to avoid stale prop reads during rapid updates
+  let local: CustomSubsection = subsection;
+  $: local = subsection;
+
+  $: hasFields = local.field_definitions.length > 0;
+
   let showFieldEditor = subsection.items.length === 0;
   let editingItemId: string | null = null;
   let editingItemValues: Record<string, string> = {};
@@ -21,22 +27,27 @@
     return Math.random().toString(36).substring(2, 9);
   }
 
+  function dispatchUpdate(updated: CustomSubsection) {
+    local = updated;
+    dispatch('update', updated);
+  }
+
   function addField() {
     const newField: FieldDefinition = {
       id: generateId(),
       name: '',
       field_type: 'text',
     };
-    dispatch('update', {
-      ...subsection,
-      field_definitions: [...subsection.field_definitions, newField],
+    dispatchUpdate({
+      ...local,
+      field_definitions: [...local.field_definitions, newField],
     });
   }
 
   function updateField(fieldId: string, updates: Partial<FieldDefinition>) {
-    dispatch('update', {
-      ...subsection,
-      field_definitions: subsection.field_definitions.map((f) =>
+    dispatchUpdate({
+      ...local,
+      field_definitions: local.field_definitions.map((f) =>
         f.id === fieldId ? { ...f, ...updates } : f
       ),
     });
@@ -48,15 +59,15 @@
   }
 
   function deleteField(fieldId: string) {
-    if (subsection.items.length > 0) {
+    if (local.items.length > 0) {
       if (!confirm('This field has data in existing items. Delete anyway?')) {
         return;
       }
     }
-    dispatch('update', {
-      ...subsection,
-      field_definitions: subsection.field_definitions.filter((f) => f.id !== fieldId),
-      items: subsection.items.map((item) => {
+    dispatchUpdate({
+      ...local,
+      field_definitions: local.field_definitions.filter((f) => f.id !== fieldId),
+      items: local.items.map((item) => {
         const newValues = { ...item.values };
         delete newValues[fieldId];
         return { ...item, values: newValues };
@@ -65,19 +76,20 @@
   }
 
   function addItem() {
+    if (!hasFields) return;
     const newItem: CustomItem = {
       id: generateId(),
       values: {},
     };
     // Initialize with empty values for all fields
-    subsection.field_definitions.forEach((f) => {
+    local.field_definitions.forEach((f) => {
       newItem.values[f.id] = f.field_type === 'boolean' ? 'false' : '';
     });
     editingItemId = newItem.id;
     editingItemValues = { ...newItem.values };
-    dispatch('update', {
-      ...subsection,
-      items: [...subsection.items, newItem],
+    dispatchUpdate({
+      ...local,
+      items: [...local.items, newItem],
     });
   }
 
@@ -88,9 +100,9 @@
 
   function saveItem() {
     if (!editingItemId) return;
-    dispatch('update', {
-      ...subsection,
-      items: subsection.items.map((item) =>
+    dispatchUpdate({
+      ...local,
+      items: local.items.map((item) =>
         item.id === editingItemId ? { ...item, values: editingItemValues } : item
       ),
     });
@@ -105,9 +117,9 @@
 
   function deleteItem(itemId: string) {
     if (!confirm('Delete this item?')) return;
-    dispatch('update', {
-      ...subsection,
-      items: subsection.items.filter((item) => item.id !== itemId),
+    dispatchUpdate({
+      ...local,
+      items: local.items.filter((item) => item.id !== itemId),
     });
     if (editingItemId === itemId) {
       editingItemId = null;
@@ -116,8 +128,8 @@
   }
 
   function getItemTitle(item: CustomItem): string {
-    if (subsection.field_definitions.length === 0) return 'Untitled';
-    const firstField = subsection.field_definitions[0];
+    if (local.field_definitions.length === 0) return 'Untitled';
+    const firstField = local.field_definitions[0];
     return item.values[firstField.id] || 'Untitled';
   }
 
@@ -129,7 +141,7 @@
   }
 
   function handleDeleteSection() {
-    const itemCount = subsection.items.length;
+    const itemCount = local.items.length;
     const message = itemCount > 0
       ? `Delete "${sectionName}" and all ${itemCount} item${itemCount === 1 ? '' : 's'} within it?`
       : `Delete "${sectionName}"?`;
@@ -164,7 +176,7 @@
       </h3>
     {/if}
     <div class="section-actions">
-      <button class="btn btn-add" on:click={addItem}>+ Add Item</button>
+      <button class="btn btn-add" on:click={addItem} disabled={!hasFields} title={hasFields ? 'Add a new item' : 'Define fields first'}>+ Add Item</button>
       <button class="btn btn-delete" on:click={handleDeleteSection}>Delete</button>
     </div>
   </div>
@@ -173,12 +185,15 @@
   <div class="field-definitions">
     <button class="toggle-fields" on:click={() => (showFieldEditor = !showFieldEditor)}>
       <span class="toggle-icon">{showFieldEditor ? '▼' : '▶'}</span>
-      Define Fields ({subsection.field_definitions.length} field{subsection.field_definitions.length === 1 ? '' : 's'})
+      Define Fields ({local.field_definitions.length} field{local.field_definitions.length === 1 ? '' : 's'})
     </button>
 
     {#if showFieldEditor}
       <div class="fields-panel">
-        {#each subsection.field_definitions as field (field.id)}
+        {#if local.field_definitions.length === 0}
+          <p class="fields-hint">Define the fields each item will have, then add items.</p>
+        {/if}
+        {#each local.field_definitions as field (field.id)}
           <div class="field-row">
             <input
               type="text"
@@ -206,15 +221,15 @@
 
   <!-- Items List -->
   <div class="items-list">
-    {#if subsection.items.length === 0}
-      <p class="empty-message">No items yet. Click "+ Add Item" to add your first.</p>
+    {#if local.items.length === 0}
+      <p class="empty-message">{hasFields ? 'No items yet. Click "+ Add Item" to add your first.' : 'Define fields above, then add items.'}</p>
     {:else}
-      {#each subsection.items as item (item.id)}
+      {#each local.items as item (item.id)}
         <div class="item-card">
           {#if editingItemId === item.id}
             <!-- Editing Form -->
             <div class="item-form">
-              {#each subsection.field_definitions as field (field.id)}
+              {#each local.field_definitions as field (field.id)}
                 <div class="form-field">
                   <label for="field-{field.id}">{field.name || 'Unnamed Field'}</label>
                   {#if field.field_type === 'boolean'}
@@ -268,7 +283,7 @@
               <button class="btn btn-edit" on:click={() => startEditItem(item)}>Edit</button>
             </div>
             <div class="item-content">
-              {#each subsection.field_definitions.slice(1) as field (field.id)}
+              {#each local.field_definitions as field (field.id)}
                 {#if item.values[field.id]}
                   <div class="item-detail">
                     <span class="detail-label">{field.name}:</span>
@@ -353,8 +368,13 @@
     color: var(--accent-primary);
   }
 
-  .btn-add:hover {
+  .btn-add:hover:not(:disabled) {
     background: var(--accent-hover);
+  }
+
+  .btn-add:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 
   .btn-delete {
@@ -395,6 +415,13 @@
 
   .fields-panel {
     padding: 0 16px 16px;
+  }
+
+  .fields-hint {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin: 0 0 12px 0;
+    font-style: italic;
   }
 
   .field-row {
