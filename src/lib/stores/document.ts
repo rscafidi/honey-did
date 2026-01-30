@@ -195,35 +195,51 @@ export function debounce<T extends (...args: any[]) => void>(fn: T, ms: number):
 function createDocumentStore() {
   const { subscribe, set, update } = writable<LegacyDocument | null>(null);
 
-  // Debounce save operations to prevent excessive disk writes
-  let saveTimeout: ReturnType<typeof setTimeout> | null = null;
-  let pendingDocument: LegacyDocument | null = null;
   // Cache whether document has data to avoid expensive isDocumentEmpty on every keystroke
   let hasDataCached = false;
+  // Dirty flag: true when in-memory state differs from what's on disk
+  let isDirty = false;
+  // Safety-net idle timer: saves after 30s of no edits (crash protection)
+  let idleSaveTimer: ReturnType<typeof setTimeout> | null = null;
+  // Prevent concurrent saves
+  let isSaving = false;
 
-  const debouncedSave = (doc: LegacyDocument) => {
-    pendingDocument = doc;
-    if (saveTimeout) clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(() => {
-      if (pendingDocument) {
-        // Use requestIdleCallback so the invoke (which serializes the full
-        // document synchronously) runs when the browser is idle rather than
-        // potentially interrupting active user input.
-        const docToSave = pendingDocument;
-        pendingDocument = null;
-        const doSave = () => invoke('update_document', { document: docToSave }).catch(console.error);
-        if (typeof requestIdleCallback === 'function') {
-          requestIdleCallback(doSave);
-        } else {
-          doSave();
-        }
-      }
-      saveTimeout = null;
-    }, 1000); // Save 1s after last change
-  };
+  function scheduleIdleSave() {
+    if (idleSaveTimer) clearTimeout(idleSaveTimer);
+    idleSaveTimer = setTimeout(() => {
+      idleSaveTimer = null;
+      saveToDisk();
+    }, 30_000); // 30s after last edit
+  }
+
+  /** Persist the current in-memory document to disk via Tauri.
+   *  Called on lifecycle events (blur, visibility change, section switch, app close).
+   *  Safe to call multiple times — no-ops if nothing is dirty. */
+  function saveToDisk(): Promise<void> {
+    if (!isDirty || isSaving) return Promise.resolve();
+    let currentDoc: LegacyDocument | null = null;
+    // Read current value synchronously from store
+    const unsub = subscribe((doc) => { currentDoc = doc; });
+    unsub();
+    if (!currentDoc) return Promise.resolve();
+    isDirty = false;
+    isSaving = true;
+    if (idleSaveTimer) { clearTimeout(idleSaveTimer); idleSaveTimer = null; }
+    return invoke('update_document', { document: currentDoc })
+      .catch((e) => {
+        console.error('Failed to save document:', e);
+        // Re-mark dirty so it gets retried on next lifecycle event
+        isDirty = true;
+      })
+      .finally(() => { isSaving = false; });
+  }
 
   return {
     subscribe,
+    /** Persist to disk if there are unsaved changes. */
+    saveToDisk,
+    /** Whether the in-memory document has unsaved changes. */
+    get dirty() { return isDirty; },
     load: async () => {
       try {
         const doc = await invoke<LegacyDocument>('get_document');
@@ -235,16 +251,18 @@ function createDocumentStore() {
           }));
         }
         hasDataCached = !isDocumentEmpty(doc);
+        isDirty = false;
         set(doc);
       } catch (e) {
         console.error('Failed to load document:', e);
       }
     },
     save: async (doc: LegacyDocument) => {
-      // Immediate save - cancel any pending debounced save
-      if (saveTimeout) { clearTimeout(saveTimeout); saveTimeout = null; pendingDocument = null; }
+      // Immediate save (used by import, etc.)
+      if (idleSaveTimer) { clearTimeout(idleSaveTimer); idleSaveTimer = null; }
       try {
         await invoke('update_document', { document: doc });
+        isDirty = false;
         set(doc);
       } catch (e) {
         console.error('Failed to save document:', e);
@@ -269,7 +287,8 @@ function createDocumentStore() {
             }
           }
 
-          debouncedSave(updated);
+          isDirty = true;
+          scheduleIdleSave();
           return updated;
         }
         return doc;

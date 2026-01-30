@@ -108,6 +108,12 @@
     );
   }
 
+  // Save to disk when switching sections (after the old section's onDestroy flushes to store)
+  $: if (currentSection) {
+    // Use setTimeout(0) so the outgoing component's onDestroy runs first
+    setTimeout(() => document.saveToDisk(), 0);
+  }
+
   $: currentSectionLabel = currentSection.startsWith('custom-')
     ? customTopLevelSections.find(s => s.id === currentSection.replace('custom-', ''))?.name || 'Custom Section'
     : sections.find((s) => s.id === currentSection)?.label || '';
@@ -184,13 +190,23 @@
     isGuidedMode = false;
   }
 
-  // Window close handler for "Clear on Exit" feature
+  // Save to disk on window blur / visibility change (user tabbed away or switched apps)
+  function handleVisibilityOrBlur() {
+    document.saveToDisk();
+  }
+
+  // Window close handler for "Clear on Exit" feature + final save
   let unlistenClose: (() => void) | null = null;
 
   onMount(async () => {
+    window.addEventListener('blur', handleVisibilityOrBlur);
+    window.addEventListener('visibilitychange', handleVisibilityOrBlur);
+
     const appWindow = getCurrentWindow();
     unlistenClose = await appWindow.onCloseRequested(async (event) => {
       try {
+        // Flush any unsaved edits before closing
+        await document.saveToDisk();
         const clearOnExit = await invoke<boolean>('get_clear_on_exit');
         if (clearOnExit) {
           await invoke('clear_data_on_exit');
@@ -202,6 +218,8 @@
   });
 
   onDestroy(() => {
+    window.removeEventListener('blur', handleVisibilityOrBlur);
+    window.removeEventListener('visibilitychange', handleVisibilityOrBlur);
     if (unlistenClose) {
       unlistenClose();
     }
