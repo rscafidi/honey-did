@@ -95,6 +95,7 @@ struct ExportSlide {
 /// Generates encrypted HTML with question-based unlock
 pub fn generate_encrypted_html_with_questions(
     document: &LegacyDocument,
+    passphrase: &str,
     include_welcome_screen: bool,
 ) -> Result<String, ExportError> {
     let welcome = document.welcome_screen.as_ref()
@@ -141,13 +142,9 @@ pub fn generate_encrypted_html_with_questions(
     // Encrypt document key with question-derived key
     let question_key_encrypted = encrypt_key_with_passphrase(&doc_key, &question_passphrase)?;
 
-    // Optionally encrypt document key with fallback passphrase
-    let passphrase_key_encrypted = if let Some(ref passphrase) = welcome.fallback_passphrase {
-        if !passphrase.is_empty() {
-            Some(encrypt_key_with_passphrase(&doc_key, passphrase)?)
-        } else {
-            None
-        }
+    // Encrypt document key with the export passphrase (backup to questions)
+    let passphrase_key_encrypted = if !passphrase.is_empty() {
+        Some(encrypt_key_with_passphrase(&doc_key, passphrase)?)
     } else {
         None
     };
@@ -183,7 +180,7 @@ pub fn generate_encrypted_html_with_questions(
     let slides_json = serde_json::to_string(&export_slides)
         .map_err(|e| ExportError::SerializationError(e.to_string()))?;
 
-    let has_passphrase_fallback = welcome.fallback_passphrase.as_ref().map(|p| !p.is_empty()).unwrap_or(false);
+    let has_passphrase_fallback = !passphrase.is_empty();
 
     // Generate the HTML with question-based unlock
     let html = generate_question_html_template(

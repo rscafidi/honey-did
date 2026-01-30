@@ -120,12 +120,14 @@ async fn save_export_with_dialog(
 async fn save_export_with_questions(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
+    passphrase: String,
     include_welcome_screen: bool,
 ) -> Result<Option<String>, String> {
     use tauri_plugin_dialog::DialogExt;
 
+    validate_passphrase(&passphrase)?;
     let doc = state.document.lock().map_err(|e| e.to_string())?;
-    let html = export::generate_encrypted_html_with_questions(&doc, include_welcome_screen).map_err(|e: export::ExportError| e.to_string())?;
+    let html = export::generate_encrypted_html_with_questions(&doc, &passphrase, include_welcome_screen).map_err(|e: export::ExportError| e.to_string())?;
     drop(doc);
 
     let date = chrono::Local::now().format("%Y-%m-%d").to_string();

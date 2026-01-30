@@ -67,6 +67,30 @@
   // Custom top-level sections (no parent)
   $: customTopLevelSections = ($customSectionsStore || []).filter((s: CustomSection) => !s.parent);
 
+  // Detect invalid welcome screen question state (exactly 1 question)
+  $: welcomeQuestionCount = ($document?.welcome_screen?.slides?.filter(s => s.type === 'question') || []).length;
+  $: hasInvalidQuestionConfig = $document?.welcome_screen?.enabled && welcomeQuestionCount === 1;
+
+  let showQuestionWarning = false;
+  let pendingSection: Section | string | null = null;
+
+  function navigateToSection(sectionId: Section | string) {
+    if (currentSection === 'welcome' && sectionId !== 'welcome' && hasInvalidQuestionConfig) {
+      pendingSection = sectionId;
+      showQuestionWarning = true;
+      return;
+    }
+    currentSection = sectionId;
+  }
+
+  function dismissQuestionWarning(proceed: boolean) {
+    showQuestionWarning = false;
+    if (proceed && pendingSection) {
+      currentSection = pendingSection;
+    }
+    pendingSection = null;
+  }
+
   function generateId(): string {
     return Math.random().toString(36).substring(2, 9);
   }
@@ -258,7 +282,7 @@
           <button
             class="nav-item"
             class:active={currentSection === section.id}
-            on:click={() => (currentSection = section.id)}
+            on:click={() => navigateToSection(section.id)}
           >
             <span class="nav-icon">{section.icon}</span>
             <span class="nav-label">{section.label}</span>
@@ -271,7 +295,7 @@
             <button
               class="nav-item"
               class:active={currentSection === `custom-${customSection.id}`}
-              on:click={() => (currentSection = `custom-${customSection.id}`)}
+              on:click={() => navigateToSection(`custom-${customSection.id}`)}
             >
               <span class="nav-icon">📁</span>
               <span class="nav-label">{customSection.name}</span>
@@ -424,6 +448,19 @@
   bind:isOpen={showHelp}
   on:close={() => (showHelp = false)}
 />
+
+{#if showQuestionWarning}
+  <div class="warning-overlay" on:click={() => dismissQuestionWarning(false)} on:keydown={(e) => e.key === 'Escape' && dismissQuestionWarning(false)} role="presentation">
+    <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+    <div class="warning-dialog" role="dialog" aria-modal="true" on:click|stopPropagation on:keydown|stopPropagation>
+      <p class="warning-text">You have 1 question on the Welcome Screen. Question-based unlock requires at least 2 questions. Add another question or remove the existing one.</p>
+      <div class="warning-actions">
+        <button class="btn btn-secondary" on:click={() => dismissQuestionWarning(false)}>Go Back</button>
+        <button class="btn btn-primary" on:click={() => dismissQuestionWarning(true)}>Continue Anyway</button>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
@@ -685,6 +722,7 @@
 
   .footer-row {
     display: flex;
+    align-items: stretch;
     gap: 8px;
   }
 
@@ -694,7 +732,7 @@
 
   .btn-icon {
     width: 40px;
-    height: 40px;
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -797,5 +835,39 @@
 
   .license-link:hover {
     color: var(--sidebar-text);
+  }
+
+  .warning-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .warning-dialog {
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 400px;
+    box-shadow: var(--card-shadow);
+  }
+
+  .warning-text {
+    margin: 0 0 20px 0;
+    color: var(--warning-text);
+    background: var(--warning-bg);
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+
+  .warning-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
   }
 </style>

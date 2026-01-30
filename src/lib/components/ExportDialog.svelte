@@ -19,7 +19,7 @@
   $: messageSlides = $documentStore?.welcome_screen?.slides?.filter(s => s.type === 'message') || [];
   $: questionCount = questionSlides.length;
   $: hasValidQuestionConfig = $documentStore?.welcome_screen?.enabled && questionCount >= 2 && questionCount <= 5;
-  $: hasFallbackPassphrase = !!$documentStore?.welcome_screen?.fallback_passphrase;
+  $: hasInvalidQuestionConfig = $documentStore?.welcome_screen?.enabled && questionCount === 1;
 
   // Legacy welcome screen (message-only slides)
   $: legacyWelcomeAvailable = $documentStore?.welcome_screen?.enabled &&
@@ -31,7 +31,7 @@
   $: passphraseStrength = calculateStrength(passphrase);
   $: passphrasesMatch = passphrase === confirmPassphrase;
   $: canExportPassphrase = passphrase.length >= 8 && passphrasesMatch && !isExporting;
-  $: canExportQuestions = hasValidQuestionConfig && !isExporting;
+  $: canExportQuestions = hasValidQuestionConfig && canExportPassphrase;
 
   function calculateStrength(pass: string): { score: number; label: string; color: string } {
     if (!pass) return { score: 0, label: '', color: '#ddd' };
@@ -67,6 +67,7 @@
 
     try {
       const filePath = await invoke<string | null>('save_export_with_questions', {
+        passphrase,
         includeWelcomeScreen: true
       });
 
@@ -152,6 +153,10 @@
         <p class="warning empty-warning">Your document is empty. The exported file won't contain any information.</p>
       {/if}
 
+      {#if hasInvalidQuestionConfig}
+        <p class="warning empty-warning">You have 1 question on the Welcome Screen. Question-based unlock requires at least 2 questions. Add another question or remove the existing one.</p>
+      {/if}
+
       {#if hasValidQuestionConfig}
         <!-- Question-based export mode -->
         <div class="form">
@@ -172,21 +177,43 @@
               <span class="summary-label">Questions:</span>
               <span>{questionCount} question{questionCount === 1 ? '' : 's'}</span>
             </div>
-            <div class="summary-item">
-              <span class="summary-label">Fallback passphrase:</span>
-              {#if hasFallbackPassphrase}
-                <span class="status-ok">Set</span>
-              {:else}
-                <span class="status-warning">Not set</span>
-              {/if}
-            </div>
           </div>
 
-          {#if !hasFallbackPassphrase}
-            <p class="warning">
-              Without a fallback passphrase, there's no recovery if the recipient forgets the answers.
-            </p>
-          {/if}
+          <div class="field">
+            <label for="passphrase">Choose a passphrase</label>
+            <div class="passphrase-input">
+              <input
+                id="passphrase"
+                type="text"
+                bind:value={passphrase}
+                placeholder="Enter a memorable passphrase"
+              />
+              <button type="button" class="generate-btn" on:click={generatePassphrase}>
+                Generate
+              </button>
+            </div>
+            {#if passphrase}
+              <div class="strength-meter">
+                <div class="strength-bar" style="width: {passphraseStrength.score * 12.5}%; background: {passphraseStrength.color}"></div>
+              </div>
+              <span class="strength-label" style="color: {passphraseStrength.color}">{passphraseStrength.label}</span>
+            {/if}
+          </div>
+
+          <div class="field">
+            <label for="confirm-passphrase">Confirm passphrase</label>
+            <input
+              id="confirm-passphrase"
+              type="password"
+              bind:value={confirmPassphrase}
+              placeholder="Re-enter passphrase"
+            />
+            {#if confirmPassphrase && !passphrasesMatch}
+              <span class="error-text">Passphrases don't match</span>
+            {/if}
+          </div>
+
+          <p class="info-note">This passphrase will serve as a backup in case the recipient forgets the answers to the questions.</p>
 
           <label class="checkbox-field">
             <input type="checkbox" bind:checked={includePrint} />
@@ -375,16 +402,6 @@
     color: var(--text-secondary);
   }
 
-  .status-ok {
-    color: var(--accent-secondary);
-    font-weight: 500;
-  }
-
-  .status-warning {
-    color: var(--warning-text);
-    font-weight: 500;
-  }
-
   .field label {
     display: block;
     margin-bottom: 6px;
@@ -482,6 +499,15 @@
 
   .empty-warning {
     margin-bottom: 16px;
+  }
+
+  .info-note {
+    padding: 10px 12px;
+    background: var(--accent-light);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: var(--accent-secondary);
+    margin: 0;
   }
 
   .error-message {

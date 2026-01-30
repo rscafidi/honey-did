@@ -1,6 +1,5 @@
 <script lang="ts">
   import { document, debounce, type MessageSlide, type WelcomeScreen, type SlideType } from '../stores/document';
-  import { invoke } from '@tauri-apps/api/core';
 
   $: welcomeScreen = ($document?.welcome_screen || { enabled: false, slides: [], fallback_passphrase: undefined }) as WelcomeScreen;
   $: slides = welcomeScreen.slides || [];
@@ -81,25 +80,6 @@
     return text.length > 35 ? text.substring(0, 35) + '...' : text;
   }
 
-  function updateFallbackPassphrase(value: string) {
-    saveWelcomeScreen({
-      ...welcomeScreen,
-      fallback_passphrase: value || undefined,
-    });
-  }
-
-  const debouncedUpdatePassphrase = debounce((value: string) => {
-    updateFallbackPassphrase(value);
-  }, 300);
-
-  async function generatePassphrase() {
-    try {
-      const passphrase = await invoke<string>('generate_passphrase');
-      updateFallbackPassphrase(passphrase);
-    } catch (e) {
-      console.error('Failed to generate passphrase:', e);
-    }
-  }
 </script>
 
 <div class="welcome-screen-section">
@@ -231,28 +211,13 @@
         <button class="btn btn-add" on:click={() => addSlide('question')} disabled={hasMaxQuestions}>+ Add Question</button>
       </div>
 
-      <div class="question-counter" class:warning={!hasMinQuestions} class:ok={hasMinQuestions}>
-        Questions: {questionCount} of 2-5 required
-      </div>
-    </div>
-
-    <div class="fallback-section">
-      <h3>Fallback Passphrase (optional)</h3>
-      <div class="passphrase-input-row">
-        <input
-          type="text"
-          value={welcomeScreen.fallback_passphrase || ''}
-          on:input={(e) => debouncedUpdatePassphrase(e.currentTarget.value)}
-          placeholder="Enter a fallback passphrase..."
-        />
-        <button class="btn btn-secondary" on:click={generatePassphrase}>Generate</button>
-      </div>
-      {#if !welcomeScreen.fallback_passphrase}
-        <p class="warning-message">Without a passphrase, there's no recovery if the recipient forgets the answers.</p>
-      {:else}
-        <p class="success-message">Fallback passphrase set</p>
+      {#if questionCount > 0}
+        <div class="question-counter" class:warning={!hasMinQuestions} class:ok={hasMinQuestions}>
+          Questions: {questionCount} of 2-5 required
+        </div>
       {/if}
     </div>
+
   {/if}
 </div>
 
@@ -286,8 +251,7 @@
     height: 20px;
   }
 
-  .slides-section h3,
-  .fallback-section h3 {
+  .slides-section h3 {
     margin: 0 0 16px 0;
     color: var(--text-primary);
     font-size: 1rem;
@@ -528,49 +492,4 @@
     color: var(--accent-secondary);
   }
 
-  .fallback-section {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 16px;
-  }
-
-  .passphrase-input-row {
-    display: flex;
-    gap: 12px;
-  }
-
-  .passphrase-input-row input {
-    flex: 1;
-    padding: 10px 12px;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    font-family: inherit;
-    font-size: 0.95rem;
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-  }
-
-  .passphrase-input-row input:focus {
-    outline: none;
-    border-color: var(--accent-primary);
-  }
-
-  .warning-message {
-    margin: 12px 0 0 0;
-    padding: 8px 12px;
-    background: var(--warning-bg);
-    border-radius: 6px;
-    color: var(--warning-text);
-    font-size: 0.9rem;
-  }
-
-  .success-message {
-    margin: 12px 0 0 0;
-    padding: 8px 12px;
-    background: var(--accent-light);
-    border-radius: 6px;
-    color: var(--accent-secondary);
-    font-size: 0.9rem;
-  }
 </style>
