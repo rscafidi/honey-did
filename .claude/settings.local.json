@@ -63,7 +63,9 @@
       "Skill(superpowers:brainstorming)",
       "Bash(npx vite build)",
       "WebSearch",
-      "Bash(npm list:*)"
+      "Bash(npm list:*)",
+      "WebFetch(domain:crates.io)",
+      "WebFetch(domain:github.com)"
     ]
   }
 }

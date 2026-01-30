@@ -155,14 +155,34 @@
     : sections.find((s) => s.id === currentSection)?.label || '';
 
   onMount(async () => {
-    // Check if app has a password set
-    try {
-      hasPassword = await invoke<boolean>('has_app_password');
-      if (hasPassword) {
-        isLocked = true;
+    // Detect Android and set safe area CSS variable.
+    // Android WebView does not populate env(safe-area-inset-bottom) for the
+    // system navigation bar, so we detect it and apply a fixed inset.
+    if (/android/i.test(navigator.userAgent)) {
+      window.document.documentElement.style.setProperty('--android-nav-bar-height', '48px');
+    }
+
+    // Check if app has a password set.
+    // On Android, the Tauri backend may not be ready after activity recreation,
+    // so we retry with delays to avoid getting stuck on the loading screen.
+    for (let attempt = 0; attempt < 10; attempt++) {
+      try {
+        const passwordCheck = invoke<boolean>('has_app_password');
+        const timeout = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('timeout')), 3000)
+        );
+        hasPassword = await Promise.race([passwordCheck, timeout]);
+        if (hasPassword) {
+          isLocked = true;
+        }
+        break;
+      } catch (e) {
+        if (attempt < 9) {
+          await new Promise(r => setTimeout(r, 500));
+        } else {
+          console.error('Failed to check password status after retries:', e);
+        }
       }
-    } catch (e) {
-      console.error('Failed to check password status:', e);
     }
 
     isLoading = false;
@@ -493,6 +513,10 @@
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
   :global(:root) {
+    /* Bottom safe area: env() works on iOS, --android-nav-bar-height is set via JS on Android */
+    --android-nav-bar-height: 0px;
+    --safe-area-bottom: max(env(safe-area-inset-bottom), var(--android-nav-bar-height));
+
     /* Light theme (default) */
     --bg-primary: #F0EFEB;
     --bg-secondary: #FFFFFF;
@@ -741,6 +765,7 @@
 
   .sidebar-footer {
     padding: 15px;
+    padding-bottom: calc(15px + var(--safe-area-bottom, 0px));
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     flex-direction: column;
@@ -908,8 +933,8 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 12px 16px;
-      padding-top: 48px;
+      padding: 16px 16px;
+      padding-top: calc(20px + env(safe-area-inset-top));
       background: var(--sidebar-bg);
       color: var(--sidebar-text);
     }
@@ -918,18 +943,18 @@
       background: none;
       border: none;
       cursor: pointer;
-      padding: 4px;
+      padding: 12px;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 5px;
     }
 
     .hamburger-line {
       display: block;
-      width: 22px;
-      height: 2px;
+      width: 26px;
+      height: 3px;
       background: var(--sidebar-text);
-      border-radius: 1px;
+      border-radius: 2px;
     }
 
     .mobile-title {
@@ -947,7 +972,7 @@
       top: 0;
       bottom: 0;
       z-index: 200;
-      padding-top: 36px;
+      padding-top: calc(12px + env(safe-area-inset-top));
       transform: translateX(-100%);
       transition: transform 0.25s ease;
     }
@@ -973,6 +998,7 @@
 
     .content-body {
       padding: 16px;
+      padding-bottom: calc(16px + var(--safe-area-bottom, 0px));
     }
   }
 </style>

@@ -141,6 +141,7 @@
     flex-direction: column;
     height: 100vh;
     background: var(--bg-primary);
+    padding-top: env(safe-area-inset-top);
   }
 
   .wizard-header {
@@ -170,6 +171,7 @@
     justify-content: center;
     align-items: center;
     padding: 16px 24px;
+    padding-bottom: calc(16px + var(--safe-area-bottom, 0px));
     background: var(--bg-secondary);
     border-top: 1px solid var(--border-color);
   }

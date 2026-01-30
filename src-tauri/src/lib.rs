@@ -80,22 +80,47 @@ fn export_html_with_questions(state: State<AppState>, passphrase: String, includ
 
 #[tauri::command]
 fn save_html_to_downloads(html: String, file_name: String) -> Result<String, String> {
-    // Try common Android download paths, then fall back to app-internal storage
-    let candidates = vec![
-        std::path::PathBuf::from("/storage/emulated/0/Download"),
-        std::path::PathBuf::from("/sdcard/Download"),
-    ];
-    let dir = candidates.into_iter()
-        .find(|p| p.exists())
-        .or_else(|| {
-            // Fall back: use HOME or app data dir
-            std::env::var("HOME").ok().map(std::path::PathBuf::from)
-        })
-        .ok_or_else(|| "Cannot find a writable directory".to_string())?;
+    let dir = get_download_dir()?;
+
+    std::fs::create_dir_all(&dir)
+        .map_err(|e| format!("Failed to create directory: {}", e))?;
 
     let path = dir.join(&file_name);
     std::fs::write(&path, html).map_err(|e| format!("Failed to write file: {}", e))?;
     Ok(path.to_string_lossy().to_string())
+}
+
+#[cfg(target_os = "android")]
+fn get_download_dir() -> Result<std::path::PathBuf, String> {
+    // On Android, resolve the external storage download directory dynamically.
+    // The EXTERNAL_STORAGE env var provides the device-specific external storage root.
+    if let Ok(ext) = std::env::var("EXTERNAL_STORAGE") {
+        let download = std::path::PathBuf::from(ext).join("Download");
+        if download.exists() {
+            return Ok(download);
+        }
+    }
+
+    // Try common external storage mount points
+    for base in &["/storage/emulated/0", "/sdcard"] {
+        let download = std::path::PathBuf::from(base).join("Download");
+        if download.exists() {
+            return Ok(download);
+        }
+    }
+
+    // Fall back to app-private storage (always writable, visible in app-specific file manager)
+    storage::get_data_dir()
+        .map(|d| d.join("exports"))
+        .map_err(|e| format!("Cannot find a writable directory: {}", e))
+}
+
+#[cfg(not(target_os = "android"))]
+fn get_download_dir() -> Result<std::path::PathBuf, String> {
+    directories::UserDirs::new()
+        .and_then(|u| u.download_dir().map(|d| d.to_path_buf()))
+        .or_else(|| std::env::var("HOME").ok().map(std::path::PathBuf::from))
+        .ok_or_else(|| "Cannot find a writable directory".to_string())
 }
 
 #[tauri::command]
