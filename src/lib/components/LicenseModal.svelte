@@ -16,7 +16,7 @@
     <div class="dialog" role="dialog" aria-modal="true" on:click|stopPropagation on:keydown|stopPropagation>
       <h2>MIT License</h2>
       <div class="license-text">
-        <p>Copyright (c) 2025 scafidi.dev</p>
+        <p>Copyright (c) 2026 scafidi.dev</p>
         <p>
           Permission is hereby granted, free of charge, to any person obtaining a copy
           of this software and associated documentation files (the "Software"), to deal
