@@ -16,11 +16,15 @@
     const fileName = `honey-did-${date}.html`;
 
     if (isMobile()) {
-      // On Android, write directly to Downloads with proper .html extension
-      // This avoids content URI issues where the file loses its extension/MIME type
+      // On Android: write to app cache, then open the share sheet so the
+      // user can save to Downloads, email, Drive, etc.
       const savedPath = await invoke<string>('save_html_to_downloads', {
         html,
         fileName,
+      });
+      await invoke('share_file', {
+        filePath: savedPath,
+        mimeType: 'text/html',
       });
       return savedPath;
     } else {
@@ -126,7 +130,7 @@
         document.body.removeChild(printFrame);
       }
 
-      successMessage = isMobile() ? `Saved to ${filePath}` : 'File exported successfully!';
+      successMessage = isMobile() ? 'File shared successfully!' : 'File exported successfully!';
       dispatch('exported', { filePath });
     } catch (e) {
       error = `Export failed: ${e}`;
@@ -169,7 +173,7 @@
         document.body.removeChild(printFrame);
       }
 
-      successMessage = isMobile() ? `Saved to ${filePath}` : 'File exported successfully!';
+      successMessage = isMobile() ? 'File shared successfully!' : 'File exported successfully!';
       dispatch('exported', { filePath });
     } catch (e) {
       error = `Export failed: ${e}`;

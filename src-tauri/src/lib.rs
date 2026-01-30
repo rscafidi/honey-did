@@ -7,6 +7,9 @@ use models::LegacyDocument;
 use std::sync::Mutex;
 use tauri::{Manager, State};
 
+#[cfg(target_os = "android")]
+use tauri::plugin::PluginHandle;
+
 struct AppState {
     document: Mutex<LegacyDocument>,
 }
@@ -92,24 +95,14 @@ fn save_html_to_downloads(html: String, file_name: String) -> Result<String, Str
 
 #[cfg(target_os = "android")]
 fn get_download_dir() -> Result<std::path::PathBuf, String> {
-    // On Android, resolve the external storage download directory dynamically.
-    // The EXTERNAL_STORAGE env var provides the device-specific external storage root.
-    if let Ok(ext) = std::env::var("EXTERNAL_STORAGE") {
-        let download = std::path::PathBuf::from(ext).join("Download");
-        if download.exists() {
-            return Ok(download);
-        }
+    // On Android, write to the app's cache directory. The file is temporary —
+    // the share intent (ACTION_SEND) is what delivers it to the user's chosen destination.
+    if let Ok(tmpdir) = std::env::var("TMPDIR") {
+        let export_dir = std::path::PathBuf::from(tmpdir).join("exports");
+        return Ok(export_dir);
     }
 
-    // Try common external storage mount points
-    for base in &["/storage/emulated/0", "/sdcard"] {
-        let download = std::path::PathBuf::from(base).join("Download");
-        if download.exists() {
-            return Ok(download);
-        }
-    }
-
-    // Fall back to app-private storage (always writable, visible in app-specific file manager)
+    // Fall back to app-private storage
     storage::get_data_dir()
         .map(|d| d.join("exports"))
         .map_err(|e| format!("Cannot find a writable directory: {}", e))
@@ -381,9 +374,44 @@ fn open_external_url(app: tauri::AppHandle, url: String) -> Result<(), String> {
         .map_err(|e| format!("Failed to open URL: {}", e))
 }
 
+#[cfg(target_os = "android")]
+fn init_share_plugin<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
+    tauri::plugin::Builder::<R>::new("share")
+        .setup(|app, _api| {
+            let handle = _api.register_android_plugin("com.honeydid.app", "SharePlugin")
+                .map_err(|e| format!("Failed to register SharePlugin: {}", e))?;
+            app.manage(handle);
+            Ok(())
+        })
+        .build()
+}
+
+#[cfg(not(target_os = "android"))]
+fn init_share_plugin<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
+    tauri::plugin::Builder::<R>::new("share").build()
+}
+
+#[tauri::command]
+#[cfg(target_os = "android")]
+fn share_file(app: tauri::AppHandle, file_path: String, mime_type: String) -> Result<(), String> {
+    let handle: State<PluginHandle<tauri::Wry>> = app.state();
+    let mut args = serde_json::Map::new();
+    args.insert("filePath".into(), serde_json::Value::String(file_path));
+    args.insert("mimeType".into(), serde_json::Value::String(mime_type));
+    handle.run_mobile_plugin::<()>("shareFile", serde_json::Value::Object(args))
+        .map_err(|e| format!("Share failed: {}", e))
+}
+
+#[tauri::command]
+#[cfg(not(target_os = "android"))]
+fn share_file(_file_path: String, _mime_type: String) -> Result<(), String> {
+    Err("Share is only available on Android".to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(init_share_plugin())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
@@ -412,6 +440,7 @@ pub fn run() {
             export_html,
             export_html_with_questions,
             save_html_to_downloads,
+            share_file,
             save_export,
             save_export_with_dialog,
             save_export_with_questions,

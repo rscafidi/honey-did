@@ -65,7 +65,8 @@
       "WebSearch",
       "Bash(npm list:*)",
       "WebFetch(domain:crates.io)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:docs.rs)"
     ]
   }
 }
