@@ -34,6 +34,7 @@
   let showExportDialog = false;
   let showImportDialog = false;
   let isGuidedMode = false;
+  let showIntro = false;
   let hasCheckedEmpty = false;
 
   // Mobile sidebar state
@@ -189,13 +190,13 @@
 
     if (!isLocked) {
       await document.load();
-      // Auto-enter guided mode for empty documents
+      // Show intro screen for empty documents
       if (!hasCheckedEmpty) {
         hasCheckedEmpty = true;
         setTimeout(() => {
           const doc = $document;
           if (isDocumentEmpty(doc)) {
-            isGuidedMode = true;
+            showIntro = true;
           }
         }, 100);
       }
@@ -212,13 +213,13 @@
   async function handleUnlock() {
     isLocked = false;
     await document.load();
-    // Check for empty document after unlock
+    // Show intro screen for empty document after unlock
     if (!hasCheckedEmpty) {
       hasCheckedEmpty = true;
       setTimeout(() => {
         const doc = $document;
         if (isDocumentEmpty(doc)) {
-          isGuidedMode = true;
+          showIntro = true;
         }
       }, 100);
     }
@@ -228,9 +229,18 @@
     // Reset app state after data is cleared
     hasPassword = false;
     isLocked = false;
-    isGuidedMode = true;
+    showIntro = true;
     hasCheckedEmpty = true;
     document.load();
+  }
+
+  function startGuidedSetup() {
+    showIntro = false;
+    isGuidedMode = true;
+  }
+
+  function skipIntro() {
+    showIntro = false;
   }
 
   function handlePasswordCreated() {
@@ -288,6 +298,39 @@
   <div class="loading">Loading...</div>
 {:else if isLocked}
   <LockScreen on:unlock={handleUnlock} on:cleared={handleDataCleared} />
+{:else if showIntro}
+  <div class="intro-screen">
+    <div class="intro-card">
+      <svg class="intro-logo" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="8" y="6" width="32" height="36" rx="2" fill="#F0EFEB" stroke="#DDE5B6" stroke-width="1.5"/>
+        <ellipse cx="24" cy="6" rx="16" ry="3" fill="#DDE5B6"/>
+        <ellipse cx="24" cy="6" rx="14" ry="2" fill="#F0EFEB"/>
+        <ellipse cx="24" cy="42" rx="16" ry="3" fill="#DDE5B6"/>
+        <ellipse cx="24" cy="42" rx="14" ry="2" fill="#F0EFEB"/>
+        <text x="24" y="28" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="16" font-weight="600" fill="#283618">HD</text>
+        <line x1="14" y1="34" x2="34" y2="34" stroke="#B7B7A4" stroke-width="1" stroke-linecap="round"/>
+        <line x1="16" y1="37" x2="32" y2="37" stroke="#B7B7A4" stroke-width="0.75" stroke-linecap="round"/>
+      </svg>
+      <h1 class="intro-heading">Welcome to Honey Did</h1>
+      <p class="intro-description">
+        Honey Did helps you organize all the important household information your
+        family needs in one secure place &mdash; from finances and insurance to
+        contacts and medical details.
+      </p>
+      <p class="intro-description">
+        You can start with a guided setup that walks you through each section,
+        or jump straight into the app and fill things in at your own pace.
+      </p>
+      <div class="intro-actions">
+        <button class="btn-intro btn-intro-primary" on:click={startGuidedSetup}>
+          Start Guided Setup
+        </button>
+        <button class="btn-intro btn-intro-secondary" on:click={skipIntro}>
+          Skip to App
+        </button>
+      </div>
+    </div>
+  </div>
 {:else if isGuidedMode}
   <GuidedWizard on:exit={exitGuidedMode} />
 {:else}
@@ -999,6 +1042,97 @@
     .content-body {
       padding: 16px;
       padding-bottom: calc(16px + var(--safe-area-bottom, 0px));
+    }
+  }
+
+  /* Intro screen */
+  .intro-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: var(--bg-primary);
+    padding: 20px;
+    box-sizing: border-box;
+  }
+
+  .intro-card {
+    max-width: 480px;
+    width: 100%;
+    background: var(--bg-secondary);
+    border-radius: 16px;
+    padding: 48px 40px;
+    box-shadow: var(--card-shadow);
+    text-align: center;
+  }
+
+  .intro-logo {
+    width: 72px;
+    height: 72px;
+    margin-bottom: 24px;
+  }
+
+  .intro-heading {
+    margin: 0 0 16px;
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .intro-description {
+    margin: 0 0 12px;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+  }
+
+  .intro-description:last-of-type {
+    margin-bottom: 32px;
+  }
+
+  .intro-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .btn-intro {
+    padding: 14px 24px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: all 0.15s ease;
+  }
+
+  .btn-intro-primary {
+    background: var(--accent-primary);
+    color: var(--bg-primary);
+  }
+
+  .btn-intro-primary:hover {
+    background: var(--accent-secondary);
+  }
+
+  .btn-intro-secondary {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+  }
+
+  .btn-intro-secondary:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+  }
+
+  @media (max-width: 768px) {
+    .intro-card {
+      padding: 32px 24px;
+    }
+
+    .intro-heading {
+      font-size: 1.5rem;
     }
   }
 </style>
