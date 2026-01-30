@@ -313,9 +313,9 @@
       </svg>
       <h1 class="intro-heading">Welcome to Honey Did</h1>
       <p class="intro-description">
-        Honey Did helps you organize all the important household information your
-        family needs in one secure place &mdash; from finances and insurance to
-        contacts and medical details.
+        Are you the DOER in your family?  What would your family do if you disappeared tomorrow?  Welcome to Honey Did,
+        a companion application to help you build a list of important information your loved ones may need in the event of your permanent absence.
+        When you're done collecting information, export it into a highly portable and secure format that key individuals can open when needed.
       </p>
       <p class="intro-description">
         You can start with a guided setup that walks you through each section,
