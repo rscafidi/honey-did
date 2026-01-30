@@ -88,4 +88,10 @@
 <style>
   .section { max-width: 800px; }
   .intro { color: var(--text-secondary); margin-bottom: 20px; }
+
+  @media (max-width: 768px) {
+    .section {
+      max-width: 100%;
+    }
+  }
 </style>

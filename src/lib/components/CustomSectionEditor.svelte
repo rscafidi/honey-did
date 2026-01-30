@@ -321,4 +321,17 @@
   .btn-setup:hover {
     background: var(--accent-hover);
   }
+
+  @media (max-width: 768px) {
+    .section-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .section-actions {
+      width: 100%;
+      justify-content: flex-end;
+    }
+  }
 </style>

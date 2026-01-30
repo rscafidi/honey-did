@@ -196,4 +196,10 @@
     color: var(--text-primary);
     font-size: 1.1rem;
   }
+
+  @media (max-width: 768px) {
+    .section {
+      max-width: 100%;
+    }
+  }
 </style>

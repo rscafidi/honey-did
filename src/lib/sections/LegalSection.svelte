@@ -125,4 +125,10 @@
   .subsection { margin-bottom: 32px; }
   h3 { margin: 0 0 16px 0; color: var(--text-primary); font-size: 1.1rem; }
   .attorney-card { background: var(--bg-tertiary); padding: 16px; border-radius: 8px; }
+
+  @media (max-width: 768px) {
+    .section {
+      max-width: 100%;
+    }
+  }
 </style>

@@ -4,7 +4,9 @@ use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
+#[cfg(not(target_os = "android"))]
 use directories::ProjectDirs;
+#[cfg(not(target_os = "android"))]
 use keyring::Entry;
 use std::fs;
 use std::path::PathBuf;
@@ -60,13 +62,44 @@ impl From<EncryptionError> for StorageError {
 }
 
 /// Gets the application data directory
+#[cfg(not(target_os = "android"))]
 pub fn get_data_dir() -> Result<PathBuf, StorageError> {
     ProjectDirs::from(APP_QUALIFIER, APP_ORGANIZATION, APP_NAME)
         .map(|dirs| dirs.data_dir().to_path_buf())
         .ok_or(StorageError::NoDataDirectory)
 }
 
+#[cfg(target_os = "android")]
+pub fn get_data_dir() -> Result<PathBuf, StorageError> {
+    // On Android, use the app-private data directory.
+    // Try multiple approaches in order of reliability.
+    if let Ok(home) = std::env::var("HOME") {
+        return Ok(PathBuf::from(home));
+    }
+    // Fallback: use the standard Android app data path
+    let path = PathBuf::from("/data/data/com.honeydid.app/files");
+    if path.exists() || std::fs::create_dir_all(&path).is_ok() {
+        return Ok(path);
+    }
+    if let Ok(tmpdir) = std::env::var("TMPDIR") {
+        let data = PathBuf::from(tmpdir).join("data");
+        let _ = std::fs::create_dir_all(&data);
+        return Ok(data);
+    }
+    Err(StorageError::NoDataDirectory)
+}
+
+/// Generates a cryptographically secure random key (128 hex characters)
+fn generate_random_key() -> String {
+    use rand::RngCore;
+    use rand::rngs::OsRng;
+    let mut key_bytes = [0u8; 64];
+    OsRng.fill_bytes(&mut key_bytes);
+    key_bytes.iter().map(|b| format!("{:02x}", b)).collect()
+}
+
 /// Gets or creates a local encryption key stored in the OS keyring
+#[cfg(not(target_os = "android"))]
 pub fn get_or_create_local_key() -> Result<String, StorageError> {
     let entry = Entry::new(KEYRING_SERVICE, KEYRING_USER)
         .map_err(|e| StorageError::KeyringError(e.to_string()))?;
@@ -74,24 +107,35 @@ pub fn get_or_create_local_key() -> Result<String, StorageError> {
     match entry.get_password() {
         Ok(key) => Ok(key),
         Err(keyring::Error::NoEntry) => {
-            // Generate a new random key using cryptographically secure RNG
-            use rand::RngCore;
-            use rand::rngs::OsRng;
-
-            // Generate 64 random bytes and encode as hex for a 128-character key
-            let mut key_bytes = [0u8; 64];
-            OsRng.fill_bytes(&mut key_bytes);
-            let key: String = key_bytes.iter()
-                .map(|b| format!("{:02x}", b))
-                .collect();
-
+            let key = generate_random_key();
             entry.set_password(&key)
                 .map_err(|e| StorageError::KeyringError(e.to_string()))?;
-
             Ok(key)
         }
         Err(e) => Err(StorageError::KeyringError(e.to_string())),
     }
+}
+
+/// Gets or creates a local encryption key stored in the app-private data directory
+#[cfg(target_os = "android")]
+pub fn get_or_create_local_key() -> Result<String, StorageError> {
+    let data_dir = get_data_dir()?;
+    let key_file = data_dir.join(".local_key");
+
+    if key_file.exists() {
+        let key = fs::read_to_string(&key_file)
+            .map_err(|e| StorageError::IoError(e.to_string()))?;
+        if key.len() == 128 {
+            return Ok(key);
+        }
+    }
+
+    let key = generate_random_key();
+    fs::create_dir_all(&data_dir)
+        .map_err(|e| StorageError::IoError(e.to_string()))?;
+    fs::write(&key_file, &key)
+        .map_err(|e| StorageError::IoError(e.to_string()))?;
+    Ok(key)
 }
 
 /// Saves the document to local encrypted storage

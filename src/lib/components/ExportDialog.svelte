@@ -1,7 +1,39 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
+  import { save } from '@tauri-apps/plugin-dialog';
+  import { writeTextFile } from '@tauri-apps/plugin-fs';
   import { document as documentStore, isDocumentEmpty } from '../stores/document';
+
+  function isMobile(): boolean {
+    // @ts-ignore
+    return window.__TAURI_INTERNALS__?.metadata?.currentWebview?.label != null &&
+           /android|iphone|ipad/i.test(navigator.userAgent);
+  }
+
+  async function saveHtmlFile(html: string): Promise<string | null> {
+    const date = new Date().toISOString().split('T')[0];
+    const fileName = `honey-did-${date}.html`;
+
+    if (isMobile()) {
+      // On Android, write directly to Downloads with proper .html extension
+      // This avoids content URI issues where the file loses its extension/MIME type
+      const savedPath = await invoke<string>('save_html_to_downloads', {
+        html,
+        fileName,
+      });
+      return savedPath;
+    } else {
+      // Desktop: use native dialog + writeTextFile
+      const filePath = await save({
+        defaultPath: fileName,
+        filters: [{ name: 'HTML Files', extensions: ['html', 'htm'] }],
+      });
+      if (!filePath) return null;
+      await writeTextFile(filePath, html);
+      return filePath;
+    }
+  }
 
   export let isOpen = false;
 
@@ -13,6 +45,7 @@
   let includeWelcomeScreen = true;
   let isExporting = false;
   let error = '';
+  let successMessage = '';
 
   // Question-based unlock detection
   $: questionSlides = $documentStore?.welcome_screen?.slides?.filter(s => s.type === 'question') || [];
@@ -63,15 +96,21 @@
     if (!canExportQuestions) return;
 
     error = '';
+    successMessage = '';
     isExporting = true;
 
     try {
-      const filePath = await invoke<string | null>('save_export_with_questions', {
+      const html = await invoke<string>('export_html_with_questions', {
         passphrase,
         includeWelcomeScreen: true
       });
 
-      if (filePath === null) {
+      if (!html || html.length === 0) {
+        throw new Error('Generated HTML is empty');
+      }
+
+      const filePath = await saveHtmlFile(html);
+      if (!filePath) {
         isExporting = false;
         return;
       }
@@ -87,8 +126,8 @@
         document.body.removeChild(printFrame);
       }
 
+      successMessage = isMobile() ? `Saved to ${filePath}` : 'File exported successfully!';
       dispatch('exported', { filePath });
-      close();
     } catch (e) {
       error = `Export failed: ${e}`;
     } finally {
@@ -100,15 +139,21 @@
     if (!canExportPassphrase) return;
 
     error = '';
+    successMessage = '';
     isExporting = true;
 
     try {
-      const filePath = await invoke<string | null>('save_export_with_dialog', {
+      const html = await invoke<string>('export_html', {
         passphrase,
         includeWelcomeScreen: !!(legacyWelcomeAvailable && includeWelcomeScreen)
       });
 
-      if (filePath === null) {
+      if (!html || html.length === 0) {
+        throw new Error('Generated HTML is empty');
+      }
+
+      const filePath = await saveHtmlFile(html);
+      if (!filePath) {
         isExporting = false;
         return;
       }
@@ -124,8 +169,8 @@
         document.body.removeChild(printFrame);
       }
 
+      successMessage = isMobile() ? `Saved to ${filePath}` : 'File exported successfully!';
       dispatch('exported', { filePath });
-      close();
     } catch (e) {
       error = `Export failed: ${e}`;
     } finally {
@@ -139,6 +184,7 @@
     includePrint = false;
     includeWelcomeScreen = true;
     error = '';
+    successMessage = '';
     dispatch('close');
   }
 </script>
@@ -148,6 +194,15 @@
     <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
     <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="export-dialog-title" on:click|stopPropagation on:keydown|stopPropagation>
       <h2 id="export-dialog-title">Create Your Secure File</h2>
+
+      {#if successMessage}
+        <div class="success-view">
+          <p class="success-message">{successMessage}</p>
+          <div class="actions">
+            <button type="button" class="btn-primary" on:click={close}>Done</button>
+          </div>
+        </div>
+      {:else}
 
       {#if isEmpty}
         <p class="warning empty-warning">Your document is empty. The exported file won't contain any information.</p>
@@ -314,6 +369,8 @@
             {isExporting ? 'Exporting...' : 'Export File'}
           </button>
         </div>
+      {/if}
+
       {/if}
     </div>
   </div>
@@ -518,6 +575,23 @@
     margin: 0;
   }
 
+  .success-view {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .success-message {
+    color: var(--accent-secondary);
+    background: var(--accent-light);
+    padding: 16px;
+    border-radius: 8px;
+    margin: 0;
+    font-weight: 500;
+    text-align: center;
+    font-size: 1.05rem;
+  }
+
   .actions {
     display: flex;
     justify-content: flex-end;
@@ -556,5 +630,13 @@
 
   .btn-secondary:hover {
     background: var(--border-color);
+  }
+
+  @media (max-width: 768px) {
+    .dialog {
+      max-width: calc(100vw - 32px);
+      max-height: calc(100vh - 32px);
+      overflow-y: auto;
+    }
   }
 </style>

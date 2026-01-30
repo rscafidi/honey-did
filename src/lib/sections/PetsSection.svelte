@@ -158,4 +158,10 @@
   .remove-btn:hover { color: var(--error-color); }
   .add-small { background: none; border: none; color: var(--accent-primary); cursor: pointer; font-size: 0.9rem; padding: 4px 0; }
   .add-small:hover { text-decoration: underline; }
+
+  @media (max-width: 768px) {
+    .section {
+      max-width: 100%;
+    }
+  }
 </style>

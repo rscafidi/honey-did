@@ -323,4 +323,17 @@
   .btn-primary:hover {
     opacity: 0.9;
   }
+
+  @media (max-width: 768px) {
+    .form-actions {
+      flex-direction: column;
+    }
+
+    .form-actions .btn-primary,
+    .form-actions .btn-secondary,
+    .form-actions .btn-danger {
+      width: 100%;
+      text-align: center;
+    }
+  }
 </style>

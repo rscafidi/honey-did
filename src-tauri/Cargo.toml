@@ -7,6 +7,10 @@ license = "MIT"
 repository = ""
 edition = "2021"
 
+[lib]
+name = "honey_did_lib"
+crate-type = ["staticlib", "cdylib", "lib"]
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
@@ -20,10 +24,13 @@ base64 = "0.21"
 rand = "0.8"
 chrono = "0.4"
 regex = "1"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-opener = "2"
+
+[target.'cfg(not(target_os = "android"))'.dependencies]
 keyring = "2"
 directories = "5"
-tauri-plugin-dialog = "2"
-tauri-plugin-opener = "2"
 
 [profile.release]
 panic = "abort"

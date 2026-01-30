@@ -268,4 +268,11 @@
     color: var(--error-color);
     text-decoration: underline;
   }
+
+  @media (max-width: 768px) {
+    .lock-container {
+      max-width: calc(100vw - 32px);
+      padding: 24px;
+    }
+  }
 </style>

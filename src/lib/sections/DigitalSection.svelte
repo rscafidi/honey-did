@@ -154,4 +154,10 @@
   h3 { margin: 0 0 16px 0; color: var(--text-primary); font-size: 1.1rem; }
   .hint { color: var(--accent-primary); font-size: 0.9rem; margin-bottom: 16px; }
   .pw-card { background: var(--bg-secondary); padding: 16px; border-radius: 8px; }
+
+  @media (max-width: 768px) {
+    .section {
+      max-width: 100%;
+    }
+  }
 </style>

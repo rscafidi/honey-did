@@ -354,14 +354,35 @@ const SHARED_CSS: &str = r##"
         .match-badge { font-size: 0.65rem; font-weight: 500; color: #606C38; background: #D4D4D4; padding: 2px 6px; border-radius: 4px; margin-left: 4px; vertical-align: middle; text-transform: lowercase; }
         .highlight { background: #DDE5B6; padding: 1px 2px; border-radius: 2px; }
         .highlight.current { background: #ADC178; outline: 2px solid #283618; }
-        .menu-toggle { display: none; position: fixed; top: 12px; left: 12px; z-index: 200; background: #283618; color: #F0EFEB; border: none; border-radius: 8px; padding: 10px 14px; cursor: pointer; font-weight: 500; font-size: 0.9rem; box-shadow: 0 2px 8px rgba(40,54,24,0.2); }
+        .mobile-toolbar { display: none; position: sticky; top: 0; left: 0; right: 0; z-index: 200; background: #283618; padding: 8px 12px; box-shadow: 0 2px 8px rgba(40,54,24,0.3); }
+        .mobile-toolbar-default { display: flex; align-items: center; justify-content: space-between; }
+        .mobile-toolbar.search-mode .mobile-toolbar-default { display: none; }
+        .mobile-toolbar-btn { background: none; border: none; color: #F0EFEB; cursor: pointer; font-weight: 500; font-size: 0.9rem; padding: 6px 10px; border-radius: 6px; display: flex; align-items: center; gap: 6px; }
+        .mobile-toolbar-btn:hover { background: rgba(240,239,235,0.1); }
+        .mobile-search-inline { display: none; align-items: center; gap: 6px; }
+        .mobile-toolbar.search-mode .mobile-search-inline { display: flex; }
+        .mobile-search-inline .search-input { flex: 1; padding: 7px 12px; border: none; border-radius: 6px; font-size: 0.9rem; background: #F0EFEB; min-width: 0; }
+        .mobile-search-inline .search-input:focus { outline: none; background: white; }
+        .mobile-search-inline .search-nav-btn { padding: 5px 8px; border: none; background: #606C38; color: #F0EFEB; border-radius: 6px; cursor: pointer; font-size: 0.8rem; flex-shrink: 0; }
+        .mobile-search-inline .search-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .mobile-search-inline .search-counter { color: #B7B7A4; font-size: 0.75rem; white-space: nowrap; flex-shrink: 0; }
+        .mobile-search-inline .search-close-btn { background: none; border: none; color: #F0EFEB; font-size: 1.1rem; cursor: pointer; padding: 2px 6px; flex-shrink: 0; }
+        .mobile-search-filters-bar { display: none; position: sticky; top: 42px; left: 0; right: 0; z-index: 199; background: #283618; padding: 4px 12px 8px; }
+        .mobile-search-filters-bar.visible { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+        .mobile-search-filters-bar .search-filter { padding: 3px 7px; border: 1px solid #606C38; background: transparent; color: #B7B7A4; border-radius: 6px; font-size: 0.7rem; font-weight: 500; cursor: pointer; user-select: none; }
+        .mobile-search-filters-bar .search-filter.active { background: #606C38; color: #F0EFEB; border-color: #606C38; }
+        .mobile-search-filters-bar .search-filter.disabled { opacity: 0.4; cursor: not-allowed; }
+        .menu-toggle { display: none; }
         @media (max-width: 768px) {
-            .menu-toggle { display: block; }
-            .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; }
+            .mobile-toolbar { display: block; }
+            .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; position: fixed; top: 0; height: 100vh; z-index: 300; }
             .sidebar.open { transform: translateX(0); box-shadow: 4px 0 20px rgba(40,54,24,0.15); }
-            .main-content { margin-left: 0; padding: 70px 16px 20px 16px; }
+            .sidebar .sidebar-search, .sidebar .search-controls { display: none; }
+            .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 250; }
+            .sidebar-overlay.visible { display: block; }
+            .main-content { margin-left: 0; padding: 16px; }
         }
-        @media print { .sidebar, .menu-toggle { display: none; } .main-content { margin-left: 0; } .section { break-inside: avoid; box-shadow: none; border: 1px solid #D4D4D4; } }
+        @media print { .sidebar, .menu-toggle, .mobile-toolbar, .mobile-search-filters-bar { display: none !important; } .main-content { margin-left: 0; padding-top: 20px !important; } .section { break-inside: avoid; box-shadow: none; border: 1px solid #D4D4D4; } }
 "##;
 
 /// Shared JavaScript utility functions
@@ -428,13 +449,66 @@ const SHARED_JS_UTILS: &str = r##"
         }
 
         function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('open');
+            var sidebar = document.getElementById('sidebar');
+            var overlay = document.getElementById('sidebarOverlay');
+            var isOpen = sidebar.classList.contains('open');
+            // Close search if opening sidebar
+            if (!isOpen) {
+                closeMobileSearchQuiet();
+            }
+            sidebar.classList.toggle('open');
+            if (overlay) overlay.classList.toggle('visible', sidebar.classList.contains('open'));
+            // Update menu button text
+            var btn = document.getElementById('toolbarMenuBtn');
+            if (btn) {
+                btn.innerHTML = sidebar.classList.contains('open') ? '&#10005; Close' : '&#9776; Menu';
+            }
         }
 
         function closeSidebarOnMobile() {
             if (window.innerWidth <= 768) {
                 document.getElementById('sidebar').classList.remove('open');
+                var overlay = document.getElementById('sidebarOverlay');
+                if (overlay) overlay.classList.remove('visible');
+                var btn = document.getElementById('toolbarMenuBtn');
+                if (btn) btn.innerHTML = '&#9776; Menu';
             }
+        }
+
+        function toggleMobileSearch() {
+            var toolbar = document.getElementById('mobileToolbar');
+            if (toolbar && toolbar.classList.contains('search-mode')) {
+                closeMobileSearch();
+            } else {
+                // Close sidebar first
+                document.getElementById('sidebar').classList.remove('open');
+                var overlay = document.getElementById('sidebarOverlay');
+                if (overlay) overlay.classList.remove('visible');
+                var btn = document.getElementById('toolbarMenuBtn');
+                if (btn) btn.innerHTML = '&#9776; Menu';
+                // Open search inline in toolbar
+                if (toolbar) toolbar.classList.add('search-mode');
+                var filters = document.getElementById('mobileFiltersBar');
+                if (filters) filters.classList.add('visible');
+                window.scrollTo(0, 0);
+                var input = document.getElementById('mobileSearchInput');
+                if (input) input.focus();
+            }
+        }
+
+        function closeMobileSearch() {
+            var toolbar = document.getElementById('mobileToolbar');
+            if (toolbar) toolbar.classList.remove('search-mode');
+            var filters = document.getElementById('mobileFiltersBar');
+            if (filters) filters.classList.remove('visible');
+            clearSearch();
+        }
+
+        function closeMobileSearchQuiet() {
+            var toolbar = document.getElementById('mobileToolbar');
+            if (toolbar) toolbar.classList.remove('search-mode');
+            var filters = document.getElementById('mobileFiltersBar');
+            if (filters) filters.classList.remove('visible');
         }
 "##;
 
@@ -569,27 +643,41 @@ const SHARED_JS_SEARCH: &str = r##"
         }
 
         let searchTimeout;
-        function debounceSearch(term) {
+        function debounceSearch(term, fromMobile) {
             clearTimeout(searchTimeout);
-            const clearBtn = document.getElementById('searchClear');
+            var desktopClear = document.getElementById('searchClear');
+            var mobileClear = document.getElementById('mobileSearchClear');
             if (term) {
-                clearBtn.classList.remove('hidden');
+                if (desktopClear) desktopClear.classList.remove('hidden');
+                if (mobileClear) mobileClear.classList.remove('hidden');
             } else {
-                clearBtn.classList.add('hidden');
+                if (desktopClear) desktopClear.classList.add('hidden');
+                if (mobileClear) mobileClear.classList.add('hidden');
             }
+            // Sync inputs
+            var desktopInput = document.getElementById('searchInput');
+            var mobileInput = document.getElementById('mobileSearchInput');
+            if (fromMobile && desktopInput) desktopInput.value = term;
+            if (!fromMobile && mobileInput) mobileInput.value = term;
             searchTimeout = setTimeout(() => performSearch(term), 300);
         }
 
         function clearSearch() {
-            const input = document.getElementById('searchInput');
-            input.value = '';
-            document.getElementById('searchClear').classList.add('hidden');
+            var input = document.getElementById('searchInput');
+            var mobileInput = document.getElementById('mobileSearchInput');
+            if (input) input.value = '';
+            if (mobileInput) mobileInput.value = '';
+            var desktopClear = document.getElementById('searchClear');
+            var mobileClear = document.getElementById('mobileSearchClear');
+            if (desktopClear) desktopClear.classList.add('hidden');
+            if (mobileClear) mobileClear.classList.add('hidden');
             clearTimeout(searchTimeout);
             clearHighlights();
             document.getElementById('searchControls').classList.remove('visible');
             searchState.term = '';
             searchState.matches = [];
             searchState.currentIndex = -1;
+            updateMobileSearchUI();
         }
 
         function performSearch(term) {
@@ -764,7 +852,8 @@ const SHARED_JS_SEARCH: &str = r##"
             document.getElementById('phoneticCount').textContent = counts.phonetic;
 
             ['exact', 'contains', 'spelling', 'phonetic'].forEach(type => {
-                const el = document.querySelector(`.search-filter[data-type="${type}"]`);
+                const el = document.querySelector('.sidebar .search-filter[data-type="' + type + '"]');
+                if (!el) return;
                 if (counts[type] === 0) {
                     el.classList.add('disabled');
                     el.classList.remove('active');
@@ -785,12 +874,51 @@ const SHARED_JS_SEARCH: &str = r##"
                 nextBtn.disabled = true;
             } else {
                 const current = searchState.currentIndex + 1;
-                counter.textContent = `Match ${current} of ${visible.length}`;
+                counter.textContent = 'Match ' + current + ' of ' + visible.length;
                 prevBtn.disabled = visible.length <= 1;
                 nextBtn.disabled = visible.length <= 1;
             }
 
             updateCurrentHighlight();
+            updateMobileSearchUI();
+        }
+
+        function updateMobileSearchUI() {
+            const counts = { exact: 0, contains: 0, spelling: 0, phonetic: 0 };
+            searchState.matches.forEach(m => counts[m.type]++);
+
+            document.querySelectorAll('.mobileExactCount').forEach(el => el.textContent = counts.exact);
+            document.querySelectorAll('.mobileContainsCount').forEach(el => el.textContent = counts.contains);
+            document.querySelectorAll('.mobileSpellingCount').forEach(el => el.textContent = counts.spelling);
+            document.querySelectorAll('.mobilePhoneticCount').forEach(el => el.textContent = counts.phonetic);
+
+            document.querySelectorAll('.mobile-search-filters-bar .search-filter').forEach(el => {
+                var type = el.dataset.type;
+                if (counts[type] === 0) {
+                    el.classList.add('disabled');
+                    el.classList.remove('active');
+                } else {
+                    el.classList.remove('disabled');
+                    el.classList.toggle('active', searchState.filters[type]);
+                }
+            });
+
+            var visible = getVisibleMatches();
+            var mCounter = document.getElementById('mobileSearchCounter');
+            var mPrev = document.getElementById('mobilePrevBtn');
+            var mNext = document.getElementById('mobileNextBtn');
+            if (mCounter) {
+                if (visible.length === 0) {
+                    mCounter.textContent = searchState.term ? 'No matches' : '';
+                    if (mPrev) mPrev.disabled = true;
+                    if (mNext) mNext.disabled = true;
+                } else {
+                    var current = searchState.currentIndex + 1;
+                    mCounter.textContent = 'Match ' + current + ' of ' + visible.length;
+                    if (mPrev) mPrev.disabled = visible.length <= 1;
+                    if (mNext) mNext.disabled = visible.length <= 1;
+                }
+            }
         }
 
         function updateCurrentHighlight() {
@@ -804,6 +932,7 @@ const SHARED_JS_SEARCH: &str = r##"
 
         function scrollToCurrentMatch() {
             updateCurrentHighlight();
+            closeSidebarOnMobile();
             const mark = document.querySelector('mark.highlight.current');
             if (mark) {
                 mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -833,7 +962,10 @@ const SHARED_JS_SEARCH: &str = r##"
             if (counts[type] === 0) return;
 
             searchState.filters[type] = !searchState.filters[type];
-            el.classList.toggle('active', searchState.filters[type]);
+            // Sync all filter buttons of this type
+            document.querySelectorAll('.search-filter[data-type="' + type + '"]').forEach(function(btn) {
+                btn.classList.toggle('active', searchState.filters[type]);
+            });
 
             clearHighlights();
             highlightMatches();
@@ -897,6 +1029,20 @@ const SHARED_JS_SEARCH: &str = r##"
                 prevMatch();
             }
         });
+
+        // On mobile browsers, the URL bar overlaps position:sticky top:0.
+        // Use visualViewport to adjust the toolbar offset dynamically.
+        if (window.visualViewport) {
+            function updateToolbarOffset() {
+                var offset = window.visualViewport.offsetTop;
+                var toolbar = document.getElementById('mobileToolbar');
+                if (toolbar) toolbar.style.top = offset + 'px';
+                var filters = document.getElementById('mobileFiltersBar');
+                if (filters) filters.style.top = (offset + 42) + 'px';
+            }
+            window.visualViewport.addEventListener('scroll', updateToolbarOffset);
+            window.visualViewport.addEventListener('resize', updateToolbarOffset);
+        }
 "##;
 
 /// Shared JavaScript for rendering the document content
@@ -906,6 +1052,26 @@ const SHARED_JS_RENDER_DOCUMENT: &str = r##"
             let html = '';
 
             html += '<button class="menu-toggle" onclick="toggleSidebar()">&#9776; Menu</button>';
+            html += '<div class="mobile-toolbar" id="mobileToolbar">';
+            html += '<div class="mobile-toolbar-default">';
+            html += '<button class="mobile-toolbar-btn" id="toolbarMenuBtn" onclick="toggleSidebar()">&#9776; Menu</button>';
+            html += '<button class="mobile-toolbar-btn" onclick="toggleMobileSearch()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg> Search</button>';
+            html += '</div>';
+            html += '<div class="mobile-search-inline">';
+            html += '<input type="text" id="mobileSearchInput" class="search-input" placeholder="Search..." oninput="debounceSearch(this.value, true)" onkeydown="if(event.key===\'Escape\')closeMobileSearch()">';
+            html += '<span class="search-counter" id="mobileSearchCounter"></span>';
+            html += '<button class="search-nav-btn" onclick="prevMatch()" id="mobilePrevBtn" disabled>◀</button>';
+            html += '<button class="search-nav-btn" onclick="nextMatch()" id="mobileNextBtn" disabled>▶</button>';
+            html += '<button class="search-close-btn" onclick="closeMobileSearch()">✕</button>';
+            html += '</div>';
+            html += '</div>';
+            html += '<div class="mobile-search-filters-bar" id="mobileFiltersBar">';
+            html += '<span class="search-filter active" data-type="exact" onclick="toggleFilter(this)">Exact (<span class="mobileExactCount">0</span>)</span>';
+            html += '<span class="search-filter active" data-type="contains" onclick="toggleFilter(this)">Contains (<span class="mobileContainsCount">0</span>)</span>';
+            html += '<span class="search-filter active" data-type="spelling" onclick="toggleFilter(this)">Spelling (<span class="mobileSpellingCount">0</span>)</span>';
+            html += '<span class="search-filter active" data-type="phonetic" onclick="toggleFilter(this)">Sounds-like (<span class="mobilePhoneticCount">0</span>)</span>';
+            html += '</div>';
+            html += '<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>';
             html += '<div class="layout">';
             html += '<div class="sidebar" id="sidebar">';
             html += '<div class="sidebar-header">';

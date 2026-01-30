@@ -36,6 +36,17 @@
   let isGuidedMode = false;
   let hasCheckedEmpty = false;
 
+  // Mobile sidebar state
+  let sidebarOpen = false;
+
+  function toggleSidebar() {
+    sidebarOpen = !sidebarOpen;
+  }
+
+  function closeSidebar() {
+    sidebarOpen = false;
+  }
+
   // Password protection state
   let isLocked = false;
   let hasPassword = false;
@@ -81,6 +92,7 @@
       return;
     }
     currentSection = sectionId;
+    closeSidebar();
   }
 
   function dismissQuestionWarning(proceed: boolean) {
@@ -225,6 +237,7 @@
   onMount(async () => {
     window.addEventListener('blur', handleVisibilityOrBlur);
     window.addEventListener('visibilitychange', handleVisibilityOrBlur);
+    window.addEventListener('pagehide', handleVisibilityOrBlur);
 
     const appWindow = getCurrentWindow();
     unlistenClose = await appWindow.onCloseRequested(async (event) => {
@@ -244,6 +257,7 @@
   onDestroy(() => {
     window.removeEventListener('blur', handleVisibilityOrBlur);
     window.removeEventListener('visibilitychange', handleVisibilityOrBlur);
+    window.removeEventListener('pagehide', handleVisibilityOrBlur);
     if (unlistenClose) {
       unlistenClose();
     }
@@ -257,8 +271,16 @@
 {:else if isGuidedMode}
   <GuidedWizard on:exit={exitGuidedMode} />
 {:else}
+  <div class="mobile-header">
+    <button class="hamburger" on:click={toggleSidebar} aria-label="Toggle menu">
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+    </button>
+    <span class="mobile-title">{currentSectionLabel}</span>
+  </div>
   <main class="app">
-    <aside class="sidebar">
+    <aside class="sidebar" class:open={sidebarOpen}>
       <div class="logo">
         <svg class="logo-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
           <!-- Scroll body -->
@@ -356,6 +378,11 @@
         </div>
       </div>
     </aside>
+    {#if sidebarOpen}
+      <!-- svelte-ignore a11y-no-static-element-interactions -->
+      <!-- svelte-ignore a11y-click-events-have-key-events -->
+      <div class="sidebar-backdrop" on:click={closeSidebar}></div>
+    {/if}
     <section class="content">
       <header class="content-header">
         <h2>{currentSectionLabel}</h2>
@@ -869,5 +896,83 @@
     display: flex;
     justify-content: flex-end;
     gap: 12px;
+  }
+
+  /* Mobile layout */
+  .mobile-header {
+    display: none;
+  }
+
+  @media (max-width: 768px) {
+    .mobile-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      padding-top: 48px;
+      background: var(--sidebar-bg);
+      color: var(--sidebar-text);
+    }
+
+    .hamburger {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .hamburger-line {
+      display: block;
+      width: 22px;
+      height: 2px;
+      background: var(--sidebar-text);
+      border-radius: 1px;
+    }
+
+    .mobile-title {
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+
+    .app {
+      flex-direction: column;
+    }
+
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      z-index: 200;
+      padding-top: 36px;
+      transform: translateX(-100%);
+      transition: transform 0.25s ease;
+    }
+
+    .sidebar.open {
+      transform: translateX(0);
+    }
+
+    .sidebar-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 150;
+    }
+
+    .content {
+      width: 100%;
+    }
+
+    .content-header {
+      display: none;
+    }
+
+    .content-body {
+      padding: 16px;
+    }
   }
 </style>

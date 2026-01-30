@@ -125,4 +125,10 @@
   .subsection.emergency { background: var(--warning-bg); padding: 20px; border-radius: 8px; }
   h3 { margin: 0 0 8px 0; color: var(--text-primary); font-size: 1.1rem; }
   .hint { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 16px; }
+
+  @media (max-width: 768px) {
+    .section {
+      max-width: 100%;
+    }
+  }
 </style>
