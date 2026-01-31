@@ -213,6 +213,7 @@
   async function handleUnlock() {
     isLocked = false;
     await document.load();
+    resetInactivityTimer();
     // Show intro screen for empty document after unlock
     if (!hasCheckedEmpty) {
       hasCheckedEmpty = true;
@@ -246,6 +247,7 @@
   function handlePasswordCreated() {
     hasPassword = true;
     showSetPasswordModal = false;
+    resetInactivityTimer();
   }
 
   function enterGuidedMode() {
@@ -261,6 +263,26 @@
     document.saveToDisk();
   }
 
+  // Inactivity lock: re-lock after 60 minutes of no user interaction
+  const INACTIVITY_TIMEOUT_MS = 60 * 60 * 1000; // 1 hour
+  let inactivityTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function resetInactivityTimer() {
+    if (inactivityTimer) clearTimeout(inactivityTimer);
+    if (hasPassword && !isLocked) {
+      inactivityTimer = setTimeout(() => {
+        if (hasPassword && !isLocked) {
+          document.saveToDisk();
+          isLocked = true;
+        }
+      }, INACTIVITY_TIMEOUT_MS);
+    }
+  }
+
+  function handleUserActivity() {
+    resetInactivityTimer();
+  }
+
   // Window close handler for "Clear on Exit" feature + final save
   let unlistenClose: (() => void) | null = null;
 
@@ -268,6 +290,11 @@
     window.addEventListener('blur', handleVisibilityOrBlur);
     window.addEventListener('visibilitychange', handleVisibilityOrBlur);
     window.addEventListener('pagehide', handleVisibilityOrBlur);
+
+    // Track user activity for inactivity lock
+    window.addEventListener('pointerdown', handleUserActivity);
+    window.addEventListener('keydown', handleUserActivity);
+    window.addEventListener('scroll', handleUserActivity, true);
 
     const appWindow = getCurrentWindow();
     unlistenClose = await appWindow.onCloseRequested(async (event) => {
@@ -288,6 +315,10 @@
     window.removeEventListener('blur', handleVisibilityOrBlur);
     window.removeEventListener('visibilitychange', handleVisibilityOrBlur);
     window.removeEventListener('pagehide', handleVisibilityOrBlur);
+    window.removeEventListener('pointerdown', handleUserActivity);
+    window.removeEventListener('keydown', handleUserActivity);
+    window.removeEventListener('scroll', handleUserActivity, true);
+    if (inactivityTimer) clearTimeout(inactivityTimer);
     if (unlistenClose) {
       unlistenClose();
     }
@@ -527,6 +558,7 @@
   bind:isOpen={showSettings}
   on:close={() => (showSettings = false)}
   on:cleared={handleDataCleared}
+  on:passwordCreated={handlePasswordCreated}
 />
 
 <LicenseModal

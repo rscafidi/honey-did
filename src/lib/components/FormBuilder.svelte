@@ -87,7 +87,7 @@
   {:else}
     <div
       class="element-list"
-      use:dndzone={{ items: elements, flipDurationMs: 200 }}
+      use:dndzone={{ items: elements, flipDurationMs: 200, dragHandleSelector: '.drag-handle' }}
       on:consider={handleDndConsider}
       on:finalize={handleDndFinalize}
     >
@@ -183,18 +183,24 @@
     background: var(--bg-tertiary);
     border: 1px solid var(--border-color);
     border-radius: 6px;
+    overflow: hidden;
+    min-width: 0;
   }
 
   .drag-handle {
     cursor: grab;
     color: var(--text-secondary);
-    font-size: 1.1rem;
+    font-size: 1.3rem;
     user-select: none;
     flex-shrink: 0;
+    touch-action: none;
+    padding: 8px 4px;
+    margin: -8px -4px;
   }
 
   .el-name {
     flex: 1;
+    min-width: 0;
     padding: 6px 10px;
     border: 1px solid var(--border-color);
     border-radius: 4px;
@@ -232,6 +238,7 @@
 
   .el-header-text {
     flex: 1;
+    min-width: 0;
     padding: 6px 10px;
     border: 1px solid var(--border-color);
     border-radius: 4px;
@@ -265,5 +272,26 @@
     background: rgba(155, 44, 44, 0.1);
     border-color: var(--error-color);
     color: var(--error-color);
+  }
+
+  @media (max-width: 768px) {
+    .element-row {
+      flex-wrap: wrap;
+    }
+
+    .element-field {
+      /* Let the name input fill the row between drag handle and delete button */
+      order: 0;
+    }
+
+    .el-name {
+      flex: 1 1 0;
+    }
+
+    .el-field-type {
+      /* Type selector drops to second line on mobile */
+      flex: 1;
+      margin-left: 26px; /* align with input (drag handle width + gap) */
+    }
   }
 </style>

@@ -10,6 +10,7 @@
   let confirmPassword = '';
   let error = '';
   let isSaving = false;
+  let showSkipWarning = false;
 
   $: passwordsMatch = password === confirmPassword;
   $: canSave = password.length >= 8 && passwordsMatch && !isSaving;
@@ -23,7 +24,7 @@
     try {
       await invoke('set_app_password', { password });
       dispatch('created');
-      close();
+      resetAndClose();
     } catch (e) {
       error = `Failed to set password: ${e}`;
     } finally {
@@ -31,10 +32,19 @@
     }
   }
 
-  function close() {
+  function handleCancel() {
+    showSkipWarning = true;
+  }
+
+  function confirmSkip() {
+    resetAndClose();
+  }
+
+  function resetAndClose() {
     password = '';
     confirmPassword = '';
     error = '';
+    showSkipWarning = false;
     dispatch('cancel');
   }
 </script>
@@ -42,49 +52,63 @@
 {#if isOpen}
   <div class="overlay" role="presentation">
     <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="setpw-title">
-      <h2 id="setpw-title">Set App Password</h2>
-      <p class="description">
-        Create a password to protect your data. You'll need this password each time you open the app.
-      </p>
+      {#if showSkipWarning}
+        <h2 id="setpw-title">Continue Without Password?</h2>
+        <p class="warning-message">
+          Your data will not be protected by a password. Anyone with access to this device can open the app and view your information. Do not use this app on a shared device without a password.
+        </p>
+        <p class="description">
+          You can set a password later in Settings.
+        </p>
+        <div class="actions">
+          <button class="btn btn-secondary" on:click={() => (showSkipWarning = false)}>Go Back</button>
+          <button class="btn btn-warning" on:click={confirmSkip}>Continue Without Password</button>
+        </div>
+      {:else}
+        <h2 id="setpw-title">Set App Password</h2>
+        <p class="description">
+          Create a password to protect your data. You'll need this password each time you open the app.
+        </p>
 
-      <div class="form">
-        <div class="field">
-          <label for="new-password">Password</label>
-          <input
-            id="new-password"
-            type="password"
-            bind:value={password}
-            placeholder="At least 8 characters"
-          />
-          {#if password && password.length < 8}
-            <span class="hint error-hint">Password must be at least 8 characters</span>
+        <div class="form">
+          <div class="field">
+            <label for="new-password">Password</label>
+            <input
+              id="new-password"
+              type="password"
+              bind:value={password}
+              placeholder="At least 8 characters"
+            />
+            {#if password && password.length < 8}
+              <span class="hint error-hint">Password must be at least 8 characters</span>
+            {/if}
+          </div>
+
+          <div class="field">
+            <label for="confirm-password">Confirm Password</label>
+            <input
+              id="confirm-password"
+              type="password"
+              bind:value={confirmPassword}
+              placeholder="Re-enter password"
+            />
+            {#if confirmPassword && !passwordsMatch}
+              <span class="hint error-hint">Passwords don't match</span>
+            {/if}
+          </div>
+
+          {#if error}
+            <p class="error-message">{error}</p>
           {/if}
         </div>
 
-        <div class="field">
-          <label for="confirm-password">Confirm Password</label>
-          <input
-            id="confirm-password"
-            type="password"
-            bind:value={confirmPassword}
-            placeholder="Re-enter password"
-          />
-          {#if confirmPassword && !passwordsMatch}
-            <span class="hint error-hint">Passwords don't match</span>
-          {/if}
+        <div class="actions">
+          <button class="btn btn-secondary" on:click={handleCancel}>Cancel</button>
+          <button class="btn btn-primary" on:click={handleSave} disabled={!canSave}>
+            {isSaving ? 'Saving...' : 'Set Password'}
+          </button>
         </div>
-
-        {#if error}
-          <p class="error-message">{error}</p>
-        {/if}
-      </div>
-
-      <div class="actions">
-        <button class="btn btn-secondary" on:click={close}>Cancel</button>
-        <button class="btn btn-primary" on:click={handleSave} disabled={!canSave}>
-          {isSaving ? 'Saving...' : 'Set Password'}
-        </button>
-      </div>
+      {/if}
     </div>
   </div>
 {/if}
@@ -159,6 +183,26 @@
 
   .error-hint {
     color: var(--error-color);
+  }
+
+  .warning-message {
+    color: var(--warning-text);
+    background: var(--warning-bg);
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin: 0 0 12px 0;
+  }
+
+  .btn-warning {
+    background: var(--warning-bg);
+    color: var(--warning-text);
+    border: 1px solid var(--warning-text);
+  }
+
+  .btn-warning:hover {
+    opacity: 0.9;
   }
 
   .error-message {

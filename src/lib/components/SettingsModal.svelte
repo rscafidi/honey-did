@@ -18,8 +18,15 @@
 
   let clearOnExit = false;
   let showChangePassword = false;
+  let showSetPassword = false;
   let showClearConfirm = false;
   let hasPassword = false;
+
+  // Set password fields
+  let setPassword = '';
+  let confirmSetPassword = '';
+  let setPasswordError = '';
+  let isSetting = false;
 
   // Change password fields
   let oldPassword = '';
@@ -38,6 +45,9 @@
   let showBiometricEnroll = false;
   let biometricPassword = '';
   let biometricError = '';
+
+  $: setPasswordsMatch = setPassword === confirmSetPassword;
+  $: canSetPassword = setPassword.length >= 8 && setPasswordsMatch && !isSetting;
 
   $: newPasswordsMatch = newPassword === confirmNewPassword;
   $: canChangePassword = oldPassword && newPassword.length >= 8 && newPasswordsMatch && !isChanging;
@@ -67,6 +77,26 @@
     } catch (e) {
       console.error('Failed to save setting:', e);
       clearOnExit = !clearOnExit; // Revert
+    }
+  }
+
+  async function handleSetPassword() {
+    if (!canSetPassword) return;
+
+    setPasswordError = '';
+    isSetting = true;
+
+    try {
+      await invoke('set_app_password', { password: setPassword });
+      hasPassword = true;
+      showSetPassword = false;
+      setPassword = '';
+      confirmSetPassword = '';
+      dispatch('passwordCreated');
+    } catch (e) {
+      setPasswordError = `${e}`;
+    } finally {
+      isSetting = false;
     }
   }
 
@@ -170,13 +200,17 @@
 
   function close() {
     showChangePassword = false;
+    showSetPassword = false;
     showClearConfirm = false;
     showBiometricEnroll = false;
+    setPassword = '';
+    confirmSetPassword = '';
     oldPassword = '';
     newPassword = '';
     confirmNewPassword = '';
     clearPassword = '';
     biometricPassword = '';
+    setPasswordError = '';
     changeError = '';
     clearError = '';
     biometricError = '';
@@ -190,7 +224,7 @@
     <div class="dialog" role="dialog" aria-modal="true" on:click|stopPropagation on:keydown|stopPropagation>
       <h2>Settings</h2>
 
-      {#if !showChangePassword && !showClearConfirm && !showBiometricEnroll}
+      {#if !showChangePassword && !showSetPassword && !showClearConfirm && !showBiometricEnroll}
         <div class="settings-section">
           <h3>Appearance</h3>
           <div class="theme-selector">
@@ -213,6 +247,14 @@
           {#if hasPassword}
             <button class="setting-button" on:click={() => (showChangePassword = true)}>
               <span class="setting-label">Change Password</span>
+              <span class="setting-arrow">→</span>
+            </button>
+          {:else}
+            <button class="setting-button" on:click={() => (showSetPassword = true)}>
+              <span class="setting-label">
+                Set Password
+                <span class="setting-hint">Protect your data with a password</span>
+              </span>
               <span class="setting-arrow">→</span>
             </button>
           {/if}
@@ -260,6 +302,34 @@
 
         <div class="actions">
           <button class="btn btn-secondary" on:click={close}>Close</button>
+        </div>
+
+      {:else if showSetPassword}
+        <div class="sub-section">
+          <p class="info-message">Create a password to protect your data. You'll need this password each time you open the app.</p>
+          <div class="field">
+            <label for="set-pw">Password</label>
+            <input id="set-pw" type="password" bind:value={setPassword} placeholder="At least 8 characters" />
+            {#if setPassword && setPassword.length < 8}
+              <span class="error-hint">Password must be at least 8 characters</span>
+            {/if}
+          </div>
+          <div class="field">
+            <label for="confirm-set-pw">Confirm Password</label>
+            <input id="confirm-set-pw" type="password" bind:value={confirmSetPassword} />
+            {#if confirmSetPassword && !setPasswordsMatch}
+              <span class="error-hint">Passwords don't match</span>
+            {/if}
+          </div>
+          {#if setPasswordError}
+            <p class="error-message">{setPasswordError}</p>
+          {/if}
+          <div class="actions">
+            <button class="btn btn-secondary" on:click={() => { showSetPassword = false; setPassword = ''; confirmSetPassword = ''; setPasswordError = ''; }}>Cancel</button>
+            <button class="btn btn-primary" on:click={handleSetPassword} disabled={!canSetPassword}>
+              {isSetting ? 'Saving...' : 'Set Password'}
+            </button>
+          </div>
         </div>
 
       {:else if showChangePassword}
