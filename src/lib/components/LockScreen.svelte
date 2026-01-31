@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onMount } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
 
   const dispatch = createEventDispatcher();
@@ -10,6 +10,55 @@
   let showClearConfirm = false;
   let clearConfirmation = '';
   let clearError = '';
+
+  let biometricAvailable = false;
+  let biometricEnabled = false;
+  let biometricError = '';
+
+  onMount(async () => {
+    try {
+      const result = await invoke<{ available: boolean; enrolled: boolean }>('check_biometric_availability');
+      biometricAvailable = result.available && result.enrolled;
+      if (biometricAvailable) {
+        biometricEnabled = await invoke<boolean>('get_biometric_enabled');
+        if (biometricEnabled) {
+          handleBiometricUnlock();
+        }
+      }
+    } catch (_) {
+      // Biometric not available
+    }
+  });
+
+  async function handleBiometricUnlock() {
+    biometricError = '';
+    try {
+      const decryptedPassword = await invoke<string>('authenticate_biometric');
+      isVerifying = true;
+      const valid = await invoke<boolean>('verify_app_password', { password: decryptedPassword });
+      if (valid) {
+        dispatch('unlock');
+      } else {
+        biometricError = 'Stored password is invalid. Please use your password.';
+      }
+    } catch (e: any) {
+      const msg = `${e}`;
+      if (msg.includes('key_invalidated')) {
+        biometricError = 'Biometrics changed. Please use your password and re-enable fingerprint in Settings.';
+        biometricEnabled = false;
+        try {
+          await invoke('set_biometric_enabled', { enabled: false });
+          await invoke('clear_biometric_enrollment');
+        } catch (_) {}
+      } else if (msg.includes('user_cancelled')) {
+        // User dismissed prompt — do nothing, password field is ready
+      } else {
+        biometricError = 'Biometric unlock failed. Please use your password.';
+      }
+    } finally {
+      isVerifying = false;
+    }
+  }
 
   async function handleUnlock() {
     if (!password || password.length < 8) {
@@ -97,6 +146,27 @@
         >
           {isVerifying ? 'Verifying...' : 'Unlock'}
         </button>
+        {#if biometricAvailable && biometricEnabled}
+          <button
+            class="btn btn-biometric"
+            on:click={handleBiometricUnlock}
+            disabled={isVerifying}
+          >
+            <svg class="fingerprint-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 12C2 6.5 6.5 2 12 2a10 10 0 0 1 8 4"/>
+              <path d="M5 19.5C5.5 18 6 15 6 12c0-3.5 2.5-6 6-6 3 0 5.5 2 6 5"/>
+              <path d="M12 12v4c0 2.5-1 4-3 5.5"/>
+              <path d="M9 12c0 2 .5 3.5 1.5 5"/>
+              <path d="M15 12c0 4-1 6-3 8"/>
+              <path d="M18 12a9 9 0 0 1-1.5 5c-.5 1-2 2.5-3.5 3.5"/>
+              <path d="M22 12c0 4-1.5 7-4 9.5"/>
+            </svg>
+            Fingerprint Unlock
+          </button>
+        {/if}
+        {#if biometricError}
+          <p class="biometric-error">{biometricError}</p>
+        {/if}
       </div>
       <button class="clear-link" on:click={() => (showClearConfirm = true)}>
         Forgot password? Clear all data
@@ -253,6 +323,38 @@
 
   .button-row .btn {
     flex: 1;
+  }
+
+  .btn-biometric {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+  }
+
+  .btn-biometric:hover:not(:disabled) {
+    background: var(--border-color);
+  }
+
+  .btn-biometric:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .fingerprint-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .biometric-error {
+    color: var(--warning-text);
+    background: var(--warning-bg);
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    margin: 0;
   }
 
   .clear-link {

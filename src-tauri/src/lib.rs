@@ -10,6 +10,11 @@ use tauri::{Manager, State};
 #[cfg(target_os = "android")]
 use tauri::plugin::PluginHandle;
 
+#[cfg(target_os = "android")]
+struct SharePluginHandle<R: tauri::Runtime>(PluginHandle<R>);
+#[cfg(target_os = "android")]
+struct BiometricPluginHandle<R: tauri::Runtime>(PluginHandle<R>);
+
 struct AppState {
     document: Mutex<LegacyDocument>,
 }
@@ -287,6 +292,33 @@ fn has_app_password() -> Result<bool, String> {
 }
 
 #[tauri::command]
+#[cfg(target_os = "android")]
+fn change_app_password(app: tauri::AppHandle, old_password: String, new_password: String) -> Result<(), String> {
+    // Validate new password
+    validate_password(&new_password)?;
+
+    // Verify old password first
+    let hash = storage::load_password_hash()
+        .map_err(|e| e.to_string())?
+        .ok_or("No password set")?;
+    let valid = storage::verify_password(&old_password, &hash).map_err(|e| e.to_string())?;
+    if !valid {
+        return Err("Incorrect password".to_string());
+    }
+    // Set new password
+    let new_hash = storage::hash_password(&new_password).map_err(|e| e.to_string())?;
+    storage::save_password_hash(&new_hash).map_err(|e| e.to_string())?;
+
+    // Clear biometric enrollment — old encrypted password is now invalid
+    let handle: State<BiometricPluginHandle<tauri::Wry>> = app.state();
+    let _ = handle.0.run_mobile_plugin::<()>("clearBiometricEnrollment", ());
+    let _ = storage::set_biometric_enabled(false);
+
+    Ok(())
+}
+
+#[tauri::command]
+#[cfg(not(target_os = "android"))]
 fn change_app_password(old_password: String, new_password: String) -> Result<(), String> {
     // Validate new password
     validate_password(&new_password)?;
@@ -302,10 +334,39 @@ fn change_app_password(old_password: String, new_password: String) -> Result<(),
     // Set new password
     let new_hash = storage::hash_password(&new_password).map_err(|e| e.to_string())?;
     storage::save_password_hash(&new_hash).map_err(|e| e.to_string())?;
+    let _ = storage::set_biometric_enabled(false);
     Ok(())
 }
 
 #[tauri::command]
+#[cfg(target_os = "android")]
+fn clear_all_data(app: tauri::AppHandle, state: State<AppState>, password: String) -> Result<(), String> {
+    // Check if password exists
+    let hash = storage::load_password_hash().map_err(|e| e.to_string())?;
+
+    // If password exists, verify it
+    if let Some(h) = hash {
+        let valid = storage::verify_password(&password, &h).map_err(|e| e.to_string())?;
+        if !valid {
+            return Err("Incorrect password".to_string());
+        }
+    }
+
+    // Clear biometric enrollment
+    let handle: State<BiometricPluginHandle<tauri::Wry>> = app.state();
+    let _ = handle.0.run_mobile_plugin::<()>("clearBiometricEnrollment", ());
+
+    // Clear everything
+    storage::delete_document().map_err(|e| e.to_string())?;
+    storage::delete_password_hash().map_err(|e| e.to_string())?;
+    storage::delete_settings().map_err(|e| e.to_string())?;
+    let mut doc = state.document.lock().map_err(|e| e.to_string())?;
+    *doc = LegacyDocument::default();
+    Ok(())
+}
+
+#[tauri::command]
+#[cfg(not(target_os = "android"))]
 fn clear_all_data(state: State<AppState>, password: String) -> Result<(), String> {
     // Check if password exists
     let hash = storage::load_password_hash().map_err(|e| e.to_string())?;
@@ -317,21 +378,39 @@ fn clear_all_data(state: State<AppState>, password: String) -> Result<(), String
             return Err("Incorrect password".to_string());
         }
     }
-    // If no password set, allow clearing without verification
 
     // Clear everything
     storage::delete_document().map_err(|e| e.to_string())?;
     storage::delete_password_hash().map_err(|e| e.to_string())?;
     storage::delete_settings().map_err(|e| e.to_string())?;
-    // Reset in-memory state
     let mut doc = state.document.lock().map_err(|e| e.to_string())?;
     *doc = LegacyDocument::default();
     Ok(())
 }
 
 #[tauri::command]
+#[cfg(target_os = "android")]
+fn force_clear_all_data(app: tauri::AppHandle, state: State<AppState>, confirmation: String) -> Result<(), String> {
+    if confirmation.to_uppercase() != "DELETE ALL DATA" {
+        return Err("Please type DELETE ALL DATA to confirm".to_string());
+    }
+
+    // Clear biometric enrollment
+    let handle: State<BiometricPluginHandle<tauri::Wry>> = app.state();
+    let _ = handle.0.run_mobile_plugin::<()>("clearBiometricEnrollment", ());
+
+    // Clear everything without password verification
+    storage::delete_document().map_err(|e| e.to_string())?;
+    storage::delete_password_hash().map_err(|e| e.to_string())?;
+    storage::delete_settings().map_err(|e| e.to_string())?;
+    let mut doc = state.document.lock().map_err(|e| e.to_string())?;
+    *doc = LegacyDocument::default();
+    Ok(())
+}
+
+#[tauri::command]
+#[cfg(not(target_os = "android"))]
 fn force_clear_all_data(state: State<AppState>, confirmation: String) -> Result<(), String> {
-    // Require exact confirmation phrase (case-insensitive)
     if confirmation.to_uppercase() != "DELETE ALL DATA" {
         return Err("Please type DELETE ALL DATA to confirm".to_string());
     }
@@ -340,7 +419,6 @@ fn force_clear_all_data(state: State<AppState>, confirmation: String) -> Result<
     storage::delete_document().map_err(|e| e.to_string())?;
     storage::delete_password_hash().map_err(|e| e.to_string())?;
     storage::delete_settings().map_err(|e| e.to_string())?;
-    // Reset in-memory state
     let mut doc = state.document.lock().map_err(|e| e.to_string())?;
     *doc = LegacyDocument::default();
     Ok(())
@@ -380,7 +458,7 @@ fn init_share_plugin<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
         .setup(|app, _api| {
             let handle = _api.register_android_plugin("com.honeydid.app", "SharePlugin")
                 .map_err(|e| format!("Failed to register SharePlugin: {}", e))?;
-            app.manage(handle);
+            app.manage(SharePluginHandle(handle));
             Ok(())
         })
         .build()
@@ -394,11 +472,11 @@ fn init_share_plugin<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
 #[tauri::command]
 #[cfg(target_os = "android")]
 fn share_file(app: tauri::AppHandle, file_path: String, mime_type: String) -> Result<(), String> {
-    let handle: State<PluginHandle<tauri::Wry>> = app.state();
+    let handle: State<SharePluginHandle<tauri::Wry>> = app.state();
     let mut args = serde_json::Map::new();
     args.insert("filePath".into(), serde_json::Value::String(file_path));
     args.insert("mimeType".into(), serde_json::Value::String(mime_type));
-    handle.run_mobile_plugin::<()>("shareFile", serde_json::Value::Object(args))
+    handle.0.run_mobile_plugin::<()>("shareFile", serde_json::Value::Object(args))
         .map_err(|e| format!("Share failed: {}", e))
 }
 
@@ -408,10 +486,100 @@ fn share_file(_file_path: String, _mime_type: String) -> Result<(), String> {
     Err("Share is only available on Android".to_string())
 }
 
+#[cfg(target_os = "android")]
+fn init_biometric_plugin<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
+    tauri::plugin::Builder::<R>::new("biometric")
+        .setup(|app, _api| {
+            let handle = _api.register_android_plugin("com.honeydid.app", "BiometricPlugin")
+                .map_err(|e| format!("Failed to register BiometricPlugin: {}", e))?;
+            app.manage(BiometricPluginHandle(handle));
+            Ok(())
+        })
+        .build()
+}
+
+#[cfg(not(target_os = "android"))]
+fn init_biometric_plugin<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
+    tauri::plugin::Builder::<R>::new("biometric").build()
+}
+
+#[tauri::command]
+#[cfg(target_os = "android")]
+fn check_biometric_availability(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
+    let handle: State<BiometricPluginHandle<tauri::Wry>> = app.state();
+    let result: serde_json::Value = handle.0.run_mobile_plugin("checkBiometricAvailability", ())
+        .map_err(|e| format!("Biometric check failed: {}", e))?;
+    Ok(result)
+}
+
+#[tauri::command]
+#[cfg(not(target_os = "android"))]
+fn check_biometric_availability() -> Result<serde_json::Value, String> {
+    Ok(serde_json::json!({"available": false, "enrolled": false}))
+}
+
+#[tauri::command]
+#[cfg(target_os = "android")]
+fn enroll_biometric(app: tauri::AppHandle, password: String) -> Result<(), String> {
+    let handle: State<BiometricPluginHandle<tauri::Wry>> = app.state();
+    let mut args = serde_json::Map::new();
+    args.insert("password".into(), serde_json::Value::String(password));
+    handle.0.run_mobile_plugin::<()>("enrollBiometric", serde_json::Value::Object(args))
+        .map_err(|e| format!("Enrollment failed: {}", e))
+}
+
+#[tauri::command]
+#[cfg(not(target_os = "android"))]
+fn enroll_biometric(_password: String) -> Result<(), String> {
+    Err("Biometric enrollment is only available on Android".to_string())
+}
+
+#[tauri::command]
+#[cfg(target_os = "android")]
+fn authenticate_biometric(app: tauri::AppHandle) -> Result<String, String> {
+    let handle: State<BiometricPluginHandle<tauri::Wry>> = app.state();
+    let result: serde_json::Value = handle.0.run_mobile_plugin("authenticateWithBiometric", ())
+        .map_err(|e| format!("{}", e))?;
+    result["password"].as_str()
+        .map(|s| s.to_string())
+        .ok_or_else(|| "Failed to get password from biometric result".to_string())
+}
+
+#[tauri::command]
+#[cfg(not(target_os = "android"))]
+fn authenticate_biometric() -> Result<String, String> {
+    Err("Biometric authentication is only available on Android".to_string())
+}
+
+#[tauri::command]
+#[cfg(target_os = "android")]
+fn clear_biometric_enrollment(app: tauri::AppHandle) -> Result<(), String> {
+    let handle: State<BiometricPluginHandle<tauri::Wry>> = app.state();
+    handle.0.run_mobile_plugin::<()>("clearBiometricEnrollment", ())
+        .map_err(|e| format!("Clear failed: {}", e))
+}
+
+#[tauri::command]
+#[cfg(not(target_os = "android"))]
+fn clear_biometric_enrollment() -> Result<(), String> {
+    Ok(())
+}
+
+#[tauri::command]
+fn get_biometric_enabled() -> Result<bool, String> {
+    storage::get_biometric_enabled().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn set_biometric_enabled(enabled: bool) -> Result<(), String> {
+    storage::set_biometric_enabled(enabled).map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(init_share_plugin())
+        .plugin(init_biometric_plugin())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
@@ -458,6 +626,12 @@ pub fn run() {
             set_clear_on_exit,
             clear_data_on_exit,
             open_external_url,
+            check_biometric_availability,
+            enroll_biometric,
+            authenticate_biometric,
+            clear_biometric_enrollment,
+            get_biometric_enabled,
+            set_biometric_enabled,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

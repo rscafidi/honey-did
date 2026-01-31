@@ -248,28 +248,67 @@ pub fn delete_document() -> Result<(), StorageError> {
     Ok(())
 }
 
-/// Saves settings to a JSON file
-pub fn save_settings(clear_on_exit: bool) -> Result<(), StorageError> {
+#[derive(serde::Serialize, serde::Deserialize, Default)]
+pub struct AppSettings {
+    pub clear_on_exit: bool,
+    #[serde(default)]
+    pub biometric_enabled: bool,
+}
+
+/// Loads full settings struct from JSON file
+pub fn load_settings_full() -> Result<AppSettings, StorageError> {
+    let data_dir = get_data_dir()?;
+    let file_path = data_dir.join("settings.json");
+    if !file_path.exists() {
+        return Ok(AppSettings::default());
+    }
+    let json = fs::read_to_string(&file_path)
+        .map_err(|e| StorageError::IoError(e.to_string()))?;
+    // Try proper deserialization first, fall back to legacy parsing
+    match serde_json::from_str::<AppSettings>(&json) {
+        Ok(settings) => Ok(settings),
+        Err(_) => Ok(AppSettings {
+            clear_on_exit: json.contains("true"),
+            biometric_enabled: false,
+        }),
+    }
+}
+
+/// Saves full settings struct to JSON file
+pub fn save_settings_full(settings: &AppSettings) -> Result<(), StorageError> {
     let data_dir = get_data_dir()?;
     fs::create_dir_all(&data_dir)
         .map_err(|e| StorageError::IoError(e.to_string()))?;
     let file_path = data_dir.join("settings.json");
-    let json = format!(r#"{{"clear_on_exit":{}}}"#, clear_on_exit);
+    let json = serde_json::to_string(settings)
+        .map_err(|e| StorageError::SerializationError(e.to_string()))?;
     fs::write(&file_path, json)
         .map_err(|e| StorageError::IoError(e.to_string()))?;
     Ok(())
 }
 
-/// Loads settings from JSON file
+/// Saves settings to a JSON file (legacy interface, delegates to full version)
+pub fn save_settings(clear_on_exit: bool) -> Result<(), StorageError> {
+    let mut settings = load_settings_full()?;
+    settings.clear_on_exit = clear_on_exit;
+    save_settings_full(&settings)
+}
+
+/// Loads settings from JSON file (legacy interface, delegates to full version)
 pub fn load_settings() -> Result<bool, StorageError> {
-    let data_dir = get_data_dir()?;
-    let file_path = data_dir.join("settings.json");
-    if !file_path.exists() {
-        return Ok(false);
-    }
-    let json = fs::read_to_string(&file_path)
-        .map_err(|e| StorageError::IoError(e.to_string()))?;
-    Ok(json.contains("true"))
+    Ok(load_settings_full()?.clear_on_exit)
+}
+
+/// Gets the biometric_enabled setting
+pub fn get_biometric_enabled() -> Result<bool, StorageError> {
+    Ok(load_settings_full()?.biometric_enabled)
+}
+
+/// Sets the biometric_enabled setting
+pub fn set_biometric_enabled(enabled: bool) -> Result<(), StorageError> {
+    let mut settings = load_settings_full()?;
+    settings.biometric_enabled = enabled;
+    save_settings_full(&settings)
 }
 
 /// Deletes settings file

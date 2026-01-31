@@ -32,6 +32,13 @@
   let clearPassword = '';
   let clearError = '';
 
+  // Biometric fields
+  let biometricAvailable = false;
+  let biometricEnabled = false;
+  let showBiometricEnroll = false;
+  let biometricPassword = '';
+  let biometricError = '';
+
   $: newPasswordsMatch = newPassword === confirmNewPassword;
   $: canChangePassword = oldPassword && newPassword.length >= 8 && newPasswordsMatch && !isChanging;
 
@@ -43,6 +50,11 @@
     try {
       clearOnExit = await invoke<boolean>('get_clear_on_exit');
       hasPassword = await invoke<boolean>('has_app_password');
+      const result = await invoke<{ available: boolean; enrolled: boolean }>('check_biometric_availability');
+      biometricAvailable = result.available && result.enrolled;
+      if (biometricAvailable) {
+        biometricEnabled = await invoke<boolean>('get_biometric_enabled');
+      }
     } catch (e) {
       console.error('Failed to load settings:', e);
     }
@@ -69,6 +81,10 @@
         oldPassword,
         newPassword
       });
+      // Biometric enrollment is cleared on the backend; sync UI
+      if (biometricEnabled) {
+        biometricEnabled = false;
+      }
       showChangePassword = false;
       oldPassword = '';
       newPassword = '';
@@ -99,15 +115,71 @@
     }
   }
 
+  async function handleBiometricToggle() {
+    if (biometricEnabled) {
+      // Turning OFF
+      try {
+        await invoke('clear_biometric_enrollment');
+        await invoke('set_biometric_enabled', { enabled: false });
+        biometricEnabled = false;
+      } catch (e) {
+        console.error('Failed to disable biometric:', e);
+      }
+    } else {
+      // Turning ON — show enrollment sub-view
+      showBiometricEnroll = true;
+      biometricPassword = '';
+      biometricError = '';
+    }
+  }
+
+  async function handleBiometricEnroll() {
+    if (!biometricPassword) {
+      biometricError = 'Enter your password';
+      return;
+    }
+
+    biometricError = '';
+
+    try {
+      // Verify the password first
+      const valid = await invoke<boolean>('verify_app_password', { password: biometricPassword });
+      if (!valid) {
+        biometricError = 'Incorrect password';
+        biometricPassword = '';
+        return;
+      }
+
+      // Enroll (triggers BiometricPrompt on device)
+      await invoke('enroll_biometric', { password: biometricPassword });
+      await invoke('set_biometric_enabled', { enabled: true });
+      biometricEnabled = true;
+      showBiometricEnroll = false;
+      biometricPassword = '';
+    } catch (e: any) {
+      const msg = `${e}`;
+      if (msg.includes('user_cancelled')) {
+        // User dismissed the prompt
+        showBiometricEnroll = false;
+        biometricPassword = '';
+      } else {
+        biometricError = 'Enrollment failed. Please try again.';
+      }
+    }
+  }
+
   function close() {
     showChangePassword = false;
     showClearConfirm = false;
+    showBiometricEnroll = false;
     oldPassword = '';
     newPassword = '';
     confirmNewPassword = '';
     clearPassword = '';
+    biometricPassword = '';
     changeError = '';
     clearError = '';
+    biometricError = '';
     dispatch('close');
   }
 </script>
@@ -118,7 +190,7 @@
     <div class="dialog" role="dialog" aria-modal="true" on:click|stopPropagation on:keydown|stopPropagation>
       <h2>Settings</h2>
 
-      {#if !showChangePassword && !showClearConfirm}
+      {#if !showChangePassword && !showClearConfirm && !showBiometricEnroll}
         <div class="settings-section">
           <h3>Appearance</h3>
           <div class="theme-selector">
@@ -143,6 +215,16 @@
               <span class="setting-label">Change Password</span>
               <span class="setting-arrow">→</span>
             </button>
+          {/if}
+
+          {#if biometricAvailable && hasPassword}
+            <label class="setting-toggle">
+              <span class="setting-label">
+                Fingerprint Unlock
+                <span class="setting-hint">Use fingerprint to unlock the app</span>
+              </span>
+              <input type="checkbox" checked={biometricEnabled} on:change={handleBiometricToggle} />
+            </label>
           {/if}
 
           <label class="setting-toggle">
@@ -205,6 +287,22 @@
             <button class="btn btn-primary" on:click={handleChangePassword} disabled={!canChangePassword}>
               {isChanging ? 'Changing...' : 'Change Password'}
             </button>
+          </div>
+        </div>
+
+      {:else if showBiometricEnroll}
+        <div class="sub-section">
+          <p class="info-message">Enter your password to enable fingerprint unlock.</p>
+          <div class="field">
+            <label for="biometric-pw">Password</label>
+            <input id="biometric-pw" type="password" bind:value={biometricPassword} />
+          </div>
+          {#if biometricError}
+            <p class="error-message">{biometricError}</p>
+          {/if}
+          <div class="actions">
+            <button class="btn btn-secondary" on:click={() => { showBiometricEnroll = false; biometricPassword = ''; biometricError = ''; }}>Cancel</button>
+            <button class="btn btn-primary" on:click={handleBiometricEnroll} disabled={!biometricPassword}>Enable</button>
           </div>
         </div>
 
@@ -410,6 +508,15 @@
     font-size: 0.85rem;
     margin-top: 4px;
     display: block;
+  }
+
+  .info-message {
+    color: var(--text-secondary);
+    background: var(--bg-tertiary);
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    margin: 0;
   }
 
   .error-message {
