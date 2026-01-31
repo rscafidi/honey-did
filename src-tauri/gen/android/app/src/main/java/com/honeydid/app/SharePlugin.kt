@@ -14,8 +14,13 @@ class SharePlugin(private val activity: android.app.Activity) : Plugin(activity)
     @Command
     fun shareFile(invoke: Invoke) {
         try {
-            val filePath = invoke.parseArgs(ShareArgs::class.java).filePath
-            val mimeType = invoke.parseArgs(ShareArgs::class.java).mimeType ?: "text/html"
+            val filePath = invoke.getString("filePath", "")
+            val mimeType = invoke.getString("mimeType", "text/html")
+
+            if (filePath.isNullOrEmpty()) {
+                invoke.reject("No filePath provided")
+                return
+            }
 
             val file = File(filePath)
             if (!file.exists()) {
@@ -41,9 +46,4 @@ class SharePlugin(private val activity: android.app.Activity) : Plugin(activity)
             invoke.reject("Share failed: ${e.message}")
         }
     }
-}
-
-class ShareArgs {
-    var filePath: String = ""
-    var mimeType: String? = "text/html"
 }
