@@ -43,7 +43,7 @@ class SharePlugin(private val activity: android.app.Activity) : Plugin(activity)
     }
 }
 
-data class ShareArgs(
-    val filePath: String = "",
-    val mimeType: String? = "text/html"
-)
+class ShareArgs {
+    var filePath: String = ""
+    var mimeType: String? = "text/html"
+}
