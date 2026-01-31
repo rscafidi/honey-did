@@ -80,4 +80,4 @@ jobs:
       - name: Build Android (debug)
         env:
           NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
-        run: npx tauri android build --debug
+        run: npx tauri android build --debug --target aarch64
