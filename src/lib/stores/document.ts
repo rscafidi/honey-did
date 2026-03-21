@@ -1,6 +1,13 @@
 import { writable, type Readable } from 'svelte/store';
 import { invoke } from '@tauri-apps/api/core';
 
+/** Returns true when running inside a Tauri webview (IPC bridge present). */
+function hasTauriBackend(): boolean {
+  return typeof window !== 'undefined' && !!(window as any).__TAURI_INTERNALS__;
+}
+
+const WEB_STORAGE_KEY = 'honey-did-document';
+
 export interface LegacyDocument {
   meta: DocumentMeta;
   financial: FinancialSection;
@@ -192,6 +199,24 @@ export function debounce<T extends (...args: any[]) => void>(fn: T, ms: number):
   }) as T;
 }
 
+function createEmptyDocument(): LegacyDocument {
+  return {
+    meta: { creator_name: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+    financial: { bank_accounts: [], credit_cards: [], investments: [], debts: [], notes: '' },
+    insurance: { policies: [], notes: '' },
+    bills: { bills: [], notes: '' },
+    property: { properties: [], vehicles: [], valuables: [], notes: '' },
+    legal: { will_location: '', attorney: { name: '', relationship: '', phone: '', email: '', notes: '' }, power_of_attorney: '', trusts: [], notes: '' },
+    digital: { email_accounts: [], social_media: [], password_manager: { name: '', master_password_hint: '', recovery_method: '', notes: '' }, notes: '' },
+    household: { maintenance_items: [], contractors: [], how_things_work: [], notes: '' },
+    personal: { funeral_preferences: '', obituary_notes: '', messages: [], notes: '' },
+    contacts: { emergency_contacts: [], family: [], professionals: [], notes: '' },
+    medical: { family_members: [], notes: '' },
+    pets: { pets: [], notes: '' },
+    custom_sections: [],
+  };
+}
+
 function createDocumentStore() {
   const { subscribe, set, update } = writable<LegacyDocument | null>(null);
 
@@ -212,7 +237,7 @@ function createDocumentStore() {
     }, 30_000); // 30s after last edit
   }
 
-  /** Persist the current in-memory document to disk via Tauri.
+  /** Persist the current in-memory document to disk via Tauri (or localStorage on web).
    *  Called on lifecycle events (blur, visibility change, section switch, app close).
    *  Safe to call multiple times — no-ops if nothing is dirty. */
   function saveToDisk(): Promise<void> {
@@ -225,6 +250,18 @@ function createDocumentStore() {
     isDirty = false;
     isSaving = true;
     if (idleSaveTimer) { clearTimeout(idleSaveTimer); idleSaveTimer = null; }
+
+    if (!hasTauriBackend()) {
+      try {
+        localStorage.setItem(WEB_STORAGE_KEY, JSON.stringify(currentDoc));
+      } catch (e) {
+        console.error('Failed to save document to localStorage:', e);
+        isDirty = true;
+      }
+      isSaving = false;
+      return Promise.resolve();
+    }
+
     return invoke('update_document', { document: currentDoc })
       .catch((e) => {
         console.error('Failed to save document:', e);
@@ -242,7 +279,14 @@ function createDocumentStore() {
     get dirty() { return isDirty; },
     load: async () => {
       try {
-        const doc = await invoke<LegacyDocument>('get_document');
+        let doc: LegacyDocument;
+        if (hasTauriBackend()) {
+          doc = await invoke<LegacyDocument>('get_document');
+        } else {
+          // Web fallback: load from localStorage or start with empty document
+          const stored = localStorage.getItem(WEB_STORAGE_KEY);
+          doc = stored ? JSON.parse(stored) : createEmptyDocument();
+        }
         // Migrate any legacy custom subsections to form_elements
         if (doc.custom_sections) {
           doc.custom_sections = doc.custom_sections.map((section) => ({
@@ -261,7 +305,11 @@ function createDocumentStore() {
       // Immediate save (used by import, etc.)
       if (idleSaveTimer) { clearTimeout(idleSaveTimer); idleSaveTimer = null; }
       try {
-        await invoke('update_document', { document: doc });
+        if (hasTauriBackend()) {
+          await invoke('update_document', { document: doc });
+        } else {
+          localStorage.setItem(WEB_STORAGE_KEY, JSON.stringify(doc));
+        }
         isDirty = false;
         set(doc);
       } catch (e) {

@@ -155,6 +155,8 @@
     ? customTopLevelSections.find(s => s.id === currentSection.replace('custom-', ''))?.name || 'Custom Section'
     : sections.find((s) => s.id === currentSection)?.label || '';
 
+  const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI_INTERNALS__;
+
   onMount(async () => {
     // Detect Android and set safe area CSS variable.
     // Android WebView does not populate env(safe-area-inset-bottom) for the
@@ -163,25 +165,27 @@
       window.document.documentElement.style.setProperty('--android-nav-bar-height', '48px');
     }
 
-    // Check if app has a password set.
-    // On Android, the Tauri backend may not be ready after activity recreation,
-    // so we retry with delays to avoid getting stuck on the loading screen.
-    for (let attempt = 0; attempt < 10; attempt++) {
-      try {
-        const passwordCheck = invoke<boolean>('has_app_password');
-        const timeout = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('timeout')), 3000)
-        );
-        hasPassword = await Promise.race([passwordCheck, timeout]);
-        if (hasPassword) {
-          isLocked = true;
-        }
-        break;
-      } catch (e) {
-        if (attempt < 9) {
-          await new Promise(r => setTimeout(r, 500));
-        } else {
-          console.error('Failed to check password status after retries:', e);
+    if (isTauri) {
+      // Check if app has a password set.
+      // On Android, the Tauri backend may not be ready after activity recreation,
+      // so we retry with delays to avoid getting stuck on the loading screen.
+      for (let attempt = 0; attempt < 10; attempt++) {
+        try {
+          const passwordCheck = invoke<boolean>('has_app_password');
+          const timeout = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('timeout')), 3000)
+          );
+          hasPassword = await Promise.race([passwordCheck, timeout]);
+          if (hasPassword) {
+            isLocked = true;
+          }
+          break;
+        } catch (e) {
+          if (attempt < 9) {
+            await new Promise(r => setTimeout(r, 500));
+          } else {
+            console.error('Failed to check password status after retries:', e);
+          }
         }
       }
     }
@@ -296,19 +300,21 @@
     window.addEventListener('keydown', handleUserActivity);
     window.addEventListener('scroll', handleUserActivity, true);
 
-    const appWindow = getCurrentWindow();
-    unlistenClose = await appWindow.onCloseRequested(async (event) => {
-      try {
-        // Flush any unsaved edits before closing
-        await document.saveToDisk();
-        const clearOnExit = await invoke<boolean>('get_clear_on_exit');
-        if (clearOnExit) {
-          await invoke('clear_data_on_exit');
+    if (isTauri) {
+      const appWindow = getCurrentWindow();
+      unlistenClose = await appWindow.onCloseRequested(async (event) => {
+        try {
+          // Flush any unsaved edits before closing
+          await document.saveToDisk();
+          const clearOnExit = await invoke<boolean>('get_clear_on_exit');
+          if (clearOnExit) {
+            await invoke('clear_data_on_exit');
+          }
+        } catch (e) {
+          console.error('Error during close:', e);
         }
-      } catch (e) {
-        console.error('Error during close:', e);
-      }
-    });
+      });
+    }
   });
 
   onDestroy(() => {
@@ -332,16 +338,7 @@
 {:else if showIntro}
   <div class="intro-screen">
     <div class="intro-card">
-      <svg class="intro-logo" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="8" y="6" width="32" height="36" rx="2" fill="#F0EFEB" stroke="#DDE5B6" stroke-width="1.5"/>
-        <ellipse cx="24" cy="6" rx="16" ry="3" fill="#DDE5B6"/>
-        <ellipse cx="24" cy="6" rx="14" ry="2" fill="#F0EFEB"/>
-        <ellipse cx="24" cy="42" rx="16" ry="3" fill="#DDE5B6"/>
-        <ellipse cx="24" cy="42" rx="14" ry="2" fill="#F0EFEB"/>
-        <text x="24" y="28" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="16" font-weight="600" fill="#283618">HD</text>
-        <line x1="14" y1="34" x2="34" y2="34" stroke="#B7B7A4" stroke-width="1" stroke-linecap="round"/>
-        <line x1="16" y1="37" x2="32" y2="37" stroke="#B7B7A4" stroke-width="0.75" stroke-linecap="round"/>
-      </svg>
+      <img class="intro-logo" src="/logo.png" alt="Honey Did" />
       <h1 class="intro-heading">Welcome to Honey Did</h1>
       <p class="intro-description">
         Are you the DOER in your family?  What would your family do if you disappeared tomorrow?  Welcome to Honey Did,
@@ -376,21 +373,7 @@
   <main class="app">
     <aside class="sidebar" class:open={sidebarOpen}>
       <div class="logo">
-        <svg class="logo-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- Scroll body -->
-          <rect x="8" y="6" width="32" height="36" rx="2" fill="#F0EFEB" stroke="#DDE5B6" stroke-width="1.5"/>
-          <!-- Top roll -->
-          <ellipse cx="24" cy="6" rx="16" ry="3" fill="#DDE5B6"/>
-          <ellipse cx="24" cy="6" rx="14" ry="2" fill="#F0EFEB"/>
-          <!-- Bottom roll -->
-          <ellipse cx="24" cy="42" rx="16" ry="3" fill="#DDE5B6"/>
-          <ellipse cx="24" cy="42" rx="14" ry="2" fill="#F0EFEB"/>
-          <!-- Cursive HD text -->
-          <text x="24" y="28" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="16" font-weight="600" fill="#283618">HD</text>
-          <!-- Decorative lines -->
-          <line x1="14" y1="34" x2="34" y2="34" stroke="#B7B7A4" stroke-width="1" stroke-linecap="round"/>
-          <line x1="16" y1="37" x2="32" y2="37" stroke="#B7B7A4" stroke-width="0.75" stroke-linecap="round"/>
-        </svg>
+        <img class="logo-icon" src="/logo.png" alt="Honey Did" />
         <span class="logo-text">Honey Did</span>
       </div>
       <nav class="nav">

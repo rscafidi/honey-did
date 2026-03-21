@@ -68,7 +68,10 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:docs.rs)",
       "WebFetch(domain:v2.tauri.app)",
-      "WebFetch(domain:tauritutorials.com)"
+      "WebFetch(domain:tauritutorials.com)",
+      "Bash(magick:*)",
+      "Bash(npx:*)",
+      "Bash(npm ls:*)"
     ]
   }
 }
