@@ -28,6 +28,7 @@
   let isRenamingSection = false;
   let newSectionName = sectionName;
   let showFieldEditor = false;
+  let showDeleteConfirm = false;
 
   // Debounce dispatching to parent/store so per-keystroke edits in FormBuilder
   // don't trigger a full Svelte reactive cascade on every character.
@@ -101,14 +102,9 @@
     isRenamingSection = false;
   }
 
-  function handleDeleteSection() {
-    const itemCount = local.items.length;
-    const message = itemCount > 0
-      ? `Delete "${sectionName}" and all ${itemCount} item${itemCount === 1 ? '' : 's'} within it?`
-      : `Delete "${sectionName}"?`;
-    if (confirm(message)) {
-      dispatch('delete');
-    }
+  function confirmDeleteSection() {
+    dispatch('delete');
+    showDeleteConfirm = false;
   }
 </script>
 
@@ -132,7 +128,13 @@
     <div class="section-actions">
       <button class="btn btn-add" on:click={addItem} disabled={!hasFields} title={hasFields ? 'Add a new item' : 'Add fields first'}>+ Add Item</button>
       <button class="btn btn-gear" class:active={showFieldEditor} on:click={() => (showFieldEditor = !showFieldEditor)} title="Configure fields">&#9881;</button>
-      <button class="btn btn-delete" on:click={handleDeleteSection}>Delete</button>
+      {#if showDeleteConfirm}
+        <span class="delete-confirm-text">Delete?</span>
+        <button class="btn btn-delete-yes" on:click={confirmDeleteSection}>Yes</button>
+        <button class="btn btn-delete-no" on:click={() => (showDeleteConfirm = false)}>No</button>
+      {:else}
+        <button class="btn btn-delete" on:click={() => (showDeleteConfirm = true)}>Delete</button>
+      {/if}
     </div>
   </div>
 
@@ -259,6 +261,31 @@
 
   .btn-delete:hover {
     background: rgba(155, 44, 44, 0.1);
+  }
+
+  .delete-confirm-text {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--error-color);
+  }
+
+  .btn-delete-yes {
+    background: var(--error-color);
+    color: white;
+  }
+
+  .btn-delete-yes:hover {
+    opacity: 0.9;
+  }
+
+  .btn-delete-no {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+  }
+
+  .btn-delete-no:hover {
+    background: var(--border-color);
   }
 
   /* Field editor panel */

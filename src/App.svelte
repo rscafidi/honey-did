@@ -60,6 +60,15 @@
   // Custom section state
   let showAddSectionForm = false;
   let newSectionName = '';
+  let renamingSectionId: string | null = null;
+  let renamingSectionValue = '';
+
+  function handleRenameCommit() {
+    if (renamingSectionId && renamingSectionValue.trim()) {
+      renameCustomSection(renamingSectionId, renamingSectionValue.trim());
+    }
+    renamingSectionId = null;
+  }
 
   const sections: { id: Section; label: string; icon: string }[] = [
     { id: 'financial', label: 'Financial', icon: '💰' },
@@ -124,8 +133,12 @@
     showAddSectionForm = false;
   }
 
-  function deleteCustomSection(sectionId: string) {
-    if (!$document) return;
+  let deletingSectionId: string | null = null;
+
+  function confirmDeleteCustomSection() {
+    if (!$document || !deletingSectionId) return;
+    const sectionId = deletingSectionId;
+    deletingSectionId = null;
     document.updateSection(
       'custom_sections',
       ($document.custom_sections || []).filter(s => s.id !== sectionId)
@@ -391,19 +404,27 @@
         <!-- Custom top-level sections -->
         {#each customTopLevelSections as customSection (customSection.id)}
           <div class="nav-item-wrapper">
-            <button
-              class="nav-item"
-              class:active={currentSection === `custom-${customSection.id}`}
-              on:click={() => navigateToSection(`custom-${customSection.id}`)}
-            >
-              <span class="nav-icon">📁</span>
-              <span class="nav-label">{customSection.name}</span>
-            </button>
-            <button
-              class="nav-delete"
-              on:click|stopPropagation={() => deleteCustomSection(customSection.id)}
-              title="Delete section"
-            >×</button>
+            {#if deletingSectionId === customSection.id}
+              <div class="nav-delete-confirm">
+                <span class="nav-delete-text">Delete?</span>
+                <button class="nav-delete-yes" on:click|stopPropagation={confirmDeleteCustomSection}>Yes</button>
+                <button class="nav-delete-no" on:click|stopPropagation={() => (deletingSectionId = null)}>No</button>
+              </div>
+            {:else}
+              <button
+                class="nav-item"
+                class:active={currentSection === `custom-${customSection.id}`}
+                on:click={() => navigateToSection(`custom-${customSection.id}`)}
+              >
+                <span class="nav-icon">📁</span>
+                <span class="nav-label">{customSection.name}</span>
+              </button>
+              <button
+                class="nav-delete"
+                on:click|stopPropagation={() => (deletingSectionId = customSection.id)}
+                title="Delete section"
+              >×</button>
+            {/if}
           </div>
         {/each}
 
@@ -462,7 +483,21 @@
     {/if}
     <section class="content">
       <header class="content-header">
-        <h2>{currentSectionLabel}</h2>
+        {#if currentSection.startsWith('custom-') && renamingSectionId === currentSection.replace('custom-', '')}
+          <input
+            type="text"
+            class="content-rename-input"
+            bind:value={renamingSectionValue}
+            on:blur={handleRenameCommit}
+            on:keydown={(e) => e.key === 'Enter' && handleRenameCommit()}
+          />
+        {:else if currentSection.startsWith('custom-')}
+          <!-- svelte-ignore a11y-click-events-have-key-events -->
+          <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+          <h2 class="section-title-editable" on:click={() => { renamingSectionId = currentSection.replace('custom-', ''); renamingSectionValue = currentSectionLabel; }}>{currentSectionLabel}</h2>
+        {:else}
+          <h2>{currentSectionLabel}</h2>
+        {/if}
       </header>
       <div class="content-body">
         {#if currentSection === 'financial'}
@@ -743,6 +778,40 @@
     color: var(--error-color);
   }
 
+  .nav-delete-confirm {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    flex: 1;
+  }
+
+  .nav-delete-text {
+    font-size: 0.85rem;
+    color: var(--error-color);
+    flex: 1;
+  }
+
+  .nav-delete-yes,
+  .nav-delete-no {
+    border: none;
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  .nav-delete-yes {
+    background: var(--error-color);
+    color: white;
+  }
+
+  .nav-delete-no {
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--sidebar-text);
+  }
+
   .add-section-btn {
     display: block;
     width: calc(100% - 20px);
@@ -916,6 +985,30 @@
     margin: 0;
     color: var(--text-primary);
     font-weight: 600;
+  }
+
+  .section-title-editable {
+    cursor: pointer;
+  }
+
+  .section-title-editable:hover {
+    text-decoration: underline;
+  }
+
+  .content-rename-input {
+    font-size: 1.5rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border: 1px solid var(--accent-primary);
+    border-radius: 4px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .content-rename-input:focus {
+    outline: none;
   }
 
   .content-body {

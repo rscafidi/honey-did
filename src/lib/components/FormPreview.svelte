@@ -59,13 +59,15 @@
     editingItemValues = {};
   }
 
-  function deleteItem(itemId: string) {
-    if (!confirm('Delete this item?')) return;
+  let deletingItemId: string | null = null;
+
+  function confirmDeleteItem(itemId: string) {
     dispatchItems(items.filter((item) => item.id !== itemId));
     if (editingItemId === itemId) {
       editingItemId = null;
       editingItemValues = {};
     }
+    deletingItemId = null;
   }
 
   function renderFieldInput(field: FormElementField): FieldType {
@@ -115,7 +117,13 @@
             </div>
             <div class="form-actions">
               <button class="btn btn-secondary" on:click={cancelEditItem}>Cancel</button>
-              <button class="btn btn-danger" on:click={() => deleteItem(item.id)}>Delete</button>
+              {#if deletingItemId === item.id}
+                <span class="delete-confirm-text">Delete?</span>
+                <button class="btn btn-danger" on:click={() => confirmDeleteItem(item.id)}>Yes</button>
+                <button class="btn btn-secondary" on:click={() => (deletingItemId = null)}>No</button>
+              {:else}
+                <button class="btn btn-danger" on:click={() => (deletingItemId = item.id)}>Delete</button>
+              {/if}
               <button class="btn btn-primary" on:click={saveItem}>Save</button>
             </div>
           </div>
@@ -304,6 +312,12 @@
 
   .btn-secondary:hover {
     background: var(--border-color);
+  }
+
+  .delete-confirm-text {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--error-color);
   }
 
   .btn-danger {
