@@ -6,13 +6,15 @@
   import FormField from '../components/FormField.svelte';
   import NotesField from '../components/NotesField.svelte';
   import CustomSubsections from '../components/CustomSubsections.svelte';
+  import FileAttachments from '../components/FileAttachments.svelte';
 
   const emptyContact = { name: '', relationship: '', phone: '', email: '', notes: '' };
   const emptyMedication = { name: '', dosage: '', frequency: '', prescriber: '', notes: '' };
 
   const defaultPets = {
     pets: [] as any[],
-    notes: ''
+    notes: '',
+    attachments: [] as any[]
   };
 
   // Local-first state: edits stay here, only flushed to store on discrete actions or debounced
@@ -75,6 +77,11 @@
 
   function updateNotes(e: Event) {
     local = { ...local, notes: (e.target as HTMLTextAreaElement).value };
+    scheduleFlush();
+  }
+
+  function updateAttachments(e: CustomEvent) {
+    local = { ...local, attachments: e.detail };
     scheduleFlush();
   }
 
@@ -141,6 +148,7 @@
   {/each}
 
   <AddButton label="Add Pet" on:click={addPet} />
+  <FileAttachments attachments={local.attachments || []} group="pets" on:update={updateAttachments} />
   <NotesField value={local.notes} on:change={updateNotes} />
 
   <CustomSubsections parentId="pets" />

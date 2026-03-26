@@ -6,6 +6,7 @@
   import FormField from '../components/FormField.svelte';
   import NotesField from '../components/NotesField.svelte';
   import CustomSubsections from '../components/CustomSubsections.svelte';
+  import FileAttachments from '../components/FileAttachments.svelte';
 
   const emptyContact = { name: '', relationship: '', phone: '', email: '', notes: '' };
 
@@ -13,7 +14,8 @@
     emergency_contacts: [] as any[],
     family: [] as any[],
     professionals: [] as any[],
-    notes: ''
+    notes: '',
+    attachments: [] as any[]
   };
 
   // Local-first state: edits stay here, only flushed to store on discrete actions or debounced
@@ -67,6 +69,11 @@
     local = { ...local, notes: (e.target as HTMLTextAreaElement).value };
     scheduleFlush();
   }
+
+  function updateAttachments(e: CustomEvent) {
+    local = { ...local, attachments: e.detail };
+    scheduleFlush();
+  }
 </script>
 
 <div class="section">
@@ -83,6 +90,7 @@
       </ItemCard>
     {/each}
     <AddButton label="Add Emergency Contact" on:click={() => addContact('emergency_contacts')} />
+    <FileAttachments attachments={local.attachments || []} group="emergency_contacts" on:update={updateAttachments} />
   </div>
 
   <div class="subsection">
@@ -97,6 +105,7 @@
       </ItemCard>
     {/each}
     <AddButton label="Add Family Member" on:click={() => addContact('family')} />
+    <FileAttachments attachments={local.attachments || []} group="family" on:update={updateAttachments} />
   </div>
 
   <div class="subsection">
@@ -112,6 +121,7 @@
       </ItemCard>
     {/each}
     <AddButton label="Add Professional Contact" on:click={() => addContact('professionals')} />
+    <FileAttachments attachments={local.attachments || []} group="professionals" on:update={updateAttachments} />
   </div>
 
   <NotesField value={local.notes} on:change={updateNotes} />

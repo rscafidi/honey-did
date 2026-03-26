@@ -1,7 +1,20 @@
 use crate::encryption::{decrypt_from_browser, decrypt_key_with_passphrase, decrypt_with_raw_key, encrypt_for_browser, encrypt_key_with_passphrase, encrypt_with_raw_key, generate_document_key, EncryptedPayload, EncryptionError};
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use serde::Deserialize;
 use crate::models::{FieldType, LegacyDocument, SlideType};
 use serde::Serialize;
+
+/// The app logo PNG, embedded at compile time.
+const LOGO_PNG_BYTES: &[u8] = include_bytes!("../icons/logo.png");
+
+/// Returns the logo as a base64 data-URI `<img>` tag.
+fn logo_img_tag(css_class: &str, size_px: u32) -> String {
+    let b64 = BASE64.encode(LOGO_PNG_BYTES);
+    format!(
+        r#"<img class="{}" src="data:image/png;base64,{}" alt="Honey Did" style="width:{}px;height:{}px;" />"#,
+        css_class, b64, size_px, size_px
+    )
+}
 
 #[derive(Debug)]
 pub enum ExportError {
@@ -297,8 +310,7 @@ pub fn import_from_html(html: &str, passphrase: &str) -> Result<LegacyDocument, 
 // SHARED TEMPLATE COMPONENTS
 // ============================================================================
 
-/// The HD scroll logo SVG, matching the desktop app's LockScreen branding
-const LOGO_SVG: &str = r##"<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:72px;height:72px;margin-bottom:1rem;"><rect x="8" y="6" width="32" height="36" rx="2" fill="#F0EFEB" stroke="#DDE5B6" stroke-width="1.5"/><ellipse cx="24" cy="6" rx="16" ry="3" fill="#DDE5B6"/><ellipse cx="24" cy="6" rx="14" ry="2" fill="#F0EFEB"/><ellipse cx="24" cy="42" rx="16" ry="3" fill="#DDE5B6"/><ellipse cx="24" cy="42" rx="14" ry="2" fill="#F0EFEB"/><text x="24" y="28" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="16" font-weight="600" fill="#283618">HD</text><line x1="14" y1="34" x2="34" y2="34" stroke="#B7B7A4" stroke-width="1" stroke-linecap="round"/><line x1="16" y1="37" x2="32" y2="37" stroke="#B7B7A4" stroke-width="0.75" stroke-linecap="round"/></svg>"##;
+// LOGO_SVG removed — replaced by logo_img_tag() using the embedded PNG.
 
 /// Shared CSS styles used by both templates
 const SHARED_CSS: &str = r##"
@@ -351,6 +363,12 @@ const SHARED_CSS: &str = r##"
         .item-title { font-weight: 600; color: #283618; margin-bottom: 0.5rem; }
         .item-detail { color: #606C38; font-size: 0.9rem; }
         .notes { background: #F0EFEB; padding: 12px 14px; border-radius: 8px; margin-top: 1rem; font-style: italic; color: #283618; border-left: 3px solid #B7B7A4; }
+        .attachments-section { margin-top: 1rem; padding: 14px; background: #F0EFEB; border-radius: 8px; border-left: 3px solid #606C38; }
+        .attachments-heading { margin: 0 0 10px 0; font-size: 0.9rem; color: #606C38; font-weight: 600; }
+        .attachment-export { margin-bottom: 10px; }
+        .attachment-export-name { font-size: 0.85rem; color: #555; }
+        .attachment-export-link { color: #283618; font-weight: 500; }
+        .attachment-export-size { font-size: 0.8rem; color: #999; }
         .match-badge { font-size: 0.65rem; font-weight: 500; color: #606C38; background: #D4D4D4; padding: 2px 6px; border-radius: 4px; margin-left: 4px; vertical-align: middle; text-transform: lowercase; }
         .highlight { background: #DDE5B6; padding: 1px 2px; border-radius: 2px; }
         .highlight.current { background: #ADC178; outline: 2px solid #283618; }
@@ -382,7 +400,24 @@ const SHARED_CSS: &str = r##"
             .sidebar-overlay.visible { display: block; }
             .main-content { margin-left: 0; padding: 16px; }
         }
-        @media print { .sidebar, .menu-toggle, .mobile-toolbar, .mobile-search-filters-bar { display: none !important; } .main-content { margin-left: 0; padding-top: 20px !important; } .section { break-inside: avoid; box-shadow: none; border: 1px solid #D4D4D4; } }
+        @media print {
+            .sidebar, .menu-toggle, .mobile-toolbar, .mobile-search-filters-bar, .sidebar-overlay { display: none !important; }
+            body { background: white !important; font-size: 11pt; line-height: 1.4; }
+            .layout { display: block !important; }
+            .main-content { margin-left: 0 !important; padding: 20px !important; max-width: 100% !important; }
+            .section { box-shadow: none !important; border: none !important; border-radius: 0 !important; background: white !important; padding: 0 !important; margin: 0 0 20px 0 !important; page-break-inside: auto; }
+            .section-title { font-size: 13pt; font-weight: 700; color: #000; border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 10px; page-break-after: avoid; }
+            h3 { font-size: 11pt; color: #333; page-break-after: avoid; margin-top: 12px; }
+            h4 { page-break-after: avoid; }
+            .item { box-shadow: none !important; background: #f8f8f8 !important; border: 1px solid #ddd !important; border-radius: 4px !important; padding: 10px 12px !important; margin-bottom: 6px !important; page-break-inside: avoid; }
+            .item-title { font-size: 10pt; font-weight: 600; }
+            .item-detail { font-size: 9.5pt; }
+            .contact-info { page-break-inside: avoid; }
+            .notes { page-break-inside: avoid; background: #f0f0f0 !important; border-left: 3px solid #999 !important; font-size: 9.5pt; }
+            .attachments-section { page-break-inside: avoid; font-size: 9.5pt; }
+            .attachment-export-link { color: #000 !important; text-decoration: none !important; }
+            .attachment-export-link::after { content: " (attached file)"; font-style: italic; color: #666; font-size: 8.5pt; }
+        }
 "##;
 
 /// Shared JavaScript utility functions
@@ -411,6 +446,56 @@ const SHARED_JS_UTILS: &str = r##"
             if (contact.notes) html += '<div class="notes">' + escapeHtml(contact.notes) + '</div>';
             html += '</div>';
             return html;
+        }
+
+        function formatSize(bytes) {
+            if (!bytes) return '';
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1048576).toFixed(1) + ' MB';
+        }
+
+        function downloadAttachment(mime, data, name) {
+            try {
+                var byteChars = atob(data);
+                var byteArr = new Uint8Array(byteChars.length);
+                for (var i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
+                var blob = new Blob([byteArr], { type: mime });
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = name;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(function() { URL.revokeObjectURL(url); }, 100);
+            } catch(e) { console.error('Download failed', e); }
+        }
+
+        function renderAttachments(attachments) {
+            if (!attachments || !attachments.length) return '';
+            var html = '<div class="attachments-section"><h4 class="attachments-heading">Attachments</h4>';
+            attachments.forEach(function(a, idx) {
+                var dlId = 'att-dl-' + (a.id || idx);
+                var attId = 'att-row-' + (a.id || idx);
+                html += '<div class="attachment-export" id="' + attId + '"><a class="attachment-export-link" href="#" id="' + dlId + '">' + escapeHtml(a.name) + '</a> <span class="attachment-export-size">(' + formatSize(a.size) + ')</span></div>';
+            });
+            html += '</div>';
+            return html;
+        }
+
+        function bindAttachmentDownloads(attachments) {
+            if (!attachments) return;
+            attachments.forEach(function(a, idx) {
+                var dlId = 'att-dl-' + (a.id || idx);
+                var el = document.getElementById(dlId);
+                if (el) {
+                    el.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        downloadAttachment(a.mime_type, a.data, a.name);
+                    });
+                }
+            });
         }
 
         function renderSection(title, id, content) {
@@ -510,6 +595,7 @@ const SHARED_JS_UTILS: &str = r##"
             var filters = document.getElementById('mobileFiltersBar');
             if (filters) filters.classList.remove('visible');
         }
+
 "##;
 
 /// Shared JavaScript for search functionality
@@ -967,7 +1053,48 @@ const SHARED_JS_SEARCH: &str = r##"
                 btn.classList.toggle('active', searchState.filters[type]);
             });
 
+            // clearHighlights destroys the DOM nodes referenced by matches,
+            // so we must rebuild the search index and re-match afterwards.
             clearHighlights();
+            buildSearchIndex();
+
+            const term = searchState.term;
+            const termMeta = metaphone(term);
+            const savedFilters = { ...searchState.filters };
+            const matchMap = new Map();
+
+            searchIndex.forEach(entry => {
+                const key = entry.node.textContent + '|' + entry.text;
+                if (matchMap.has(key)) return;
+
+                const wordLower = entry.lowerText;
+
+                if (wordLower === term) {
+                    matchMap.set(key, { ...entry, type: 'exact' });
+                    return;
+                }
+                if (term.length >= 3 && wordLower.includes(term)) {
+                    matchMap.set(key, { ...entry, type: 'contains' });
+                    return;
+                }
+                if (wordLower[0] === term[0]) {
+                    const maxDist = term.length >= 8 ? 3 : (term.length >= 5 ? 2 : 1);
+                    const dist = levenshtein(wordLower, term);
+                    if (dist > 0 && dist <= maxDist) {
+                        matchMap.set(key, { ...entry, type: 'spelling', distance: dist });
+                        return;
+                    }
+                }
+                if (term.length >= 3 && termMeta && entry.metaphone === termMeta) {
+                    matchMap.set(key, { ...entry, type: 'phonetic' });
+                }
+            });
+
+            const typeOrder = { exact: 0, contains: 1, spelling: 2, phonetic: 3 };
+            searchState.matches = Array.from(matchMap.values())
+                .sort((a, b) => typeOrder[a.type] - typeOrder[b.type]);
+            searchState.filters = savedFilters;
+
             highlightMatches();
 
             const visible = getVisibleMatches();
@@ -1075,16 +1202,7 @@ const SHARED_JS_RENDER_DOCUMENT: &str = r##"
             html += '<div class="layout">';
             html += '<div class="sidebar" id="sidebar">';
             html += '<div class="sidebar-header">';
-            html += '<svg class="logo-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">';
-            html += '<rect x="8" y="6" width="32" height="36" rx="2" fill="#F0EFEB" stroke="#DDE5B6" stroke-width="1.5"/>';
-            html += '<ellipse cx="24" cy="6" rx="16" ry="3" fill="#DDE5B6"/>';
-            html += '<ellipse cx="24" cy="6" rx="14" ry="2" fill="#F0EFEB"/>';
-            html += '<ellipse cx="24" cy="42" rx="16" ry="3" fill="#DDE5B6"/>';
-            html += '<ellipse cx="24" cy="42" rx="14" ry="2" fill="#F0EFEB"/>';
-            html += '<text x="24" y="28" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="16" font-weight="600" fill="#283618">HD</text>';
-            html += '<line x1="14" y1="34" x2="34" y2="34" stroke="#B7B7A4" stroke-width="1" stroke-linecap="round"/>';
-            html += '<line x1="16" y1="37" x2="32" y2="37" stroke="#B7B7A4" stroke-width="0.75" stroke-linecap="round"/>';
-            html += '</svg>';
+            html += '<img class="logo-icon" src="' + LOGO_DATA_URI + '" alt="Honey Did" />';
             html += '<div class="logo-text"><div class="sidebar-title">Honey Did</div>';
             if (data.meta && data.meta.creator_name) {
                 html += '<div class="sidebar-subtitle">By ' + escapeHtml(data.meta.creator_name) + '</div>';
@@ -1196,6 +1314,7 @@ const SHARED_JS_RENDER_DOCUMENT: &str = r##"
                     });
                 }
                 if (data.financial.notes) content += '<div class="notes">' + escapeHtml(data.financial.notes) + '</div>';
+                content += renderAttachments(data.financial.attachments);
                 html += renderSection('💰 Financial Information', 'financial', content);
             }
 
@@ -1213,6 +1332,7 @@ const SHARED_JS_RENDER_DOCUMENT: &str = r##"
                     });
                 }
                 if (data.insurance.notes) content += '<div class="notes">' + escapeHtml(data.insurance.notes) + '</div>';
+                content += renderAttachments(data.insurance.attachments);
                 html += renderSection('🛡️ Insurance', 'insurance', content);
             }
 
@@ -1231,6 +1351,7 @@ const SHARED_JS_RENDER_DOCUMENT: &str = r##"
                     });
                 }
                 if (data.bills.notes) content += '<div class="notes">' + escapeHtml(data.bills.notes) + '</div>';
+                content += renderAttachments(data.bills.attachments);
                 html += renderSection('📄 Bills', 'bills', content);
             }
 
@@ -1265,6 +1386,7 @@ const SHARED_JS_RENDER_DOCUMENT: &str = r##"
                     });
                 }
                 if (data.property.notes) content += '<div class="notes">' + escapeHtml(data.property.notes) + '</div>';
+                content += renderAttachments(data.property.attachments);
                 html += renderSection('🏠 Property', 'property', content);
             }
 
@@ -1286,6 +1408,7 @@ const SHARED_JS_RENDER_DOCUMENT: &str = r##"
                     });
                 }
                 if (data.legal.notes) content += '<div class="notes">' + escapeHtml(data.legal.notes) + '</div>';
+                content += renderAttachments(data.legal.attachments);
                 html += renderSection('⚖️ Legal Documents', 'legal', content);
             }
 
@@ -1319,6 +1442,7 @@ const SHARED_JS_RENDER_DOCUMENT: &str = r##"
                     });
                 }
                 if (data.digital.notes) content += '<div class="notes">' + escapeHtml(data.digital.notes) + '</div>';
+                content += renderAttachments(data.digital.attachments);
                 html += renderSection('💻 Digital Life', 'digital', content);
             }
 
@@ -1350,6 +1474,7 @@ const SHARED_JS_RENDER_DOCUMENT: &str = r##"
                     });
                 }
                 if (data.household.notes) content += '<div class="notes">' + escapeHtml(data.household.notes) + '</div>';
+                content += renderAttachments(data.household.attachments);
                 html += renderSection('🔧 Household', 'household', content);
             }
 
@@ -1371,6 +1496,7 @@ const SHARED_JS_RENDER_DOCUMENT: &str = r##"
                     });
                 }
                 if (data.personal.notes) content += '<div class="notes">' + escapeHtml(data.personal.notes) + '</div>';
+                content += renderAttachments(data.personal.attachments);
                 html += renderSection('👤 Personal Wishes', 'personal', content);
             }
 
@@ -1396,6 +1522,7 @@ const SHARED_JS_RENDER_DOCUMENT: &str = r##"
                     });
                 }
                 if (data.contacts.notes) content += '<div class="notes">' + escapeHtml(data.contacts.notes) + '</div>';
+                content += renderAttachments(data.contacts.attachments);
                 html += renderSection('📇 Important Contacts', 'contacts', content);
             }
 
@@ -1429,6 +1556,7 @@ const SHARED_JS_RENDER_DOCUMENT: &str = r##"
                     });
                 }
                 if (data.medical.notes) content += '<div class="notes">' + escapeHtml(data.medical.notes) + '</div>';
+                content += renderAttachments(data.medical.attachments);
                 html += renderSection('🏥 Medical Information', 'medical', content);
             }
 
@@ -1453,6 +1581,7 @@ const SHARED_JS_RENDER_DOCUMENT: &str = r##"
                     });
                 }
                 if (data.pets.notes) content += '<div class="notes">' + escapeHtml(data.pets.notes) + '</div>';
+                content += renderAttachments(data.pets.attachments);
                 html += renderSection('🐾 Pets', 'pets', content);
             }
 
@@ -1469,6 +1598,7 @@ const SHARED_JS_RENDER_DOCUMENT: &str = r##"
                     section.subsections.forEach(sub => {
                         content += renderCustomSubsection(sub);
                     });
+                    content += renderAttachments(section.attachments);
                     if (content) html += renderSection('📋 ' + escapeHtml(section.name), 'custom-' + section.id, content);
                 });
 
@@ -1514,6 +1644,17 @@ const SHARED_JS_RENDER_DOCUMENT: &str = r##"
 
             container.innerHTML = html;
             buildSearchIndex();
+
+            // Bind download handlers for all attachments
+            var allSections = ['financial','insurance','bills','property','legal','digital','household','personal','contacts','medical','pets'];
+            allSections.forEach(function(key) {
+                if (data[key] && data[key].attachments) bindAttachmentDownloads(data[key].attachments);
+            });
+            if (data.custom_sections) {
+                data.custom_sections.forEach(function(cs) {
+                    if (cs.attachments) bindAttachmentDownloads(cs.attachments);
+                });
+            }
         }
 "##;
 
@@ -1705,7 +1846,7 @@ const QUESTION_CSS: &str = r##"
         /* Slide Screen */
         .slide-screen { position: fixed; inset: 0; background: linear-gradient(145deg, #283618 0%, #1a2410 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; }
         .slide-screen.hidden { display: none; }
-        .slide-container { max-width: 600px; padding: 40px; text-align: center; }
+        .slide-container { max-width: 600px; padding: 40px; text-align: center; display: flex; flex-direction: column; align-items: center; }
         .slide-text { font-size: 1.5rem; line-height: 1.8; color: #F0EFEB; font-weight: 400; white-space: pre-wrap; margin-bottom: 24px; }
         .slide-input { width: 100%; max-width: 400px; padding: 14px 16px; font-size: 1.1rem; border: 2px solid rgba(240, 239, 235, 0.3); border-radius: 10px; text-align: center; background: rgba(255,255,255,0.1); color: #F0EFEB; margin-bottom: 16px; }
         .slide-input::placeholder { color: rgba(240, 239, 235, 0.5); }
@@ -2041,6 +2182,7 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str, welcome_slid
         <div class="container" id="documentContent"></div>
     </div>
     <script>
+        const LOGO_DATA_URI = "{logo_data_uri}";
         const ENCRYPTED_DATA = {encrypted_data};
         const WELCOME_SLIDES = {welcome_slides_json};
 {SHARED_JS_UTILS}
@@ -2053,7 +2195,8 @@ fn generate_html_template(encrypted_data: &str, creator_name: &str, welcome_slid
 </html>"##,
         SHARED_CSS = SHARED_CSS,
         PASSPHRASE_CSS = PASSPHRASE_CSS,
-        logo_svg = LOGO_SVG,
+        logo_svg = logo_img_tag("lock-logo", 72),
+        logo_data_uri = format!("data:image/png;base64,{}", BASE64.encode(LOGO_PNG_BYTES)),
         app_version = env!("CARGO_PKG_VERSION"),
         creator_name = creator_name,
         encrypted_data = encrypted_data,
@@ -2131,6 +2274,7 @@ fn generate_question_html_template(encrypted_data: &str, slides_json: &str, has_
     </div>
 
     <script>
+        const LOGO_DATA_URI = "{logo_data_uri}";
         const ENCRYPTED_DATA = {encrypted_data};
         const SLIDES = {slides_json};
         const HAS_PASSPHRASE = {has_passphrase};
@@ -2144,7 +2288,8 @@ fn generate_question_html_template(encrypted_data: &str, slides_json: &str, has_
 </html>"##,
         SHARED_CSS = SHARED_CSS,
         QUESTION_CSS = QUESTION_CSS,
-        logo_svg = LOGO_SVG,
+        logo_svg = logo_img_tag("lock-logo", 72),
+        logo_data_uri = format!("data:image/png;base64,{}", BASE64.encode(LOGO_PNG_BYTES)),
         app_version = env!("CARGO_PKG_VERSION"),
         fallback_link = fallback_link,
         encrypted_data = encrypted_data,

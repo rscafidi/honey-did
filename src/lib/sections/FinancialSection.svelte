@@ -6,13 +6,15 @@
   import FormField from '../components/FormField.svelte';
   import NotesField from '../components/NotesField.svelte';
   import CustomSubsections from '../components/CustomSubsections.svelte';
+  import FileAttachments from '../components/FileAttachments.svelte';
 
   const defaultFinancial = {
     bank_accounts: [] as any[],
     credit_cards: [] as any[],
     investments: [] as any[],
     debts: [] as any[],
-    notes: ''
+    notes: '',
+    attachments: [] as any[]
   };
 
   // Local-first state: edits stay here, only flushed to store on discrete actions or debounced
@@ -122,6 +124,11 @@
     local = { ...local, notes: target.value };
     scheduleFlush();
   }
+
+  function updateAttachments(e: CustomEvent) {
+    local = { ...local, attachments: e.detail };
+    scheduleFlush();
+  }
 </script>
 
 <div class="section">
@@ -137,6 +144,7 @@
       </ItemCard>
     {/each}
     <AddButton label="Add Bank Account" on:click={addBankAccount} />
+    <FileAttachments attachments={local.attachments || []} group="bank_accounts" on:update={updateAttachments} />
   </div>
 
   <div class="subsection">
@@ -150,6 +158,7 @@
       </ItemCard>
     {/each}
     <AddButton label="Add Credit Card" on:click={addCreditCard} />
+    <FileAttachments attachments={local.attachments || []} group="credit_cards" on:update={updateAttachments} />
   </div>
 
   <div class="subsection">
@@ -163,6 +172,7 @@
       </ItemCard>
     {/each}
     <AddButton label="Add Investment Account" on:click={addInvestment} />
+    <FileAttachments attachments={local.attachments || []} group="investments" on:update={updateAttachments} />
   </div>
 
   <div class="subsection">
@@ -175,6 +185,7 @@
       </ItemCard>
     {/each}
     <AddButton label="Add Debt/Loan" on:click={addDebt} />
+    <FileAttachments attachments={local.attachments || []} group="debts" on:update={updateAttachments} />
   </div>
 
   <NotesField value={local.notes} on:change={updateNotes} />

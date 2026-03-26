@@ -27,6 +27,19 @@ pub struct DocumentMeta {
     pub updated_at: String,
 }
 
+// --- File Attachments ---
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct FileAttachment {
+    pub id: String,
+    pub name: String,
+    pub mime_type: String,
+    pub size: u64,
+    pub data: String, // base64-encoded file content
+    #[serde(default)]
+    pub group: String, // subsection key, e.g. "bank_accounts", "credit_cards"
+}
+
 // --- Financial Section ---
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -36,6 +49,8 @@ pub struct FinancialSection {
     pub investments: Vec<Investment>,
     pub debts: Vec<Debt>,
     pub notes: String,
+    #[serde(default)]
+    pub attachments: Vec<FileAttachment>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -76,6 +91,8 @@ pub struct Debt {
 pub struct InsuranceSection {
     pub policies: Vec<InsurancePolicy>,
     pub notes: String,
+    #[serde(default)]
+    pub attachments: Vec<FileAttachment>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -93,6 +110,8 @@ pub struct InsurancePolicy {
 pub struct BillsSection {
     pub bills: Vec<Bill>,
     pub notes: String,
+    #[serde(default)]
+    pub attachments: Vec<FileAttachment>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -113,6 +132,8 @@ pub struct PropertySection {
     pub vehicles: Vec<Vehicle>,
     pub valuables: Vec<Valuable>,
     pub notes: String,
+    #[serde(default)]
+    pub attachments: Vec<FileAttachment>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -145,6 +166,8 @@ pub struct LegalSection {
     pub power_of_attorney: String,
     pub trusts: Vec<Trust>,
     pub notes: String,
+    #[serde(default)]
+    pub attachments: Vec<FileAttachment>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -162,6 +185,8 @@ pub struct DigitalSection {
     pub social_media: Vec<DigitalAccount>,
     pub password_manager: PasswordManagerInfo,
     pub notes: String,
+    #[serde(default)]
+    pub attachments: Vec<FileAttachment>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -188,6 +213,8 @@ pub struct HouseholdSection {
     pub contractors: Vec<Contact>,
     pub how_things_work: Vec<HowTo>,
     pub notes: String,
+    #[serde(default)]
+    pub attachments: Vec<FileAttachment>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -212,6 +239,8 @@ pub struct PersonalSection {
     pub obituary_notes: String,
     pub messages: Vec<PersonalMessage>,
     pub notes: String,
+    #[serde(default)]
+    pub attachments: Vec<FileAttachment>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -228,6 +257,8 @@ pub struct ContactsSection {
     pub family: Vec<Contact>,
     pub professionals: Vec<Contact>,
     pub notes: String,
+    #[serde(default)]
+    pub attachments: Vec<FileAttachment>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -245,6 +276,8 @@ pub struct Contact {
 pub struct MedicalSection {
     pub family_members: Vec<FamilyMedical>,
     pub notes: String,
+    #[serde(default)]
+    pub attachments: Vec<FileAttachment>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -273,6 +306,8 @@ pub struct Medication {
 pub struct PetsSection {
     pub pets: Vec<Pet>,
     pub notes: String,
+    #[serde(default)]
+    pub attachments: Vec<FileAttachment>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -339,6 +374,8 @@ pub struct CustomSection {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub parent: Option<String>,  // None = top-level, Some("financial") = subsection
     pub subsections: Vec<CustomSubsection>,
+    #[serde(default)]
+    pub attachments: Vec<FileAttachment>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

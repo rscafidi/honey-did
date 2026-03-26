@@ -6,6 +6,7 @@
   import FormField from '../components/FormField.svelte';
   import NotesField from '../components/NotesField.svelte';
   import CustomSubsections from '../components/CustomSubsections.svelte';
+  import FileAttachments from '../components/FileAttachments.svelte';
 
   const emptyAccount = { name: '', username: '', recovery_hint: '', notes: '' };
 
@@ -13,7 +14,8 @@
     email_accounts: [] as any[],
     social_media: [] as any[],
     password_manager: { name: '', master_password_hint: '', recovery_method: '', notes: '' },
-    notes: ''
+    notes: '',
+    attachments: [] as any[]
   };
 
   // Local-first state: edits stay here, only flushed to store on discrete actions or debounced
@@ -102,6 +104,11 @@
     local = { ...local, notes: target.value };
     scheduleFlush();
   }
+
+  function updateAttachments(e: CustomEvent) {
+    local = { ...local, attachments: e.detail };
+    scheduleFlush();
+  }
 </script>
 
 <div class="section">
@@ -114,6 +121,7 @@
       <FormField label="Recovery Method" value={local.password_manager?.recovery_method || ''} placeholder="Emergency kit location, recovery key, etc." on:change={(e) => updatePasswordManager('recovery_method', e.detail.value)} />
       <FormField label="Notes" type="textarea" value={local.password_manager?.notes || ''} on:change={(e) => updatePasswordManager('notes', e.detail.value)} />
     </div>
+    <FileAttachments attachments={local.attachments || []} group="password_manager" on:update={updateAttachments} />
   </div>
 
   <div class="subsection">
@@ -127,6 +135,7 @@
       </ItemCard>
     {/each}
     <AddButton label="Add Email Account" on:click={addEmail} />
+    <FileAttachments attachments={local.attachments || []} group="email_accounts" on:update={updateAttachments} />
   </div>
 
   <div class="subsection">
@@ -140,6 +149,7 @@
       </ItemCard>
     {/each}
     <AddButton label="Add Social Media Account" on:click={addSocial} />
+    <FileAttachments attachments={local.attachments || []} group="social_media" on:update={updateAttachments} />
   </div>
 
   <NotesField value={local.notes} on:change={updateNotes} />

@@ -31,6 +31,15 @@ export interface DocumentMeta {
   updated_at: string;
 }
 
+export interface FileAttachment {
+  id: string;
+  name: string;
+  mime_type: string;
+  size: number;
+  data: string; // base64-encoded file content
+  group: string; // subsection key, e.g. "bank_accounts", "credit_cards"
+}
+
 // Simplified interfaces - full types match Rust models
 export interface FinancialSection {
   bank_accounts: any[];
@@ -38,16 +47,19 @@ export interface FinancialSection {
   investments: any[];
   debts: any[];
   notes: string;
+  attachments: FileAttachment[];
 }
 
 export interface InsuranceSection {
   policies: any[];
   notes: string;
+  attachments: FileAttachment[];
 }
 
 export interface BillsSection {
   bills: any[];
   notes: string;
+  attachments: FileAttachment[];
 }
 
 export interface PropertySection {
@@ -55,6 +67,7 @@ export interface PropertySection {
   vehicles: any[];
   valuables: any[];
   notes: string;
+  attachments: FileAttachment[];
 }
 
 export interface LegalSection {
@@ -63,6 +76,7 @@ export interface LegalSection {
   power_of_attorney: string;
   trusts: any[];
   notes: string;
+  attachments: FileAttachment[];
 }
 
 export interface DigitalSection {
@@ -70,6 +84,7 @@ export interface DigitalSection {
   social_media: any[];
   password_manager: any;
   notes: string;
+  attachments: FileAttachment[];
 }
 
 export interface HouseholdSection {
@@ -77,6 +92,7 @@ export interface HouseholdSection {
   contractors: any[];
   how_things_work: any[];
   notes: string;
+  attachments: FileAttachment[];
 }
 
 export interface PersonalSection {
@@ -84,6 +100,7 @@ export interface PersonalSection {
   obituary_notes: string;
   messages: any[];
   notes: string;
+  attachments: FileAttachment[];
 }
 
 export interface ContactsSection {
@@ -91,16 +108,19 @@ export interface ContactsSection {
   family: any[];
   professionals: any[];
   notes: string;
+  attachments: FileAttachment[];
 }
 
 export interface MedicalSection {
   family_members: any[];
   notes: string;
+  attachments: FileAttachment[];
 }
 
 export interface PetsSection {
   pets: any[];
   notes: string;
+  attachments: FileAttachment[];
 }
 
 export type SlideType = 'message' | 'question';
@@ -202,17 +222,17 @@ export function debounce<T extends (...args: any[]) => void>(fn: T, ms: number):
 function createEmptyDocument(): LegacyDocument {
   return {
     meta: { creator_name: '', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-    financial: { bank_accounts: [], credit_cards: [], investments: [], debts: [], notes: '' },
-    insurance: { policies: [], notes: '' },
-    bills: { bills: [], notes: '' },
-    property: { properties: [], vehicles: [], valuables: [], notes: '' },
-    legal: { will_location: '', attorney: { name: '', relationship: '', phone: '', email: '', notes: '' }, power_of_attorney: '', trusts: [], notes: '' },
-    digital: { email_accounts: [], social_media: [], password_manager: { name: '', master_password_hint: '', recovery_method: '', notes: '' }, notes: '' },
-    household: { maintenance_items: [], contractors: [], how_things_work: [], notes: '' },
-    personal: { funeral_preferences: '', obituary_notes: '', messages: [], notes: '' },
-    contacts: { emergency_contacts: [], family: [], professionals: [], notes: '' },
-    medical: { family_members: [], notes: '' },
-    pets: { pets: [], notes: '' },
+    financial: { bank_accounts: [], credit_cards: [], investments: [], debts: [], notes: '', attachments: [] },
+    insurance: { policies: [], notes: '', attachments: [] },
+    bills: { bills: [], notes: '', attachments: [] },
+    property: { properties: [], vehicles: [], valuables: [], notes: '', attachments: [] },
+    legal: { will_location: '', attorney: { name: '', relationship: '', phone: '', email: '', notes: '' }, power_of_attorney: '', trusts: [], notes: '', attachments: [] },
+    digital: { email_accounts: [], social_media: [], password_manager: { name: '', master_password_hint: '', recovery_method: '', notes: '' }, notes: '', attachments: [] },
+    household: { maintenance_items: [], contractors: [], how_things_work: [], notes: '', attachments: [] },
+    personal: { funeral_preferences: '', obituary_notes: '', messages: [], notes: '', attachments: [] },
+    contacts: { emergency_contacts: [], family: [], professionals: [], notes: '', attachments: [] },
+    medical: { family_members: [], notes: '', attachments: [] },
+    pets: { pets: [], notes: '', attachments: [] },
     custom_sections: [],
   };
 }
@@ -419,15 +439,15 @@ function createSectionStore<K extends keyof LegacyDocument>(
 }
 
 // Pre-built section stores — components import these instead of subscribing to $document directly
-export const financialStore = createSectionStore('financial', { bank_accounts: [], credit_cards: [], investments: [], debts: [], notes: '' });
-export const insuranceStore = createSectionStore('insurance', { policies: [], notes: '' });
-export const billsStore = createSectionStore('bills', { bills: [], notes: '' });
-export const propertyStore = createSectionStore('property', { properties: [], vehicles: [], valuables: [], notes: '' });
-export const legalStore = createSectionStore('legal', { will_location: '', attorney: { name: '', relationship: '', phone: '', email: '', notes: '' }, power_of_attorney: '', trusts: [], notes: '' });
-export const digitalStore = createSectionStore('digital', { email_accounts: [], social_media: [], password_manager: { name: '', master_password_hint: '', recovery_method: '', notes: '' }, notes: '' });
-export const householdStore = createSectionStore('household', { maintenance_items: [], contractors: [], how_things_work: [], notes: '' });
-export const personalStore = createSectionStore('personal', { funeral_preferences: '', obituary_notes: '', messages: [], notes: '' });
-export const contactsStore = createSectionStore('contacts', { emergency_contacts: [], family: [], professionals: [], notes: '' });
-export const medicalStore = createSectionStore('medical', { family_members: [], notes: '' });
-export const petsStore = createSectionStore('pets', { pets: [], notes: '' });
+export const financialStore = createSectionStore('financial', { bank_accounts: [], credit_cards: [], investments: [], debts: [], notes: '', attachments: [] });
+export const insuranceStore = createSectionStore('insurance', { policies: [], notes: '', attachments: [] });
+export const billsStore = createSectionStore('bills', { bills: [], notes: '', attachments: [] });
+export const propertyStore = createSectionStore('property', { properties: [], vehicles: [], valuables: [], notes: '', attachments: [] });
+export const legalStore = createSectionStore('legal', { will_location: '', attorney: { name: '', relationship: '', phone: '', email: '', notes: '' }, power_of_attorney: '', trusts: [], notes: '', attachments: [] });
+export const digitalStore = createSectionStore('digital', { email_accounts: [], social_media: [], password_manager: { name: '', master_password_hint: '', recovery_method: '', notes: '' }, notes: '', attachments: [] });
+export const householdStore = createSectionStore('household', { maintenance_items: [], contractors: [], how_things_work: [], notes: '', attachments: [] });
+export const personalStore = createSectionStore('personal', { funeral_preferences: '', obituary_notes: '', messages: [], notes: '', attachments: [] });
+export const contactsStore = createSectionStore('contacts', { emergency_contacts: [], family: [], professionals: [], notes: '', attachments: [] });
+export const medicalStore = createSectionStore('medical', { family_members: [], notes: '', attachments: [] });
+export const petsStore = createSectionStore('pets', { pets: [], notes: '', attachments: [] });
 export const customSectionsStore = createSectionStore('custom_sections', []);

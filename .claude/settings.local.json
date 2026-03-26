@@ -71,7 +71,13 @@
       "WebFetch(domain:tauritutorials.com)",
       "Bash(magick:*)",
       "Bash(npx:*)",
-      "Bash(npm ls:*)"
+      "Bash(npm ls:*)",
+      "Bash(npm test:*)",
+      "Bash(base64 -w0 C:/git/honey-did/public/logo.png)",
+      "Bash(python:*)",
+      "Bash(netstat -ano)",
+      "Bash(taskkill:*)",
+      "Bash(echo \"exit: $?\")"
     ]
   }
 }

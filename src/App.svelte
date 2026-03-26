@@ -25,6 +25,21 @@
   import SettingsModal from './lib/components/SettingsModal.svelte';
   import LicenseModal from './lib/components/LicenseModal.svelte';
   import HelpModal from './lib/components/HelpModal.svelte';
+  import { createTestDocument } from './lib/testData';
+
+  const isDev = import.meta.env.DEV;
+
+  function autofocus(node: HTMLElement) {
+    node.focus();
+  }
+
+  async function fillTestData() {
+    const testDoc = createTestDocument();
+    await document.save(testDoc);
+    await document.load();
+    showIntro = false;
+    hasCheckedEmpty = true;
+  }
 
   type Section =
     | 'financial' | 'insurance' | 'bills' | 'property' | 'legal'
@@ -355,7 +370,7 @@
       <h1 class="intro-heading">Welcome to Honey Did</h1>
       <p class="intro-description">
         Are you the DOER in your family?  What would your family do if you disappeared tomorrow?  Welcome to Honey Did,
-        a companion application to help you build a list of important information your loved ones may need in the event of your permanent absence.
+        an application helps you build a list of important information your loved ones may need in the event of your permanent absence.
         When you're done collecting information, export it into a highly portable and secure format that key individuals can open when needed.
       </p>
       <p class="intro-description">
@@ -437,6 +452,7 @@
               placeholder="Section name"
               bind:value={newSectionName}
               on:keydown={(e) => e.key === 'Enter' && addCustomSection()}
+              use:autofocus
             />
             <div class="add-section-actions">
               <button class="btn-small btn-cancel" on:click={() => { showAddSectionForm = false; newSectionName = ''; }}>Cancel</button>
@@ -467,6 +483,11 @@
         <button class="btn btn-primary" on:click={() => (showExportDialog = true)}>
           Export
         </button>
+        {#if isDev}
+          <button class="btn btn-dev" on:click={fillTestData}>
+            Fill Test Data
+          </button>
+        {/if}
         <div class="sidebar-legal">
           <span>&copy; scafidi.dev</span>
           <span class="legal-sep">&middot;</span>
@@ -954,6 +975,22 @@
   .btn-secondary:hover {
     background: rgba(255, 255, 255, 0.2);
     color: var(--sidebar-text);
+  }
+
+  .btn-dev {
+    width: 100%;
+    padding: 8px;
+    border: 1px dashed #f59e0b;
+    border-radius: 6px;
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .btn-dev:hover {
+    background: rgba(245, 158, 11, 0.2);
   }
 
   .btn-outline {

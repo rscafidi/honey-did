@@ -6,13 +6,15 @@
   import FormField from '../components/FormField.svelte';
   import NotesField from '../components/NotesField.svelte';
   import CustomSubsections from '../components/CustomSubsections.svelte';
+  import FileAttachments from '../components/FileAttachments.svelte';
 
   const defaultLegal = {
     will_location: '',
     attorney: { name: '', relationship: '', phone: '', email: '', notes: '' },
     power_of_attorney: '',
     trusts: [] as any[],
-    notes: ''
+    notes: '',
+    attachments: [] as any[]
   };
 
   // Local-first state: edits stay here, only flushed to store on discrete actions or debounced
@@ -83,6 +85,11 @@
     local = { ...local, notes: target.value };
     scheduleFlush();
   }
+
+  function updateAttachments(e: CustomEvent) {
+    local = { ...local, attachments: e.detail };
+    scheduleFlush();
+  }
 </script>
 
 <div class="section">
@@ -113,6 +120,7 @@
       </ItemCard>
     {/each}
     <AddButton label="Add Trust" on:click={addTrust} />
+    <FileAttachments attachments={local.attachments || []} group="legal_docs" on:update={updateAttachments} />
   </div>
 
   <NotesField value={local.notes} on:change={updateNotes} />

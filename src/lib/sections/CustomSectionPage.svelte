@@ -2,6 +2,7 @@
   import { createEventDispatcher } from 'svelte';
   import type { CustomSection, CustomSubsection } from '../stores/document';
   import CustomSectionEditor from '../components/CustomSectionEditor.svelte';
+  import FileAttachments from '../components/FileAttachments.svelte';
 
   export let section: CustomSection;
 
@@ -60,6 +61,10 @@
       ),
     });
   }
+
+  function updateAttachments(e: CustomEvent) {
+    dispatch('update', { ...section, attachments: e.detail });
+  }
 </script>
 
 <div class="custom-section-page">
@@ -100,6 +105,8 @@
         + Add Subsection
       </button>
     {/if}
+
+    <FileAttachments attachments={section.attachments || []} on:update={updateAttachments} />
   {/if}
 </div>
 

@@ -6,12 +6,14 @@
   import FormField from '../components/FormField.svelte';
   import NotesField from '../components/NotesField.svelte';
   import CustomSubsections from '../components/CustomSubsections.svelte';
+  import FileAttachments from '../components/FileAttachments.svelte';
 
   const defaultPersonal = {
     funeral_preferences: '',
     obituary_notes: '',
     messages: [] as any[],
-    notes: ''
+    notes: '',
+    attachments: [] as any[]
   };
 
   // Local-first state: edits stay here, only flushed to store on discrete actions or debounced
@@ -70,6 +72,11 @@
     local = { ...local, notes: (e.target as HTMLTextAreaElement).value };
     scheduleFlush();
   }
+
+  function updateAttachments(e: CustomEvent) {
+    local = { ...local, attachments: e.detail };
+    scheduleFlush();
+  }
 </script>
 
 <div class="section">
@@ -95,6 +102,7 @@
       placeholder="Key life events, achievements, family members to mention, tone you'd prefer..."
       on:change={(e) => updateField('obituary_notes', e.detail.value)}
     />
+    <FileAttachments attachments={local.attachments || []} group="personal_docs" on:update={updateAttachments} />
   </div>
 
   <div class="subsection">
@@ -107,6 +115,7 @@
       </ItemCard>
     {/each}
     <AddButton label="Add Personal Message" on:click={addMessage} />
+    <FileAttachments attachments={local.attachments || []} group="messages" on:update={updateAttachments} />
   </div>
 
   <NotesField value={local.notes} on:change={updateNotes} />

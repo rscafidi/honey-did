@@ -6,12 +6,14 @@
   import FormField from '../components/FormField.svelte';
   import NotesField from '../components/NotesField.svelte';
   import CustomSubsections from '../components/CustomSubsections.svelte';
+  import FileAttachments from '../components/FileAttachments.svelte';
 
   const defaultHousehold = {
     maintenance_items: [] as any[],
     contractors: [] as any[],
     how_things_work: [] as any[],
-    notes: ''
+    notes: '',
+    attachments: [] as any[]
   };
 
   // Local-first state: edits stay here, only flushed to store on discrete actions or debounced
@@ -121,6 +123,11 @@
     local = { ...local, notes: target.value };
     scheduleFlush();
   }
+
+  function updateAttachments(e: CustomEvent) {
+    local = { ...local, attachments: e.detail };
+    scheduleFlush();
+  }
 </script>
 
 <div class="section">
@@ -136,6 +143,7 @@
       </ItemCard>
     {/each}
     <AddButton label="Add Maintenance Task" on:click={addMaintenance} />
+    <FileAttachments attachments={local.attachments || []} group="maintenance_items" on:update={updateAttachments} />
   </div>
 
   <div class="subsection">
@@ -150,6 +158,7 @@
       </ItemCard>
     {/each}
     <AddButton label="Add Contractor" on:click={addContractor} />
+    <FileAttachments attachments={local.attachments || []} group="contractors" on:update={updateAttachments} />
   </div>
 
   <div class="subsection">
@@ -162,6 +171,7 @@
       </ItemCard>
     {/each}
     <AddButton label="Add How-To" on:click={addHowTo} />
+    <FileAttachments attachments={local.attachments || []} group="how_things_work" on:update={updateAttachments} />
   </div>
 
   <NotesField value={local.notes} on:change={updateNotes} />
