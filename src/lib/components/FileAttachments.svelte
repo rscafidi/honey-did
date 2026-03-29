@@ -58,11 +58,47 @@
   }
 
   function getExtension(filename: string): string {
-    return (filename.split('.').pop() || '').toLowerCase();
+    // Strip query params and fragments, then get extension
+    const clean = filename.split(/[?#]/)[0];
+    return (clean.split('.').pop() || '').toLowerCase();
   }
 
-  function validateExtension(filename: string): boolean {
-    const ext = getExtension(filename);
+  function isContentUri(path: string): boolean {
+    return path.startsWith('content://') || path.includes('%3A') || path.includes('document:');
+  }
+
+  // Detect file type from first bytes (magic number)
+  function detectMimeFromBytes(bytes: Uint8Array): { mime: string; ext: string } | null {
+    if (bytes.length < 4) return null;
+    const h = (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
+    const h2 = (bytes[0] << 8) | bytes[1];
+
+    // PDF: %PDF
+    if (h === 0x25504446) return { mime: 'application/pdf', ext: 'pdf' };
+    // PNG: 0x89504E47
+    if (h === 0x89504E47) return { mime: 'image/png', ext: 'png' };
+    // JPEG: 0xFFD8FF
+    if ((h >>> 8) === 0xFFD8FF) return { mime: 'image/jpeg', ext: 'jpg' };
+    // GIF: GIF8
+    if (h === 0x47494638) return { mime: 'image/gif', ext: 'gif' };
+    // WEBP: RIFF....WEBP
+    if (h === 0x52494646 && bytes.length >= 12 && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) return { mime: 'image/webp', ext: 'webp' };
+    // ZIP-based (docx, xlsx, etc): PK\x03\x04
+    if (h === 0x504B0304) {
+      // Check for Office Open XML markers in the zip
+      const text = new TextDecoder('ascii', { fatal: false }).decode(bytes.subarray(0, Math.min(bytes.length, 2000)));
+      if (text.includes('word/')) return { mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', ext: 'docx' };
+      if (text.includes('xl/')) return { mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', ext: 'xlsx' };
+      // Generic zip - could be docx/xlsx, allow it
+      return { mime: 'application/zip', ext: 'xlsx' };
+    }
+    // OLE2 (doc, xls): 0xD0CF11E0
+    if (h === 0xD0CF11E0) return { mime: 'application/msword', ext: 'doc' };
+
+    return null;
+  }
+
+  function validateExtension(ext: string): boolean {
     if (!ext || !ALLOWED_EXTENSIONS.has(ext)) {
       error = `Unsupported file type ".${ext || '(none)'}". Supported: ${ALLOWED_EXTENSIONS_LIST.join(', ')}.`;
       return false;
@@ -91,22 +127,51 @@
         if (!selected) return;
 
         const path = typeof selected === 'string' ? selected : (selected as any).path ?? selected;
-        const filename = String(path).split(/[/\\]/).pop() || 'file';
-        if (!validateExtension(filename)) return;
+        const pathStr = String(path);
 
-        const bytes = await readFile(path);
+        const bytes = await readFile(pathStr);
         if (bytes.length > MAX_FILE_SIZE) {
           error = 'File is too large. Maximum file size is 10 MB.';
           return;
         }
 
-        const base64 = uint8ArrayToBase64(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes));
+        const rawBytes = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+        let filename: string;
+        let mimeType: string;
+
+        if (isContentUri(pathStr)) {
+          // Android content URI: detect type from file magic bytes
+          const detected = detectMimeFromBytes(rawBytes);
+          if (!detected) {
+            // Try plain text heuristic: if all bytes are valid UTF-8 printable chars
+            const isText = rawBytes.length > 0 && rawBytes.every(b => b === 0x0A || b === 0x0D || b === 0x09 || (b >= 0x20 && b <= 0x7E));
+            if (isText) {
+              filename = 'file.txt';
+              mimeType = 'text/plain';
+            } else {
+              error = `Could not determine file type. Supported: ${ALLOWED_EXTENSIONS_LIST.join(', ')}.`;
+              return;
+            }
+          } else {
+            if (!validateExtension(detected.ext)) return;
+            filename = 'file.' + detected.ext;
+            mimeType = detected.mime;
+          }
+        } else {
+          // Normal file path: extract filename and validate extension
+          filename = pathStr.split(/[/\\]/).pop() || 'file';
+          const ext = getExtension(filename);
+          if (!validateExtension(ext)) return;
+          mimeType = getMimeType(filename);
+        }
+
+        const base64 = uint8ArrayToBase64(rawBytes);
 
         const attachment: FileAttachment = {
           id: generateId(),
           name: filename,
-          mime_type: getMimeType(filename),
-          size: bytes.length,
+          mime_type: mimeType,
+          size: rawBytes.length,
           data: base64,
           group,
         };
@@ -129,7 +194,7 @@
 
     error = '';
 
-    if (!validateExtension(file.name)) {
+    if (!validateExtension(getExtension(file.name))) {
       input.value = '';
       return;
     }

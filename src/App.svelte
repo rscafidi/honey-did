@@ -63,6 +63,40 @@
     sidebarOpen = false;
   }
 
+  // Swipe-to-open sidebar (mobile)
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchTracking = false;
+
+  function handleTouchStart(e: TouchEvent) {
+    const x = e.touches[0].clientX;
+    if (!sidebarOpen && x < 30) {
+      // Start tracking from left edge
+      touchStartX = x;
+      touchStartY = e.touches[0].clientY;
+      touchTracking = true;
+    } else if (sidebarOpen) {
+      // Track for swipe-to-close
+      touchStartX = x;
+      touchStartY = e.touches[0].clientY;
+      touchTracking = true;
+    }
+  }
+
+  function handleTouchEnd(e: TouchEvent) {
+    if (!touchTracking) return;
+    touchTracking = false;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = Math.abs(e.changedTouches[0].clientY - touchStartY);
+    // Require mostly horizontal swipe (dx > dy) and minimum distance
+    if (dy > Math.abs(dx)) return;
+    if (!sidebarOpen && dx > 60) {
+      sidebarOpen = true;
+    } else if (sidebarOpen && dx < -60) {
+      sidebarOpen = false;
+    }
+  }
+
   // Password protection state
   let isLocked = false;
   let hasPassword = false;
@@ -398,7 +432,7 @@
     </button>
     <span class="mobile-title">{currentSectionLabel}</span>
   </div>
-  <main class="app">
+  <main class="app" on:touchstart={handleTouchStart} on:touchend={handleTouchEnd}>
     <aside class="sidebar" class:open={sidebarOpen}>
       <div class="logo">
         <img class="logo-icon" src="/logo.png" alt="Honey Did" />
