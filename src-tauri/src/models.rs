@@ -221,6 +221,7 @@ pub struct HouseholdSection {
 pub struct MaintenanceItem {
     pub name: String,
     pub frequency: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub last_done: String,
     pub notes: String,
 }

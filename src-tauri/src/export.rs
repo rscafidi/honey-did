@@ -5,7 +5,7 @@ use crate::models::{FieldType, LegacyDocument, SlideType};
 use serde::Serialize;
 
 /// The app logo PNG, embedded at compile time.
-const LOGO_PNG_BYTES: &[u8] = include_bytes!("../icons/logo.png");
+const LOGO_PNG_BYTES: &[u8] = include_bytes!("../icons/icon-no-text.png");
 
 /// Returns the logo as a base64 data-URI `<img>` tag.
 fn logo_img_tag(css_class: &str, size_px: u32) -> String {
@@ -372,22 +372,24 @@ const SHARED_CSS: &str = r##"
         .match-badge { font-size: 0.65rem; font-weight: 500; color: #606C38; background: #D4D4D4; padding: 2px 6px; border-radius: 4px; margin-left: 4px; vertical-align: middle; text-transform: lowercase; }
         .highlight { background: #DDE5B6; padding: 1px 2px; border-radius: 2px; }
         .highlight.current { background: #ADC178; outline: 2px solid #283618; }
-        .mobile-toolbar { display: none; position: sticky; top: 0; left: 0; right: 0; z-index: 200; background: #283618; padding: 8px 12px; box-shadow: 0 2px 8px rgba(40,54,24,0.3); }
+        .mobile-toolbar { display: none; position: sticky; top: 0; left: 0; right: 0; z-index: 200; background: #283618; padding: 10px 12px; box-shadow: 0 2px 8px rgba(40,54,24,0.3); }
         .mobile-toolbar-default { display: flex; align-items: center; justify-content: space-between; }
         .mobile-toolbar.search-mode .mobile-toolbar-default { display: none; }
-        .mobile-toolbar-btn { background: none; border: none; color: #F0EFEB; cursor: pointer; font-weight: 500; font-size: 0.9rem; padding: 6px 10px; border-radius: 6px; display: flex; align-items: center; gap: 6px; }
+        .mobile-toolbar-btn { background: none; border: none; color: #F0EFEB; cursor: pointer; font-weight: 500; font-size: 0.95rem; padding: 8px 12px; border-radius: 6px; display: flex; align-items: center; gap: 6px; min-height: 44px; }
         .mobile-toolbar-btn:hover { background: rgba(240,239,235,0.1); }
-        .mobile-search-inline { display: none; align-items: center; gap: 6px; }
+        .mobile-search-inline { display: none; flex-direction: column; gap: 8px; }
         .mobile-toolbar.search-mode .mobile-search-inline { display: flex; }
-        .mobile-search-inline .search-input { flex: 1; padding: 7px 12px; border: none; border-radius: 6px; font-size: 0.9rem; background: #F0EFEB; min-width: 0; }
-        .mobile-search-inline .search-input:focus { outline: none; background: white; }
-        .mobile-search-inline .search-nav-btn { padding: 5px 8px; border: none; background: #606C38; color: #F0EFEB; border-radius: 6px; cursor: pointer; font-size: 0.8rem; flex-shrink: 0; }
-        .mobile-search-inline .search-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-        .mobile-search-inline .search-counter { color: #B7B7A4; font-size: 0.75rem; white-space: nowrap; flex-shrink: 0; }
-        .mobile-search-inline .search-close-btn { background: none; border: none; color: #F0EFEB; font-size: 1.1rem; cursor: pointer; padding: 2px 6px; flex-shrink: 0; }
-        .mobile-search-filters-bar { display: none; position: sticky; top: 42px; left: 0; right: 0; z-index: 199; background: #283618; padding: 4px 12px 8px; }
-        .mobile-search-filters-bar.visible { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-        .mobile-search-filters-bar .search-filter { padding: 3px 7px; border: 1px solid #606C38; background: transparent; color: #B7B7A4; border-radius: 6px; font-size: 0.7rem; font-weight: 500; cursor: pointer; user-select: none; }
+        .mobile-search-row { display: flex; align-items: center; gap: 8px; }
+        .mobile-search-row .search-input { flex: 1; padding: 12px 14px; border: none; border-radius: 8px; font-size: 1rem; background: #F0EFEB; min-width: 0; }
+        .mobile-search-row .search-input:focus { outline: none; background: white; }
+        .mobile-search-row .search-close-btn { background: none; border: none; color: #F0EFEB; font-size: 1.4rem; cursor: pointer; padding: 8px; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .mobile-search-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .mobile-search-nav .search-counter { color: #B7B7A4; font-size: 0.85rem; white-space: nowrap; }
+        .mobile-search-nav .search-nav-btn { padding: 10px 18px; border: none; background: #606C38; color: #F0EFEB; border-radius: 8px; cursor: pointer; font-size: 1rem; min-height: 44px; min-width: 56px; flex-shrink: 0; }
+        .mobile-search-nav .search-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .mobile-search-filters-bar { display: none; position: sticky; top: 0; left: 0; right: 0; z-index: 199; background: #283618; padding: 6px 12px 10px; }
+        .mobile-search-filters-bar.visible { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .mobile-search-filters-bar .search-filter { padding: 8px 12px; border: 1px solid #606C38; background: transparent; color: #B7B7A4; border-radius: 8px; font-size: 0.85rem; font-weight: 500; cursor: pointer; user-select: none; min-height: 38px; display: flex; align-items: center; }
         .mobile-search-filters-bar .search-filter.active { background: #606C38; color: #F0EFEB; border-color: #606C38; }
         .mobile-search-filters-bar .search-filter.disabled { opacity: 0.4; cursor: not-allowed; }
         .menu-toggle { display: none; }
@@ -1185,11 +1187,17 @@ const SHARED_JS_RENDER_DOCUMENT: &str = r##"
             html += '<button class="mobile-toolbar-btn" onclick="toggleMobileSearch()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg> Search</button>';
             html += '</div>';
             html += '<div class="mobile-search-inline">';
+            html += '<div class="mobile-search-row">';
             html += '<input type="text" id="mobileSearchInput" class="search-input" placeholder="Search..." oninput="debounceSearch(this.value, true)" onkeydown="if(event.key===\'Escape\')closeMobileSearch()">';
+            html += '<button class="search-close-btn" onclick="closeMobileSearch()">&#10005;</button>';
+            html += '</div>';
+            html += '<div class="mobile-search-nav">';
             html += '<span class="search-counter" id="mobileSearchCounter"></span>';
-            html += '<button class="search-nav-btn" onclick="prevMatch()" id="mobilePrevBtn" disabled>◀</button>';
-            html += '<button class="search-nav-btn" onclick="nextMatch()" id="mobileNextBtn" disabled>▶</button>';
-            html += '<button class="search-close-btn" onclick="closeMobileSearch()">✕</button>';
+            html += '<div style="display:flex;gap:8px;">';
+            html += '<button class="search-nav-btn" onclick="prevMatch()" id="mobilePrevBtn" disabled>&#9650; Prev</button>';
+            html += '<button class="search-nav-btn" onclick="nextMatch()" id="mobileNextBtn" disabled>&#9660; Next</button>';
+            html += '</div>';
+            html += '</div>';
             html += '</div>';
             html += '</div>';
             html += '<div class="mobile-search-filters-bar" id="mobileFiltersBar">';
@@ -1454,7 +1462,6 @@ const SHARED_JS_RENDER_DOCUMENT: &str = r##"
                     data.household.maintenance_items.forEach(m => {
                         content += '<div class="item"><div class="item-title">' + escapeHtml(m.name) + '</div>';
                         content += '<div class="item-detail">Frequency: ' + escapeHtml(m.frequency) + '</div>';
-                        content += '<div class="item-detail">Last Done: ' + escapeHtml(m.last_done) + '</div>';
                         if (m.notes) content += '<div class="notes">' + escapeHtml(m.notes) + '</div>';
                         content += '</div>';
                     });

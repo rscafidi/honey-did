@@ -50,7 +50,7 @@
   function addMaintenance() {
     local = {
       ...local,
-      maintenance_items: [...local.maintenance_items, { name: '', frequency: '', last_done: '', notes: '' }]
+      maintenance_items: [...local.maintenance_items, { name: '', frequency: '', notes: '' }]
     };
     scheduleFlush();
   }
@@ -138,7 +138,6 @@
       <ItemCard title={item.name || 'New Task'} on:delete={() => removeMaintenance(i)}>
         <FormField label="Task" value={item.name} placeholder="Change HVAC filter, service furnace, etc." on:change={(e) => updateMaintenance(i, 'name', e.detail.value)} />
         <FormField label="Frequency" value={item.frequency} placeholder="Monthly, Annually, etc." on:change={(e) => updateMaintenance(i, 'frequency', e.detail.value)} />
-        <FormField label="Last Done" value={item.last_done} placeholder="January 2024" on:change={(e) => updateMaintenance(i, 'last_done', e.detail.value)} />
         <FormField label="Notes" type="textarea" value={item.notes} on:change={(e) => updateMaintenance(i, 'notes', e.detail.value)} />
       </ItemCard>
     {/each}

@@ -90,10 +90,10 @@ export function createTestDocument(): LegacyDocument {
     },
     household: {
       maintenance_items: [
-        { name: 'HVAC Filter', frequency: 'Every 3 months', last_done: '2024-01-15', notes: 'Use MERV 13, size 20x25x1. Filters are in the garage on the shelf.' },
-        { name: 'Gutter Cleaning', frequency: 'Twice yearly (spring & fall)', last_done: '2023-11-01', notes: 'Can DIY with the extension ladder or call CleanPro ($150)' },
-        { name: 'Water Heater Flush', frequency: 'Annually', last_done: '2023-09-15', notes: 'Turn off power first, attach hose to drain valve, run for 5 min' },
-        { name: 'Smoke Detector Batteries', frequency: 'Every 6 months', last_done: '2024-01-01', notes: 'All 6 detectors use 9V batteries. Spare batteries in the junk drawer.' },
+        { name: 'HVAC Filter', frequency: 'Every 3 months', notes: 'Use MERV 13, size 20x25x1. Filters are in the garage on the shelf.' },
+        { name: 'Gutter Cleaning', frequency: 'Twice yearly (spring & fall)', notes: 'Can DIY with the extension ladder or call CleanPro ($150)' },
+        { name: 'Water Heater Flush', frequency: 'Annually', notes: 'Turn off power first, attach hose to drain valve, run for 5 min' },
+        { name: 'Smoke Detector Batteries', frequency: 'Every 6 months', notes: 'All 6 detectors use 9V batteries. Spare batteries in the junk drawer.' },
       ],
       contractors: [
         { name: 'Mike\'s Plumbing', relationship: 'Plumber', phone: '555-0188', email: 'mike@mikesplumbing.com', notes: 'Very reliable, fair prices. Ask for Mike directly.' },
